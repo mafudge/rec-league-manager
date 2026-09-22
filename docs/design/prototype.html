@@ -1,0 +1,795 @@
+<title>League Night</title>
+<style>
+  :root{
+    --ink:#16342C;
+    --ink-2:#1D4137;
+    --paper:#F4F0E4;
+    --paper-dim:#EAE4D3;
+    --bag-blue:#2E5FA3;
+    --bag-blue-dim:#284f88;
+    --bag-gold:#D9A431;
+    --brick:#A34430;
+    --line:#D8D2C0;
+    --line-dark:rgba(244,240,228,.16);
+    --backdrop:#4B3A2C;
+    --backdrop-2:#3E2F24;
+    --bezel:#26221C;
+    --ink-text:#1B2A26;
+    --muted:#5B6E67;
+    --muted-dark:#AFC2BB;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--backdrop);
+    background-image:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(244,240,228,.06), transparent 60%),
+      linear-gradient(180deg, var(--backdrop) 0%, var(--backdrop-2) 100%);
+    color:var(--paper);
+    font-family:"Karla", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding-inline:16px;
+    padding-block:44px 60px;
+  }
+
+  h1,h2,h3{margin:0; text-wrap:balance;}
+
+  .display{
+    font-family:"Bebas Neue", "Arial Narrow", sans-serif;
+    font-weight:400;
+    letter-spacing:.02em;
+  }
+
+  button{font-family:inherit;}
+
+  /* ---------- intro ---------- */
+  .intro{max-width:600px; margin:0 auto 34px;}
+  .intro .kicker{font-size:13px; color:var(--bag-gold); margin:0 0 6px;}
+  .intro h1{font-size:clamp(32px,5.6vw,48px); line-height:.95; color:var(--paper);}
+  .intro p{max-width:60ch; color:var(--muted-dark); font-size:15.5px; line-height:1.55; margin:14px 0 0;}
+  .intro .cast{margin-top:16px; font-size:13.5px; color:var(--paper); opacity:.75;}
+  .intro .cast b{color:var(--bag-gold); font-weight:600;}
+
+  /* ---------- stage chrome (crumbs / reset / exit) ---------- */
+  .stagebar{
+    max-width:400px; margin:0 auto 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    min-height:22px;
+  }
+  .crumbs{font-size:12px; color:var(--muted-dark); overflow-wrap:anywhere;}
+  .crumbs b{color:var(--paper); font-weight:700;}
+  .textbtn{
+    background:none; border:none; padding:0; cursor:pointer;
+    font-size:12px; font-weight:700; color:var(--bag-gold);
+    white-space:nowrap;
+  }
+  .textbtn:hover{color:#e9bb5c;}
+  .textbtn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:3px;}
+  .exit-pill{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(244,240,228,.08);
+    border:1px solid var(--line-dark);
+    border-radius:999px;
+    padding:6px 8px 6px 14px;
+    font-size:12px;
+    color:var(--paper);
+  }
+
+  /* ---------- device ---------- */
+  .stage{display:flex; justify-content:center;}
+  .device{
+    width:min(360px,90vw);
+    aspect-ratio:9/19.3;
+    background:var(--bezel);
+    border-radius:36px;
+    padding:9px;
+    box-shadow:0 24px 44px -18px rgba(0,0,0,.6), inset 0 0 0 1px rgba(244,240,228,.06);
+  }
+  .screen{
+    position:relative;
+    width:100%; height:100%;
+    border-radius:28px;
+    overflow:hidden;
+    background:var(--paper);
+    color:var(--ink-text);
+    display:flex;
+    flex-direction:column;
+    font-size:13px;
+  }
+  .screen.public{background:var(--ink);}
+  .notch{position:absolute; top:8px; left:50%; transform:translateX(-50%); width:64px; height:5px; border-radius:3px; background:rgba(0,0,0,.14); z-index:2;}
+  .screen.public .notch{background:rgba(244,240,228,.14);}
+  .home-bar{position:absolute; bottom:7px; left:50%; transform:translateX(-50%); width:84px; height:4px; border-radius:2px; background:rgba(0,0,0,.16); z-index:2;}
+  .screen.public .home-bar{background:rgba(244,240,228,.22);}
+
+  .app-shell{flex:1; display:flex; flex-direction:column; min-height:0;}
+
+  .topbar{background:var(--ink); color:var(--paper); padding:20px 14px 10px; flex:0 0 auto;}
+  .topbar-row{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .backbtn{
+    background:none; border:none; color:var(--paper); font-size:20px; line-height:1;
+    padding:0 6px 0 0; cursor:pointer;
+  }
+  .backbtn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:2px;}
+  .topbar .app{font-size:10.5px; opacity:.7; margin:0 0 2px;}
+  .topbar .league{font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.02em; margin:0;}
+  .topbar .meta{font-size:11px; opacity:.75; margin:2px 0 0;}
+  .topbar-right{font-size:11.5px; font-weight:700; color:var(--bag-gold); background:none; border:none; cursor:pointer;}
+
+  .content{flex:1; overflow-y:auto; padding:16px 14px 14px; display:flex; flex-direction:column; gap:14px; min-height:0;}
+  .content.centered{justify-content:center; padding-top:22px;}
+
+  .scr-title{font-family:"Bebas Neue",sans-serif; font-size:21px; letter-spacing:.02em; color:var(--ink); margin:0; display:flex; align-items:baseline; gap:8px;}
+  .story-tag{font-family:"Karla",sans-serif; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:normal;}
+  .wordmark{font-size:11px; font-weight:700; color:var(--bag-blue); margin:0 0 2px;}
+
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--muted); font-weight:700;}
+  .field input{
+    border:1px solid var(--line); background:#fff; border-radius:8px;
+    padding:9px 10px; font-size:13.5px; font-family:inherit; color:var(--ink-text);
+    width:100%;
+  }
+  .field input:focus-visible{outline:2px solid var(--bag-blue); outline-offset:1px;}
+  .help-error{font-size:11.5px; color:var(--brick); margin:0;}
+
+  .btn{appearance:none; border:none; border-radius:8px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer; text-align:center;}
+  .btn-primary{background:var(--bag-blue); color:#fff;}
+  .btn-primary:hover{background:var(--bag-blue-dim);}
+  .btn-ghost{background:transparent; color:var(--bag-blue); border:1px solid var(--bag-blue);}
+  .btn-disabled{background:var(--line); color:var(--muted); cursor:not-allowed;}
+  .btn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:2px;}
+  .btn-sm{padding:6px 10px; font-size:11.5px; border-radius:6px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex; gap:8px;}
+
+  .list{display:flex; flex-direction:column;}
+  .list-row{display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); gap:10px; text-align:left;}
+  .list-row:last-child{border-bottom:none;}
+  .list-row.tappable{background:none; border-left:none; border-right:none; border-top:none; width:100%; cursor:pointer; font:inherit;}
+  .list-row.tappable:focus-visible{outline:2px solid var(--bag-blue); outline-offset:-2px;}
+  .list-row .primary{font-weight:700; font-size:13.5px; color:var(--ink-text);}
+  .list-row .secondary{font-size:11.5px; color:var(--muted);}
+  .chev{color:var(--muted); font-size:15px;}
+
+  .row-inline{display:flex; gap:8px; align-items:flex-end;}
+  .row-inline .field{flex:1;}
+
+  .banner{border-radius:8px; padding:10px 12px; font-size:12px; line-height:1.4;}
+  .banner-brick{background:rgba(163,68,48,.1); color:var(--brick); border:1px solid rgba(163,68,48,.3);}
+  .banner-gold{background:rgba(217,164,49,.14); color:#7a5714; border:1px solid rgba(217,164,49,.35);}
+
+  .link-box{display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid var(--line); border-radius:8px; padding:8px 10px;}
+  .link-box .url{font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+  .week{border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .week-head{display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--paper-dim); font-size:11.5px; font-weight:700;}
+  .week.current .week-head{background:var(--bag-blue); color:#fff;}
+  .week-body{padding:2px 6px;}
+  .game-row{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 4px; border-bottom:1px solid var(--line); font-size:12px; width:100%; background:none; border-left:none; border-right:none; border-top:none; cursor:pointer; font-family:inherit; text-align:left;}
+  .game-row:last-child{border-bottom:none;}
+  .game-row:focus-visible{outline:2px solid var(--bag-blue); outline-offset:-2px;}
+  .game-row .team{flex:1;}
+  .game-row .team.right{text-align:right;}
+  .game-row .mid{font-variant-numeric:tabular-nums; font-weight:700; color:var(--muted); min-width:52px; text-align:center;}
+  .game-row.scored .mid{color:var(--ink);}
+  .game-row.scored .team{font-weight:700;}
+
+  table.standings{width:100%; border-collapse:collapse; font-size:12px;}
+  table.standings th, table.standings td{padding:7px 4px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line);}
+  table.standings th{font-size:10.5px; color:var(--muted); font-weight:700;}
+  table.standings td:first-child, table.standings th:first-child{text-align:left; padding-left:0;}
+  table.standings tr:first-child td{font-weight:700;}
+  .diff-pos{color:var(--ink-2);}
+  .diff-neg{color:var(--brick);}
+  .tiebreak-note{font-size:11px; color:var(--muted); margin:0;}
+
+  .score-card{border:1px solid var(--line); border-radius:10px; padding:12px; background:var(--paper-dim);}
+  .score-card .vs{display:flex; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .score-card .team{font-weight:700; font-size:13px; flex:1;}
+  .score-inputs{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .score-inputs input{
+    flex:1; text-align:center; border:1px solid var(--line); border-radius:8px;
+    padding:10px 0; font-size:18px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:#fff; color:var(--ink-text); font-family:inherit; -moz-appearance:textfield;
+  }
+  .score-inputs input:focus-visible{outline:2px solid var(--bag-blue);}
+  .score-inputs .dash{color:var(--muted); font-weight:700;}
+
+  .hint{font-size:11px; color:var(--muted); margin:0;}
+
+  .tabbar{
+    flex:0 0 auto; display:flex; border-top:1px solid var(--line);
+    background:#fff; padding-bottom:14px;
+  }
+  .tab{
+    flex:1; background:none; border:none; padding:9px 4px 6px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    color:var(--muted); font-size:10.5px; font-weight:700;
+  }
+  .tab .tdot{width:5px; height:5px; border-radius:50%; background:transparent;}
+  .tab.active{color:var(--ink);}
+  .tab.active .tdot{background:var(--bag-gold);}
+  .tab:focus-visible{outline:2px solid var(--bag-blue); outline-offset:-2px;}
+
+  /* ---------- public / notfound ---------- */
+  .pub-content{flex:1; overflow-y:auto; padding:26px 16px 20px; display:flex; flex-direction:column; gap:16px; color:var(--paper);}
+  .pub-hero{text-align:center; margin-bottom:2px;}
+  .pub-hero h2{font-family:"Bebas Neue",sans-serif; font-size:25px; letter-spacing:.03em; text-transform:uppercase; color:var(--paper);}
+  .pub-hero p{margin:2px 0 0; font-size:11px; color:var(--bag-gold); font-weight:700;}
+  .pub-section-title{font-size:11px; font-weight:700; color:var(--bag-gold); margin:0 0 8px;}
+  .pub-game{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line-dark); font-size:13px;}
+  .pub-game:last-child{border-bottom:none;}
+  .pub-divider{height:1px; background:var(--line-dark); border:none; margin:0;}
+  .pub-week-line{display:flex; justify-content:space-between; padding:5px 0; font-size:11.5px; color:var(--muted-dark);}
+  table.pub-standings{width:100%; border-collapse:collapse; font-size:11.5px;}
+  table.pub-standings th, table.pub-standings td{padding:6px 4px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line-dark); color:var(--paper);}
+  table.pub-standings th{font-size:10px; color:var(--muted-dark); font-weight:700;}
+  table.pub-standings td:first-child, table.pub-standings th:first-child{text-align:left; padding-left:0;}
+  .pub-footer{font-size:10.5px; color:var(--muted-dark); text-align:center; margin-top:2px;}
+
+  .notfound-wrap{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:24px; text-align:center; color:var(--paper);}
+  .notfound-wrap .display{font-size:24px; letter-spacing:.02em;}
+  .notfound-wrap p{font-size:12px; color:var(--muted-dark); max-width:22em; margin:0;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Karla:wght@400;500;700&display=swap">
+
+<div class="intro">
+  <p class="kicker">Rec League Manager — MVP walkthrough</p>
+  <h1 class="display">League night, click by click.</h1>
+  <p>This phone is a working prototype, not a picture of one — sign in, open Dana's Tuesday-night cornhole league, add a team, generate a schedule, enter a score, and preview what a player sees. Nothing is sent anywhere; it resets if you reload.</p>
+  <p class="cast">Organizer: <b>Dana</b> · League: <b>Tuesday Cornhole</b> · Fall 2026 · 6 teams</p>
+</div>
+
+<div class="stagebar" id="stagebar"></div>
+
+<div class="stage">
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="notch"></div>
+      <div class="app-shell" id="appShell"></div>
+      <div class="home-bar"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------- round-robin generator (circle method) ---------- */
+  function generateSchedule(names){
+    var list = names.slice();
+    if(list.length % 2 !== 0) list.push('__BYE__');
+    var n = list.length;
+    var rounds = n - 1;
+    var half = n / 2;
+    var arr = list.slice();
+    var games = [];
+    for(var r = 0; r < rounds; r++){
+      for(var i = 0; i < half; i++){
+        var a = arr[i], b = arr[n - 1 - i];
+        if(a === '__BYE__' || b === '__BYE__') continue; // bye week for that team, no game
+        games.push({ week: r + 1, home: a, away: b, hs: null, as: null });
+      }
+      var fixed = arr[0];
+      var rest = arr.slice(1);
+      rest.unshift(rest.pop());
+      arr = [fixed].concat(rest);
+    }
+    return { games: games, weeks: rounds };
+  }
+
+  function calcStandings(entrants, games){
+    var rows = {};
+    entrants.forEach(function(name){ rows[name] = { name: name, w:0, l:0, pf:0, pa:0 }; });
+    games.forEach(function(g){
+      if(g.hs == null || g.as == null) return;
+      if(!rows[g.home]) rows[g.home] = { name:g.home, w:0,l:0,pf:0,pa:0 };
+      if(!rows[g.away]) rows[g.away] = { name:g.away, w:0,l:0,pf:0,pa:0 };
+      rows[g.home].pf += g.hs; rows[g.home].pa += g.as;
+      rows[g.away].pf += g.as; rows[g.away].pa += g.hs;
+      if(g.hs > g.as){ rows[g.home].w++; rows[g.away].l++; }
+      else if(g.as > g.hs){ rows[g.away].w++; rows[g.home].l++; }
+    });
+    var list = Object.keys(rows).map(function(k){
+      var r = rows[k];
+      r.diff = r.pf - r.pa;
+      return r;
+    });
+    list.sort(function(a,b){
+      if(b.w !== a.w) return b.w - a.w;
+      if(b.diff !== a.diff) return b.diff - a.diff;
+      if(b.pf !== a.pf) return b.pf - a.pf;
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }
+
+  function currentWeek(games, totalWeeks){
+    for(var w = 1; w <= totalWeeks; w++){
+      var weekGames = games.filter(function(g){ return g.week === w; });
+      var open = weekGames.some(function(g){ return g.hs == null || g.as == null; });
+      if(open) return w;
+    }
+    return totalWeeks;
+  }
+
+  var INITIAL_ENTRANTS = ['Bag Ladies','Board Stiff','Air Apparent','In Cahoots','Toss Up','Hole Lotta Love'];
+
+  function freshState(){
+    var built = generateSchedule(INITIAL_ENTRANTS);
+    var games = built.games;
+    // seed weeks 1–2 with played scores (matches the backlog's own demo script)
+    var seed = [21,14, 21,18, 15,21, 21,9, 21,17, 14,21];
+    for(var i = 0; i < 6; i++){ games[i].hs = seed[i*2]; games[i].as = seed[i*2+1]; }
+
+    return {
+      stack: ['signin'],
+      authError: false,
+      authDraft: { email: 'dana@duckpinbrewing.com', password: 'demo-pass' },
+      league: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: 8, slug: 'tuesday-cornhole', activeTab: 'overview' },
+      entrants: INITIAL_ENTRANTS.slice(),
+      entrantDraft: 'Bag Ladies',
+      entrantError: '',
+      games: games,
+      totalWeeks: built.weeks,
+      createDraft: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: '8' },
+      createErrors: {},
+      scoreGameIndex: null,
+      scoreDraft: { home: '', away: '', error: '' },
+      copied: false,
+      genRefusal: ''
+    };
+  }
+
+  var state = freshState();
+
+  var appShell = document.getElementById('appShell');
+  var screen = document.getElementById('screen');
+  var stagebar = document.getElementById('stagebar');
+
+  function view(){ return state.stack[state.stack.length - 1]; }
+  function push(v){ state.stack.push(v); }
+  function pop(){ if(state.stack.length > 1) state.stack.pop(); }
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var v = view();
+    screen.className = 'screen' + ((v === 'public' || v === 'notfound') ? ' public' : '');
+    appShell.innerHTML = renderView(v);
+    renderStagebar(v);
+    wireInputs();
+  }
+
+  function renderStagebar(v){
+    if(v === 'public' || v === 'notfound'){
+      stagebar.innerHTML =
+        '<div class="exit-pill">' +
+          '<span>' + (v === 'public' ? 'Previewing the public page (US07) — no sign-in, nothing editable' : 'Previewing a broken link (US07, negative case)') + '</span>' +
+          '<button class="textbtn" data-action="exit-preview">Exit preview</button>' +
+        '</div>' +
+        '<button class="textbtn" data-action="reset-demo">Reset</button>';
+      return;
+    }
+    var labels = { overview:'Overview', entrants:'Entrants', schedule:'Schedule', standings:'Standings' };
+    var trail = 'Sign in';
+    if(v !== 'signin'){
+      trail = 'Your leagues';
+      if(v === 'create') trail += ' &rsaquo; New league';
+      if(v === 'league') trail += ' &rsaquo; <b>' + esc(state.league.name) + '</b> &rsaquo; ' + labels[state.league.activeTab];
+      if(v === 'score') trail += ' &rsaquo; <b>' + esc(state.league.name) + '</b> &rsaquo; Schedule &rsaquo; Enter score';
+    }
+    stagebar.innerHTML =
+      '<div class="crumbs">' + trail + '</div>' +
+      '<button class="textbtn" data-action="reset-demo">Reset</button>';
+  }
+
+  function renderView(v){
+    if(v === 'signin') return renderSignin();
+    if(v === 'leagues') return renderLeagues();
+    if(v === 'create') return renderCreate();
+    if(v === 'league') return renderLeague();
+    if(v === 'score') return renderScore();
+    if(v === 'public') return renderPublic();
+    if(v === 'notfound') return renderNotFound();
+    return '';
+  }
+
+  function renderSignin(){
+    return (
+      '<div class="content centered">' +
+        '<p class="wordmark">REC LEAGUE MANAGER</p>' +
+        '<h2 class="scr-title">Sign in<span class="story-tag">US01</span></h2>' +
+        '<div class="field"><label for="in-email">Email</label>' +
+          '<input id="in-email" value="' + esc(state.authDraft.email) + '"></div>' +
+        '<div class="field"><label for="in-pass">Password</label>' +
+          '<input id="in-pass" type="password" value="' + esc(state.authDraft.password) + '"></div>' +
+        (state.authError ? '<p class="help-error">Email or password is incorrect.</p>' : '') +
+        '<button class="btn btn-primary" data-action="sign-in">Sign in</button>' +
+        '<button class="textbtn" style="text-align:left;" data-action="show-auth-error">See what a wrong password looks like</button>' +
+      '</div>'
+    );
+  }
+
+  function renderLeagues(){
+    return (
+      '<div class="topbar"><div class="topbar-row">' +
+        '<div><p class="app">REC LEAGUE MANAGER</p><p class="league">Signed in as Dana</p></div>' +
+        '<button class="topbar-right" data-action="sign-out">Sign out</button>' +
+      '</div></div>' +
+      '<div class="content">' +
+        '<h2 class="scr-title">Your leagues<span class="story-tag">US01</span></h2>' +
+        '<div class="list">' +
+          '<button class="list-row tappable" data-action="open-league">' +
+            '<div><div class="primary">' + esc(state.league.name) + '</div>' +
+            '<div class="secondary">' + esc(state.league.sport) + ' &middot; ' + esc(state.league.season) + ' &middot; Week ' + currentWeek(state.games, state.totalWeeks) + ' of ' + state.league.weeks + '</div></div>' +
+            '<span class="chev">&rsaquo;</span>' +
+          '</button>' +
+        '</div>' +
+        '<button class="btn btn-ghost" data-action="new-league">+ Create a league</button>' +
+      '</div>'
+    );
+  }
+
+  function renderCreate(){
+    var d = state.createDraft, e = state.createErrors;
+    return (
+      '<div class="topbar"><div class="topbar-row">' +
+        '<button class="backbtn" data-action="back">&lsaquo;</button>' +
+        '<div class="league" style="font-size:16px;">New league</div><span style="width:20px;"></span>' +
+      '</div></div>' +
+      '<div class="content">' +
+        '<h2 class="scr-title">Create a league<span class="story-tag">US02</span></h2>' +
+        '<div class="field"><label for="cr-name">Name</label><input id="cr-name" value="' + esc(d.name) + '">' +
+          (e.name ? '<p class="help-error">' + e.name + '</p>' : '') + '</div>' +
+        '<div class="row-inline">' +
+          '<div class="field"><label for="cr-sport">Sport</label><input id="cr-sport" value="' + esc(d.sport) + '"></div>' +
+          '<div class="field"><label for="cr-weeks">Weeks</label><input id="cr-weeks" value="' + esc(d.weeks) + '">' +
+            (e.weeks ? '<p class="help-error">' + e.weeks + '</p>' : '') + '</div>' +
+        '</div>' +
+        '<div class="field"><label for="cr-season">Season label</label><input id="cr-season" value="' + esc(d.season) + '"></div>' +
+        '<button class="btn btn-primary" data-action="submit-create">Create league</button>' +
+      '</div>'
+    );
+  }
+
+  function renderLeague(){
+    var tab = state.league.activeTab;
+    var body =
+      tab === 'overview' ? renderOverviewTab() :
+      tab === 'entrants' ? renderEntrantsTab() :
+      tab === 'schedule' ? renderScheduleTab() :
+      renderStandingsTab();
+
+    return (
+      '<div class="topbar"><div class="topbar-row">' +
+        '<button class="backbtn" data-action="back">&lsaquo;</button>' +
+        '<div><p class="league">' + esc(state.league.name) + '</p><p class="meta">' + esc(state.league.season) + ' &middot; Week ' + currentWeek(state.games, state.totalWeeks) + ' of ' + state.league.weeks + '</p></div>' +
+        '<span style="width:16px;"></span>' +
+      '</div></div>' +
+      body +
+      '<div class="tabbar">' +
+        tabBtn('overview','Overview') + tabBtn('entrants','Entrants') + tabBtn('schedule','Schedule') + tabBtn('standings','Standings') +
+      '</div>'
+    );
+
+    function tabBtn(key, label){
+      var active = tab === key;
+      return '<button class="tab' + (active ? ' active' : '') + '" data-action="set-tab" data-tab="' + key + '">' +
+        '<span class="tdot"></span>' + label + '</button>';
+    }
+  }
+
+  function renderOverviewTab(){
+    var standings = calcStandings(state.entrants, state.games);
+    var leader = standings.length ? standings[0] : null;
+    var scoredCount = state.games.filter(function(g){ return g.hs != null; }).length;
+    return (
+      '<div class="content">' +
+        '<h2 class="scr-title">Overview<span class="story-tag">Hub</span></h2>' +
+        '<div class="link-box">' +
+          '<span class="url">recleague.app/l/' + esc(state.league.slug) + '</span>' +
+          '<button class="btn btn-ghost btn-sm" data-action="copy-link">' + (state.copied ? 'Link copied' : 'Copy link') + '</button>' +
+        '</div>' +
+        '<div class="list">' +
+          '<button class="list-row tappable" data-action="set-tab" data-tab="entrants">' +
+            '<div class="primary">Entrants</div><div class="secondary">' + state.entrants.length + ' registered</div>' +
+          '</button>' +
+          '<button class="list-row tappable" data-action="set-tab" data-tab="schedule">' +
+            '<div class="primary">Schedule</div><div class="secondary">Week ' + currentWeek(state.games, state.totalWeeks) + ' of ' + state.totalWeeks + '</div>' +
+          '</button>' +
+          '<button class="list-row tappable" data-action="set-tab" data-tab="standings">' +
+            '<div class="primary">Standings</div><div class="secondary">' + (scoredCount ? (esc(leader.name) + ' lead' + (leader.name.slice(-1)==='s'?'':'s') + ', ' + leader.w + '&ndash;' + leader.l) : 'No games played yet') + '</div>' +
+          '</button>' +
+        '</div>' +
+        '<button class="btn btn-ghost" data-action="preview-public">Preview public page</button>' +
+        '<button class="textbtn" style="text-align:left;" data-action="preview-notfound">Preview a broken link</button>' +
+      '</div>'
+    );
+  }
+
+  function renderEntrantsTab(){
+    var rows = state.entrants.map(function(name){
+      return '<div class="list-row"><div class="primary">' + esc(name) + '</div></div>';
+    }).join('');
+    return (
+      '<div class="content">' +
+        '<h2 class="scr-title">Entrants<span class="story-tag">US03</span></h2>' +
+        '<div class="row-inline">' +
+          '<div class="field"><label for="en-name">Team or player name</label>' +
+            '<input id="en-name" value="' + esc(state.entrantDraft) + '">' +
+            (state.entrantError ? '<p class="help-error">' + state.entrantError + '</p>' : '') +
+          '</div>' +
+          '<button class="btn btn-primary btn-sm" data-action="add-entrant">Add</button>' +
+        '</div>' +
+        '<div class="list">' + rows + '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderScheduleTab(){
+    var scoredAny = state.games.some(function(g){ return g.hs != null; });
+    var cw = currentWeek(state.games, state.totalWeeks);
+
+    var banner = '';
+    if(state.genRefusal){
+      banner = '<div class="banner banner-brick">' + state.genRefusal + '</div>';
+    } else if(scoredAny){
+      banner = '<div class="banner banner-brick">Scores already recorded &mdash; clear them first to regenerate.</div>' +
+        '<button class="btn btn-ghost btn-sm" data-action="clear-scores">Clear scores</button>';
+    } else {
+      banner = '<div class="banner banner-gold">Ready to generate &mdash; ' + state.entrants.length + ' entrants, ' + state.totalWeeks + ' weeks.</div>' +
+        '<button class="btn btn-primary btn-sm" data-action="generate-schedule">Generate schedule</button>';
+    }
+
+    var weeksHtml = '';
+    for(var w = 1; w <= state.totalWeeks; w++){
+      var weekGames = state.games.filter(function(g){ return g.week === w; });
+      var played = weekGames.length && weekGames.every(function(g){ return g.hs != null; });
+      var tagText = played ? 'Played' : (w === cw ? 'This week' : 'Upcoming');
+      var rows = weekGames.map(function(g){
+        var idx = state.games.indexOf(g);
+        var scored = g.hs != null;
+        return '<button class="game-row' + (scored ? ' scored' : '') + '" data-action="open-score" data-idx="' + idx + '">' +
+          '<span class="team">' + esc(g.home) + '</span>' +
+          '<span class="mid">' + (scored ? (g.hs + '&ndash;' + g.as) : 'vs') + '</span>' +
+          '<span class="team right">' + esc(g.away) + '</span>' +
+        '</button>';
+      }).join('');
+      weeksHtml += '<div class="week' + (w === cw && !played ? ' current' : '') + '">' +
+        '<div class="week-head"><span>Week ' + w + '</span><span class="tag">' + tagText + '</span></div>' +
+        '<div class="week-body">' + rows + '</div>' +
+      '</div>';
+    }
+
+    return (
+      '<div class="content">' +
+        '<h2 class="scr-title">Schedule<span class="story-tag">US04</span></h2>' +
+        banner +
+        weeksHtml +
+        '<p class="hint">Tap any game to enter or correct its score.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderStandingsTab(){
+    var standings = calcStandings(state.entrants, state.games);
+    var anyPlayed = state.games.some(function(g){ return g.hs != null; });
+    return (
+      '<div class="content">' +
+        '<h2 class="scr-title">Standings<span class="story-tag">US06</span></h2>' +
+        (anyPlayed ?
+          '<table class="standings"><thead><tr><th>Entrant</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr></thead><tbody>' +
+            standings.map(function(r){
+              return '<tr><td>' + esc(r.name) + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + r.pf + '</td><td>' + r.pa + '</td>' +
+                '<td class="' + (r.diff >= 0 ? 'diff-pos' : 'diff-neg') + '">' + (r.diff > 0 ? '+' : (r.diff === 0 ? '' : '&minus;')) + Math.abs(r.diff) + '</td></tr>';
+            }).join('') +
+          '</tbody></table>' +
+          '<p class="tiebreak-note">Ties are broken by wins, then point differential, then points scored.</p>'
+          :
+          '<table class="standings"><thead><tr><th>Entrant</th><th>W</th><th>L</th></tr></thead><tbody>' +
+            state.entrants.map(function(n){ return '<tr><td>' + esc(n) + '</td><td>0</td><td>0</td></tr>'; }).join('') +
+          '</tbody></table>' +
+          '<p class="tiebreak-note">No games played yet.</p>'
+        ) +
+      '</div>'
+    );
+  }
+
+  function renderScore(){
+    var g = state.games[state.scoreGameIndex];
+    var d = state.scoreDraft;
+    return (
+      '<div class="topbar"><div class="topbar-row">' +
+        '<button class="backbtn" data-action="back">&lsaquo;</button>' +
+        '<div class="league" style="font-size:16px;">Enter score</div><span style="width:20px;"></span>' +
+      '</div></div>' +
+      '<div class="content">' +
+        '<h2 class="scr-title">Week ' + g.week + '<span class="story-tag">US05</span></h2>' +
+        '<div class="score-card">' +
+          '<div class="vs"><div class="team">' + esc(g.home) + '</div><div class="team" style="text-align:right;">' + esc(g.away) + '</div></div>' +
+          '<div class="score-inputs">' +
+            '<input id="sc-home" inputmode="numeric" value="' + esc(d.home) + '">' +
+            '<span class="dash">&ndash;</span>' +
+            '<input id="sc-away" inputmode="numeric" value="' + esc(d.away) + '">' +
+          '</div>' +
+          (d.error ? '<p class="help-error">' + d.error + '</p>' : '') +
+          '<button class="btn btn-primary btn-block" data-action="save-score">Save score</button>' +
+        '</div>' +
+        '<p class="hint">Saving again replaces the old score &mdash; Sunday-night corrections are normal.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderPublic(){
+    var standings = calcStandings(state.entrants, state.games);
+    var cw = currentWeek(state.games, state.totalWeeks);
+    var cwGames = state.games.filter(function(g){ return g.week === cw; });
+    var weekLines = '';
+    for(var w = 1; w <= state.totalWeeks; w++){
+      var wg = state.games.filter(function(g){ return g.week === w; });
+      var played = wg.length && wg.every(function(g){ return g.hs != null; });
+      weekLines += '<div class="pub-week-line"><span>Week ' + w + '</span><span>' + (played ? 'played' : (w === cw ? 'this week' : 'upcoming')) + '</span></div>';
+    }
+    return (
+      '<div class="pub-content">' +
+        '<div class="pub-hero"><h2 class="display">' + esc(state.league.name) + '</h2><p>' + esc(state.league.season.toUpperCase()) + '</p></div>' +
+        '<div><p class="pub-section-title">This week &mdash; week ' + cw + '</p>' +
+          cwGames.map(function(g){
+            return '<div class="pub-game"><span>' + esc(g.home) + '</span><span style="color:var(--paper);">vs</span><span>' + esc(g.away) + '</span></div>';
+          }).join('') +
+        '</div>' +
+        '<hr class="pub-divider">' +
+        '<div><p class="pub-section-title">Full schedule</p>' + weekLines + '</div>' +
+        '<hr class="pub-divider">' +
+        '<div><p class="pub-section-title">Standings</p>' +
+          '<table class="pub-standings"><thead><tr><th>Entrant</th><th>W</th><th>L</th><th>Diff</th></tr></thead><tbody>' +
+            standings.map(function(r){
+              return '<tr><td>' + esc(r.name) + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + (r.diff > 0 ? '+' : (r.diff===0?'':'&minus;')) + Math.abs(r.diff) + '</td></tr>';
+            }).join('') +
+          '</tbody></table>' +
+        '</div>' +
+        '<p class="pub-footer">No sign-in needed. Nothing on this page edits the league.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderNotFound(){
+    return (
+      '<div class="notfound-wrap">' +
+        '<h2 class="display">League not found</h2>' +
+        '<p>This is what a player sees if a link is mistyped or the league is gone &mdash; never a stack trace.</p>' +
+      '</div>'
+    );
+  }
+
+  /* ---------- wiring for text inputs that shouldn't re-render on keystroke ---------- */
+  function wireInputs(){
+    var map = [
+      ['in-email', function(v){ state.authDraft.email = v; state.authError = false; }],
+      ['in-pass', function(v){ state.authDraft.password = v; state.authError = false; }],
+      ['cr-name', function(v){ state.createDraft.name = v; }],
+      ['cr-sport', function(v){ state.createDraft.sport = v; }],
+      ['cr-season', function(v){ state.createDraft.season = v; }],
+      ['cr-weeks', function(v){ state.createDraft.weeks = v; }],
+      ['en-name', function(v){ state.entrantDraft = v; }],
+      ['sc-home', function(v){ state.scoreDraft.home = v; }],
+      ['sc-away', function(v){ state.scoreDraft.away = v; }]
+    ];
+    map.forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if(el) el.addEventListener('input', function(){ pair[1](this.value); });
+    });
+  }
+
+  /* ---------- actions ---------- */
+  function handleAction(action, el){
+    if(action === 'sign-in'){
+      if(state.authDraft.email.trim() && state.authDraft.password.trim()){
+        state.authError = false;
+        push('leagues');
+      }
+    } else if(action === 'show-auth-error'){
+      state.authError = true;
+    } else if(action === 'sign-out'){
+      state.stack = ['signin'];
+    } else if(action === 'open-league'){
+      push('league');
+    } else if(action === 'new-league'){
+      push('create');
+    } else if(action === 'back'){
+      pop();
+    } else if(action === 'submit-create'){
+      var d = state.createDraft, errs = {};
+      if(!d.name.trim()) errs.name = 'Name is required.';
+      var weeksNum = parseInt(d.weeks, 10);
+      if(isNaN(weeksNum) || weeksNum < 1) errs.weeks = 'Weeks must be at least 1.';
+      state.createErrors = errs;
+      if(Object.keys(errs).length === 0){
+        state.league.name = d.name.trim();
+        state.league.sport = d.sport.trim() || 'Cornhole';
+        state.league.season = d.season.trim() || 'Fall 2026';
+        state.league.weeks = weeksNum;
+        pop();
+        push('league');
+        state.league.activeTab = 'overview';
+      }
+    } else if(action === 'set-tab'){
+      state.league.activeTab = el.getAttribute('data-tab');
+    } else if(action === 'copy-link'){
+      state.copied = true;
+      render();
+      setTimeout(function(){ state.copied = false; render(); }, 1400);
+      return;
+    } else if(action === 'preview-public'){
+      push('public');
+    } else if(action === 'preview-notfound'){
+      push('notfound');
+    } else if(action === 'exit-preview'){
+      pop();
+    } else if(action === 'add-entrant'){
+      var name = state.entrantDraft.trim();
+      if(!name) { /* no-op */ }
+      else if(state.entrants.some(function(n){ return n.toLowerCase() === name.toLowerCase(); })){
+        state.entrantError = 'An entrant with that name already exists in this league.';
+      } else {
+        state.entrants.push(name);
+        state.entrantDraft = '';
+        state.entrantError = '';
+      }
+    } else if(action === 'open-score'){
+      var idx = parseInt(el.getAttribute('data-idx'), 10);
+      var g = state.games[idx];
+      state.scoreGameIndex = idx;
+      state.scoreDraft = { home: g.hs != null ? String(g.hs) : '', away: g.as != null ? String(g.as) : '', error: '' };
+      push('score');
+    } else if(action === 'save-score'){
+      var h = state.scoreDraft.home, a = state.scoreDraft.away;
+      var hn = Number(h), an = Number(a);
+      var valid = h !== '' && a !== '' && Number.isInteger(hn) && Number.isInteger(an) && hn >= 0 && an >= 0;
+      if(!valid){
+        state.scoreDraft.error = 'Scores must be whole numbers 0 or greater.';
+      } else {
+        state.games[state.scoreGameIndex].hs = hn;
+        state.games[state.scoreGameIndex].as = an;
+        pop();
+      }
+    } else if(action === 'generate-schedule'){
+      if(state.entrants.length < 2){
+        state.genRefusal = 'Add at least 2 entrants first.';
+      } else {
+        var built = generateSchedule(state.entrants);
+        state.games = built.games;
+        state.totalWeeks = built.weeks;
+        state.genRefusal = '';
+      }
+    } else if(action === 'clear-scores'){
+      state.games.forEach(function(g){ g.hs = null; g.as = null; });
+      state.genRefusal = '';
+    } else if(action === 'reset-demo'){
+      state = freshState();
+    }
+    render();
+  }
+
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-action]');
+    if(!el) return;
+    e.preventDefault();
+    handleAction(el.getAttribute('data-action'), el);
+  });
+
+  render();
+})();
+</script>

@@ -1,0 +1,807 @@
+<title>The Organizer's Path</title>
+<style>
+  :root{
+    --ink:#16342C;
+    --ink-2:#1D4137;
+    --paper:#F4F0E4;
+    --paper-dim:#EAE4D3;
+    --bag-blue:#2E5FA3;
+    --bag-blue-dim:#284f88;
+    --bag-gold:#D9A431;
+    --brick:#A34430;
+    --line:#D8D2C0;
+    --line-dark:rgba(244,240,228,.16);
+    --backdrop:#4B3A2C;
+    --backdrop-2:#3E2F24;
+    --bezel:#26221C;
+    --ink-text:#1B2A26;
+    --muted:#5B6E67;
+    --muted-dark:#AFC2BB;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--backdrop);
+    background-image:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(244,240,228,.06), transparent 60%),
+      linear-gradient(180deg, var(--backdrop) 0%, var(--backdrop-2) 100%);
+    color:var(--paper);
+    font-family:"Karla", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding-inline:16px;
+    padding-block:48px 64px;
+  }
+
+  h1,h2,h3{margin:0; text-wrap:balance;}
+
+  .display{
+    font-family:"Bebas Neue", "Arial Narrow", sans-serif;
+    font-weight:400;
+    letter-spacing:.02em;
+  }
+
+  /* ---------- intro ---------- */
+  .intro{
+    max-width:640px;
+    margin:0 auto 40px;
+  }
+  .intro .kicker{
+    font-size:13px;
+    color:var(--bag-gold);
+    margin:0 0 6px;
+  }
+  .intro h1{
+    font-size:clamp(34px,6vw,52px);
+    line-height:.95;
+    color:var(--paper);
+  }
+  .intro p{
+    max-width:60ch;
+    color:var(--muted-dark);
+    font-size:16px;
+    line-height:1.55;
+    margin:14px 0 0;
+  }
+  .intro .cast{
+    margin-top:18px;
+    font-size:14px;
+    color:var(--paper);
+    opacity:.75;
+  }
+  .intro .cast b{color:var(--bag-gold); font-weight:600;}
+
+  /* ---------- progress rail ---------- */
+  .rail{
+    max-width:1100px;
+    margin:0 auto 22px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .rail::-webkit-scrollbar{display:none;}
+  .rail-track{
+    display:flex;
+    align-items:flex-start;
+    gap:0;
+    min-width:max-content;
+    padding-bottom:4px;
+  }
+  .tick{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    background:none;
+    border:none;
+    color:var(--muted-dark);
+    font-family:"Karla",sans-serif;
+    cursor:pointer;
+    padding:6px 14px;
+    position:relative;
+  }
+  .tick .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--muted-dark);
+    opacity:.5;
+    transition:background .2s ease, opacity .2s ease, transform .2s ease;
+  }
+  .tick .lbl{
+    font-size:11.5px;
+    white-space:nowrap;
+    opacity:.75;
+  }
+  .tick::before{
+    content:"";
+    position:absolute;
+    top:10px; left:-50%; right:50%;
+    height:1px;
+    background:var(--line-dark);
+  }
+  .tick:first-child::before{display:none;}
+  .tick[aria-current="true"] .dot{
+    background:var(--bag-gold);
+    opacity:1;
+    transform:scale(1.3);
+  }
+  .tick[aria-current="true"] .lbl{
+    color:var(--paper);
+    opacity:1;
+  }
+  .tick:focus-visible{outline:2px solid var(--bag-gold); outline-offset:3px; border-radius:4px;}
+
+  /* ---------- filmstrip ---------- */
+  .filmstrip{
+    display:flex;
+    gap:28px;
+    overflow-x:auto;
+    scroll-snap-type:x proximity;
+    padding:8px 6vw 28px;
+    margin:0 -6vw;
+  }
+  .frame{
+    scroll-snap-align:center;
+    flex:0 0 auto;
+    width:min(300px,78vw);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .frame-cap{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:8px;
+    margin-bottom:10px;
+    font-size:12.5px;
+    color:var(--muted-dark);
+  }
+  .frame-cap .num{
+    font-family:"Bebas Neue",sans-serif;
+    font-size:20px;
+    color:var(--bag-gold);
+    line-height:1;
+  }
+  .frame-cap .name{color:var(--paper); font-weight:600; font-size:13px;}
+  .frame-cap .story{opacity:.65;}
+
+  .device{
+    width:100%;
+    aspect-ratio:9/19.3;
+    background:var(--bezel);
+    border-radius:34px;
+    padding:9px;
+    box-shadow:0 22px 40px -18px rgba(0,0,0,.6), inset 0 0 0 1px rgba(244,240,228,.06);
+  }
+  .screen{
+    position:relative;
+    width:100%; height:100%;
+    border-radius:26px;
+    overflow:hidden;
+    background:var(--paper);
+    color:var(--ink-text);
+    display:flex;
+    flex-direction:column;
+    font-size:13px;
+  }
+  .screen.public{background:var(--ink);}
+  .notch{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%);
+    width:64px; height:5px; border-radius:3px;
+    background:rgba(0,0,0,.14);
+  }
+  .screen.public .notch{background:rgba(244,240,228,.14);}
+  .home-bar{
+    position:absolute; bottom:7px; left:50%; transform:translateX(-50%);
+    width:84px; height:4px; border-radius:2px;
+    background:rgba(0,0,0,.16);
+  }
+  .screen.public .home-bar{background:rgba(244,240,228,.22);}
+
+  .topbar{
+    background:var(--ink);
+    color:var(--paper);
+    padding:20px 16px 10px;
+  }
+  .topbar .app{font-size:11px; opacity:.7; margin:0 0 2px;}
+  .topbar .league{font-family:"Bebas Neue",sans-serif; font-size:19px; letter-spacing:.02em; margin:0;}
+  .topbar .meta{font-size:11px; opacity:.75; margin:2px 0 0;}
+
+  .content{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 16px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .content.centered{justify-content:center; padding-top:26px;}
+
+  .scr-title{
+    font-family:"Bebas Neue",sans-serif;
+    font-size:22px;
+    letter-spacing:.02em;
+    color:var(--ink);
+    margin:0;
+  }
+  .wordmark{font-size:11.5px; font-weight:700; color:var(--bag-blue); margin:0 0 2px;}
+
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--muted); font-weight:700;}
+  .field input, .field .input-static{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:13.5px;
+    font-family:inherit;
+    color:var(--ink-text);
+  }
+  .field input:focus-visible{outline:2px solid var(--bag-blue); outline-offset:1px;}
+  .help-error{font-size:11.5px; color:var(--brick); margin:0;}
+
+  .btn{
+    appearance:none; border:none; border-radius:8px;
+    padding:10px 14px;
+    font-family:"Karla",sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn-primary{background:var(--bag-blue); color:#fff;}
+  .btn-primary:hover{background:var(--bag-blue-dim);}
+  .btn-ghost{background:transparent; color:var(--bag-blue); border:1px solid var(--bag-blue);}
+  .btn-disabled{background:var(--line); color:var(--muted); cursor:not-allowed;}
+  .btn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:2px;}
+  .btn-sm{padding:6px 10px; font-size:11.5px; border-radius:6px;}
+
+  .list{display:flex; flex-direction:column;}
+  .list-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    gap:10px;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .list-row .primary{font-weight:700; font-size:13.5px;}
+  .list-row .secondary{font-size:11.5px; color:var(--muted);}
+
+  .row-inline{display:flex; gap:8px; align-items:flex-end;}
+  .row-inline .field{flex:1;}
+
+  .banner{
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.4;
+  }
+  .banner-brick{background:rgba(163,68,48,.1); color:var(--brick); border:1px solid rgba(163,68,48,.3);}
+  .banner-gold{background:rgba(217,164,49,.14); color:#7a5714; border:1px solid rgba(217,164,49,.35);}
+
+  .week{
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .week-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 10px;
+    background:var(--paper-dim);
+    font-size:11.5px; font-weight:700;
+  }
+  .week.current .week-head{background:var(--bag-blue); color:#fff;}
+  .week-head .tag{font-size:10px; font-weight:700; text-transform:none;}
+  .week-body{padding:2px 10px;}
+  .game-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0;
+    border-bottom:1px solid var(--line);
+    font-size:12px;
+  }
+  .game-row:last-child{border-bottom:none;}
+  .game-row .score{
+    font-variant-numeric:tabular-nums;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .week.upcoming .game-row{color:var(--muted);}
+
+  table.standings{width:100%; border-collapse:collapse; font-size:12px;}
+  table.standings th, table.standings td{
+    padding:7px 4px;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+    border-bottom:1px solid var(--line);
+  }
+  table.standings th{font-size:10.5px; color:var(--muted); font-weight:700;}
+  table.standings td:first-child, table.standings th:first-child{text-align:left; padding-left:0;}
+  table.standings tr:first-child td{font-weight:700;}
+  .diff-pos{color:var(--ink-2);}
+  .diff-neg{color:var(--brick);}
+  .tiebreak-note{font-size:11px; color:var(--muted); margin:0;}
+
+  .score-card{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    background:var(--paper-dim);
+  }
+  .score-card .vs{display:flex; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .score-card .team{font-weight:700; font-size:12.5px; flex:1;}
+  .score-inputs{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .score-inputs .num{
+    flex:1; text-align:center;
+    border:1px solid var(--line); border-radius:8px;
+    padding:10px 0; font-size:18px; font-weight:700;
+    font-variant-numeric:tabular-nums;
+    background:#fff; color:var(--ink-text);
+  }
+  .score-inputs .dash{color:var(--muted); font-weight:700;}
+
+  /* ---------- public screen ---------- */
+  .pub-content{
+    flex:1; overflow-y:auto;
+    padding:26px 16px 20px;
+    display:flex; flex-direction:column; gap:16px;
+    color:var(--paper);
+  }
+  .pub-hero{text-align:center; margin-bottom:2px;}
+  .pub-hero h2{
+    font-family:"Bebas Neue",sans-serif;
+    font-size:26px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    color:var(--paper);
+  }
+  .pub-hero p{margin:2px 0 0; font-size:11.5px; color:var(--bag-gold); font-weight:700;}
+  .pub-section-title{
+    font-size:11px; font-weight:700; color:var(--bag-gold);
+    margin:0 0 8px;
+  }
+  .pub-game{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 0; border-bottom:1px solid var(--line-dark);
+    font-size:13px;
+  }
+  .pub-game:last-child{border-bottom:none;}
+  .pub-divider{height:1px; background:var(--line-dark); border:none; margin:0;}
+  .pub-week-line{display:flex; justify-content:space-between; padding:5px 0; font-size:11.5px; color:var(--muted-dark);}
+  table.pub-standings{width:100%; border-collapse:collapse; font-size:11.5px;}
+  table.pub-standings th, table.pub-standings td{
+    padding:6px 4px; text-align:right;
+    font-variant-numeric:tabular-nums;
+    border-bottom:1px solid var(--line-dark);
+    color:var(--paper);
+  }
+  table.pub-standings th{font-size:10px; color:var(--muted-dark); font-weight:700;}
+  table.pub-standings td:first-child, table.pub-standings th:first-child{text-align:left; padding-left:0;}
+  .pub-footer{font-size:10.5px; color:var(--muted-dark); text-align:center; margin-top:2px;}
+
+  /* ---------- annotation chips ---------- */
+  .notes{
+    width:100%;
+    margin-top:12px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .chip{
+    font-size:11.5px;
+    line-height:1.4;
+    color:var(--paper);
+    background:rgba(244,240,228,.06);
+    border-left:2px solid var(--bag-gold);
+    padding:6px 10px;
+  }
+  .chip b{color:var(--bag-gold); font-weight:700;}
+
+  @media (prefers-reduced-motion: reduce){
+    .filmstrip{scroll-behavior:auto;}
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Karla:wght@400;500;700&display=swap">
+
+<div class="intro">
+  <p class="kicker">Rec League Manager — MVP walkthrough</p>
+  <h1 class="display">League night, nine screens.</h1>
+  <p>The organizer's path from the PRD (§6), built with a real season: Dana's Tuesday-night cornhole league, week 3 of 8. Scroll the strip below the way you'd scroll a phone.</p>
+  <p class="cast">Organizer: <b>Dana</b> · League: <b>Tuesday Cornhole</b> · Entrants: <b>Bag Ladies, Board Stiff, Air Apparent, In Cahoots, Toss Up, Hole Lotta Love</b></p>
+</div>
+
+<nav class="rail" aria-label="Screens">
+  <div class="rail-track" id="railTrack">
+    <button class="tick" data-target="f1" aria-current="true"><span class="dot"></span><span class="lbl">1 · Sign in</span></button>
+    <button class="tick" data-target="f2"><span class="dot"></span><span class="lbl">2 · Leagues</span></button>
+    <button class="tick" data-target="f3"><span class="dot"></span><span class="lbl">3 · Create</span></button>
+    <button class="tick" data-target="f4"><span class="dot"></span><span class="lbl">4 · League home</span></button>
+    <button class="tick" data-target="f5"><span class="dot"></span><span class="lbl">5 · Entrants</span></button>
+    <button class="tick" data-target="f6"><span class="dot"></span><span class="lbl">6 · Schedule</span></button>
+    <button class="tick" data-target="f7"><span class="dot"></span><span class="lbl">7 · Enter score</span></button>
+    <button class="tick" data-target="f8"><span class="dot"></span><span class="lbl">8 · Standings</span></button>
+    <button class="tick" data-target="f9"><span class="dot"></span><span class="lbl">9 · Public page</span></button>
+  </div>
+</nav>
+
+<div class="filmstrip" id="filmstrip">
+
+  <!-- 1: Sign in -->
+  <figure class="frame" id="f1">
+    <figcaption class="frame-cap"><span class="num">1</span><span class="name">Sign in</span><span class="story">US01</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content centered">
+          <p class="wordmark">REC LEAGUE MANAGER</p>
+          <h2 class="scr-title">Sign in</h2>
+          <div class="field">
+            <label for="p1-email">Email</label>
+            <input id="p1-email" value="dana@duckpinbrewing.com" readonly>
+          </div>
+          <div class="field">
+            <label for="p1-pass">Password</label>
+            <input id="p1-pass" type="password" value="xxxxxxxx" readonly>
+          </div>
+          <button class="btn btn-primary">Sign in</button>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Wrong password: same page, one line — <b>"Email or password is incorrect."</b> No league shown.</p>
+    </div>
+  </figure>
+
+  <!-- 2: League list -->
+  <figure class="frame" id="f2">
+    <figcaption class="frame-cap"><span class="num">2</span><span class="name">Your leagues</span><span class="story">US01</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="topbar">
+          <p class="app">REC LEAGUE MANAGER</p>
+          <p class="league">Signed in as Dana</p>
+        </div>
+        <div class="content">
+          <h2 class="scr-title">Your leagues</h2>
+          <div class="list">
+            <div class="list-row">
+              <div>
+                <div class="primary">Tuesday Cornhole</div>
+                <div class="secondary">Cornhole · Fall 2026 · Week 3 of 8</div>
+              </div>
+              <span aria-hidden="true">›</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost">+ Create a league</button>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Before your first league: <b>"No leagues yet — create one."</b></p>
+    </div>
+  </figure>
+
+  <!-- 3: Create league -->
+  <figure class="frame" id="f3">
+    <figcaption class="frame-cap"><span class="num">3</span><span class="name">Create a league</span><span class="story">US02</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content">
+          <h2 class="scr-title">Create a league</h2>
+          <div class="field">
+            <label for="p3-name">Name</label>
+            <input id="p3-name" value="Tuesday Cornhole" readonly>
+          </div>
+          <div class="row-inline">
+            <div class="field">
+              <label for="p3-sport">Sport</label>
+              <input id="p3-sport" value="Cornhole" readonly>
+            </div>
+            <div class="field">
+              <label for="p3-weeks">Weeks</label>
+              <input id="p3-weeks" value="8" readonly>
+            </div>
+          </div>
+          <div class="field">
+            <label for="p3-season">Season label</label>
+            <input id="p3-season" value="Fall 2026" readonly>
+          </div>
+          <button class="btn btn-primary">Create league</button>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Blank name → <b>"Name is required."</b> Zero or negative weeks → <b>"Weeks must be at least 1."</b></p>
+    </div>
+  </figure>
+
+  <!-- 4: League home -->
+  <figure class="frame" id="f4">
+    <figcaption class="frame-cap"><span class="num">4</span><span class="name">League home</span><span class="story">Hub</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="topbar">
+          <p class="app">TUESDAY CORNHOLE</p>
+          <p class="league">Fall 2026</p>
+          <p class="meta">Week 3 of 8</p>
+        </div>
+        <div class="content">
+          <div class="list-row" style="border:1px solid var(--line); border-radius:8px; padding:8px 10px;">
+            <div class="secondary" style="font-size:11px;">recleague.app/l/tuesday-cornhole</div>
+            <button class="btn btn-ghost btn-sm">Copy link</button>
+          </div>
+          <div class="list">
+            <div class="list-row">
+              <div class="primary">Entrants</div>
+              <div class="secondary">6 registered</div>
+            </div>
+            <div class="list-row">
+              <div class="primary">Schedule</div>
+              <div class="secondary">Week 3 of 5 up next</div>
+            </div>
+            <div class="list-row">
+              <div class="primary">Standings</div>
+              <div class="secondary">Bag Ladies lead, 2–0</div>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">One organizer per league, always — there's no co-admin to hand this to.</p>
+    </div>
+  </figure>
+
+  <!-- 5: Entrants -->
+  <figure class="frame" id="f5">
+    <figcaption class="frame-cap"><span class="num">5</span><span class="name">Entrants</span><span class="story">US03</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content">
+          <h2 class="scr-title">Entrants</h2>
+          <div class="row-inline">
+            <div class="field">
+              <label for="p5-name">Team or player name</label>
+              <input id="p5-name" value="Bag Ladies" readonly>
+              <p class="help-error">An entrant with that name already exists in this league.</p>
+            </div>
+            <button class="btn btn-primary btn-sm">Add</button>
+          </div>
+          <div class="list">
+            <div class="list-row"><div class="primary">Bag Ladies</div></div>
+            <div class="list-row"><div class="primary">Board Stiff</div></div>
+            <div class="list-row"><div class="primary">Air Apparent</div></div>
+            <div class="list-row"><div class="primary">In Cahoots</div></div>
+            <div class="list-row"><div class="primary">Toss Up</div></div>
+            <div class="list-row"><div class="primary">Hole Lotta Love</div></div>
+          </div>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Name field and Add button both fit a 375px screen — built for the parking lot, not the office.</p>
+    </div>
+  </figure>
+
+  <!-- 6: Schedule -->
+  <figure class="frame" id="f6">
+    <figcaption class="frame-cap"><span class="num">6</span><span class="name">Schedule</span><span class="story">US04</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content">
+          <h2 class="scr-title">Schedule</h2>
+          <div class="banner banner-brick">Scores already recorded — clear them first to regenerate.</div>
+
+          <div class="week">
+            <div class="week-head"><span>Week 1</span><span class="tag">Played</span></div>
+            <div class="week-body">
+              <div class="game-row"><span>Bag Ladies</span><span class="score">21–14</span><span>Hole Lotta Love</span></div>
+              <div class="game-row"><span>Board Stiff</span><span class="score">21–18</span><span>Toss Up</span></div>
+              <div class="game-row"><span>Air Apparent</span><span class="score">15–21</span><span>In Cahoots</span></div>
+            </div>
+          </div>
+
+          <div class="week">
+            <div class="week-head"><span>Week 2</span><span class="tag">Played</span></div>
+            <div class="week-body">
+              <div class="game-row"><span>Bag Ladies</span><span class="score">21–9</span><span>Toss Up</span></div>
+              <div class="game-row"><span>Hole Lotta Love</span><span class="score">21–17</span><span>In Cahoots</span></div>
+              <div class="game-row"><span>Board Stiff</span><span class="score">14–21</span><span>Air Apparent</span></div>
+            </div>
+          </div>
+
+          <div class="week current">
+            <div class="week-head"><span>Week 3</span><span class="tag">This week</span></div>
+            <div class="week-body">
+              <div class="game-row"><span>Bag Ladies</span><span>vs</span><span>In Cahoots</span></div>
+              <div class="game-row"><span>Toss Up</span><span>vs</span><span>Air Apparent</span></div>
+              <div class="game-row"><span>Hole Lotta Love</span><span>vs</span><span>Board Stiff</span></div>
+            </div>
+          </div>
+
+          <div class="week upcoming">
+            <div class="week-head"><span>Week 4</span><span class="tag">Upcoming</span></div>
+            <div class="week-body">
+              <div class="game-row"><span>Bag Ladies</span><span>vs</span><span>Air Apparent</span></div>
+              <div class="game-row"><span>In Cahoots</span><span>vs</span><span>Board Stiff</span></div>
+              <div class="game-row"><span>Toss Up</span><span>vs</span><span>Hole Lotta Love</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Fewer than 2 entrants → <b>"Add at least 2 entrants first."</b> An odd entrant count adds a bye row that rotates on its own — this six-team season never needs one.</p>
+    </div>
+  </figure>
+
+  <!-- 7: Enter score -->
+  <figure class="frame" id="f7">
+    <figcaption class="frame-cap"><span class="num">7</span><span class="name">Enter scores</span><span class="story">US05</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content">
+          <h2 class="scr-title">Week 3 · Enter scores</h2>
+          <div class="score-card">
+            <div class="vs">
+              <div class="team">Bag Ladies</div>
+              <div class="team" style="text-align:right;">In Cahoots</div>
+            </div>
+            <div class="score-inputs">
+              <div class="num">21</div>
+              <span class="dash">–</span>
+              <div class="num">17</div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;">Save score</button>
+          </div>
+          <div class="list">
+            <div class="list-row">
+              <div class="primary">Toss Up vs Air Apparent</div>
+              <button class="btn btn-ghost btn-sm">Enter score</button>
+            </div>
+            <div class="list-row">
+              <div class="primary">Hole Lotta Love vs Board Stiff</div>
+              <button class="btn btn-ghost btn-sm">Enter score</button>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Blank or negative → <b>"Scores must be whole numbers 0 or greater."</b> Saving again replaces the old score — Sunday-night corrections are normal.</p>
+    </div>
+  </figure>
+
+  <!-- 8: Standings -->
+  <figure class="frame" id="f8">
+    <figcaption class="frame-cap"><span class="num">8</span><span class="name">Standings</span><span class="story">US06</span></figcaption>
+    <div class="device">
+      <div class="screen organizer">
+        <div class="notch"></div>
+        <div class="content">
+          <h2 class="scr-title">Standings</h2>
+          <table class="standings">
+            <thead>
+              <tr><th>Entrant</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Bag Ladies</td><td>2</td><td>0</td><td>42</td><td>23</td><td class="diff-pos">+19</td></tr>
+              <tr><td>In Cahoots</td><td>1</td><td>1</td><td>38</td><td>36</td><td class="diff-pos">+2</td></tr>
+              <tr><td>Air Apparent</td><td>1</td><td>1</td><td>36</td><td>35</td><td class="diff-pos">+1</td></tr>
+              <tr><td>Hole Lotta Love</td><td>1</td><td>1</td><td>35</td><td>38</td><td class="diff-neg">−3</td></tr>
+              <tr><td>Board Stiff</td><td>1</td><td>1</td><td>35</td><td>39</td><td class="diff-neg">−4</td></tr>
+              <tr><td>Toss Up</td><td>0</td><td>2</td><td>27</td><td>42</td><td class="diff-neg">−15</td></tr>
+            </tbody>
+          </table>
+          <p class="tiebreak-note">Ties are broken by wins, then point differential, then points scored.</p>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">Before week 1: every row 0–0 and the page says <b>"No games played yet."</b> A game with no score contributes to nobody's row.</p>
+    </div>
+  </figure>
+
+  <!-- 9: Public page -->
+  <figure class="frame" id="f9">
+    <figcaption class="frame-cap"><span class="num">9</span><span class="name">Public page</span><span class="story">US07</span></figcaption>
+    <div class="device">
+      <div class="screen public">
+        <div class="notch"></div>
+        <div class="pub-content">
+          <div class="pub-hero">
+            <h2 class="display">Tuesday Cornhole</h2>
+            <p>FALL 2026</p>
+          </div>
+
+          <div>
+            <p class="pub-section-title">This week — week 3</p>
+            <div class="pub-game"><span>Bag Ladies</span><span class="score" style="color:var(--paper);">vs</span><span>In Cahoots</span></div>
+            <div class="pub-game"><span>Toss Up</span><span style="color:var(--paper);">vs</span><span>Air Apparent</span></div>
+            <div class="pub-game"><span>Hole Lotta Love</span><span style="color:var(--paper);">vs</span><span>Board Stiff</span></div>
+          </div>
+
+          <hr class="pub-divider">
+
+          <div>
+            <p class="pub-section-title">Full schedule</p>
+            <div class="pub-week-line"><span>Week 1</span><span>played</span></div>
+            <div class="pub-week-line"><span>Week 2</span><span>played</span></div>
+            <div class="pub-week-line"><span>Week 3</span><span>this week</span></div>
+            <div class="pub-week-line"><span>Week 4</span><span>upcoming</span></div>
+            <div class="pub-week-line"><span>Week 5</span><span>upcoming</span></div>
+          </div>
+
+          <hr class="pub-divider">
+
+          <div>
+            <p class="pub-section-title">Standings</p>
+            <table class="pub-standings">
+              <thead><tr><th>Entrant</th><th>W</th><th>L</th><th>Diff</th></tr></thead>
+              <tbody>
+                <tr><td>Bag Ladies</td><td>2</td><td>0</td><td>+19</td></tr>
+                <tr><td>In Cahoots</td><td>1</td><td>1</td><td>+2</td></tr>
+                <tr><td>Air Apparent</td><td>1</td><td>1</td><td>+1</td></tr>
+                <tr><td>Hole Lotta Love</td><td>1</td><td>1</td><td>−3</td></tr>
+                <tr><td>Board Stiff</td><td>1</td><td>1</td><td>−4</td></tr>
+                <tr><td>Toss Up</td><td>0</td><td>2</td><td>−15</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="pub-footer">No sign-in needed. Nothing on this page edits the league.</p>
+        </div>
+        <div class="home-bar"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <p class="chip">A league that doesn't exist shows <b>"League not found"</b> — never an error page.</p>
+    </div>
+  </figure>
+
+</div>
+
+<script>
+  (function(){
+    var strip = document.getElementById('filmstrip');
+    var ticks = Array.prototype.slice.call(document.querySelectorAll('.tick'));
+    var frames = ticks.map(function(t){ return document.getElementById(t.getAttribute('data-target')); });
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    ticks.forEach(function(tick, i){
+      tick.addEventListener('click', function(){
+        frames[i].scrollIntoView({
+          behavior: reduceMotion ? 'auto' : 'smooth',
+          inline: 'center',
+          block: 'nearest'
+        });
+      });
+    });
+
+    if('IntersectionObserver' in window){
+      var observer = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if(entry.isIntersecting && entry.intersectionRatio > 0.6){
+            var idx = frames.indexOf(entry.target);
+            if(idx > -1){
+              ticks.forEach(function(t){ t.removeAttribute('aria-current'); });
+              ticks[idx].setAttribute('aria-current', 'true');
+            }
+          }
+        });
+      }, { root: strip, threshold: [0.6] });
+      frames.forEach(function(f){ observer.observe(f); });
+    }
+  })();
+</script>
