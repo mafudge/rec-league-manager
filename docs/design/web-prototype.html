@@ -1,0 +1,783 @@
+<title>League Night, at the Desk</title>
+<style>
+  :root{
+    --ink:#16342C;
+    --ink-2:#1D4137;
+    --paper:#F4F0E4;
+    --paper-dim:#EAE4D3;
+    --bag-blue:#2E5FA3;
+    --bag-blue-dim:#284f88;
+    --bag-gold:#D9A431;
+    --brick:#A34430;
+    --line:#D8D2C0;
+    --line-dark:rgba(244,240,228,.16);
+    --backdrop:#4B3A2C;
+    --backdrop-2:#3E2F24;
+    --bezel:#26221C;
+    --ink-text:#1B2A26;
+    --muted:#5B6E67;
+    --muted-dark:#AFC2BB;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--backdrop);
+    background-image:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(244,240,228,.06), transparent 60%),
+      linear-gradient(180deg, var(--backdrop) 0%, var(--backdrop-2) 100%);
+    color:var(--paper);
+    font-family:"Karla", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding-inline:16px;
+    padding-block:44px 60px;
+  }
+
+  h1,h2,h3{margin:0; text-wrap:balance;}
+  button{font-family:inherit;}
+
+  .display{font-family:"Bebas Neue","Arial Narrow",sans-serif; font-weight:400; letter-spacing:.02em;}
+
+  /* ---------- intro ---------- */
+  .intro{max-width:640px; margin:0 auto 30px;}
+  .intro .kicker{font-size:13px; color:var(--bag-gold); margin:0 0 6px;}
+  .intro h1{font-size:clamp(32px,5.6vw,48px); line-height:.95; color:var(--paper);}
+  .intro p{max-width:62ch; color:var(--muted-dark); font-size:15.5px; line-height:1.55; margin:14px 0 0;}
+  .intro .cast{margin-top:16px; font-size:13.5px; color:var(--paper); opacity:.75;}
+  .intro .cast b{color:var(--bag-gold); font-weight:600;}
+
+  /* ---------- browser chrome ---------- */
+  .browser-wrap{width:min(1060px,94vw); margin:0 auto;}
+  .browser-bar{
+    display:flex; align-items:center; gap:12px;
+    background:var(--bezel); border-radius:14px 14px 0 0;
+    padding:11px 16px;
+  }
+  .dots{display:flex; gap:6px; flex:0 0 auto;}
+  .dots span{width:9px; height:9px; border-radius:50%; background:rgba(244,240,228,.22);}
+  .address{
+    flex:1; min-width:0;
+    background:rgba(244,240,228,.08); border-radius:999px;
+    padding:6px 14px; font-size:12px; color:var(--muted-dark);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .address b{color:var(--paper); font-weight:600;}
+  .browser-actions{display:flex; gap:14px; align-items:center; flex:0 0 auto;}
+  .textbtn{background:none; border:none; padding:0; cursor:pointer; font-size:12px; font-weight:700; color:var(--bag-gold); white-space:nowrap;}
+  .textbtn:hover{color:#e9bb5c;}
+  .textbtn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:3px;}
+
+  .browser-body{
+    position:relative;
+    background:var(--paper);
+    border-radius:0 0 14px 14px;
+    overflow:hidden;
+    box-shadow:0 26px 50px -20px rgba(0,0,0,.6);
+  }
+  .site{height:640px;}
+
+  /* ---------- shared page shells ---------- */
+  .page-center{height:100%; overflow-y:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px;}
+  .page-top{height:100%; overflow-y:auto; padding:40px 48px;}
+  .page-inner{max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:22px;}
+
+  .auth-card{width:100%; max-width:380px; display:flex; flex-direction:column; gap:14px;}
+  .auth-card.wide{max-width:460px;}
+  .wordmark{font-size:11px; font-weight:700; color:var(--bag-blue); margin:0;}
+  .scr-title{font-family:"Bebas Neue",sans-serif; font-size:24px; letter-spacing:.02em; color:var(--ink); margin:0; display:flex; align-items:baseline; gap:9px;}
+  .story-tag{font-family:"Karla",sans-serif; font-size:10.5px; font-weight:700; color:var(--muted); letter-spacing:normal;}
+
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11.5px; color:var(--muted); font-weight:700;}
+  .field input{border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px 11px; font-size:14px; font-family:inherit; color:var(--ink-text); width:100%;}
+  .field input:focus-visible{outline:2px solid var(--bag-blue); outline-offset:1px;}
+  .help-error{font-size:12px; color:var(--brick); margin:0;}
+  .row-inline{display:flex; gap:10px; align-items:flex-end;}
+  .row-inline .field{flex:1;}
+
+  .btn{appearance:none; border:none; border-radius:8px; padding:10px 16px; font-weight:700; font-size:13.5px; cursor:pointer; text-align:center;}
+  .btn-primary{background:var(--bag-blue); color:#fff;}
+  .btn-primary:hover{background:var(--bag-blue-dim);}
+  .btn-ghost{background:transparent; color:var(--bag-blue); border:1px solid var(--bag-blue);}
+  .btn-disabled{background:var(--line); color:var(--muted); cursor:not-allowed;}
+  .btn:focus-visible{outline:2px solid var(--bag-gold); outline-offset:2px;}
+  .btn-sm{padding:7px 12px; font-size:12px; border-radius:6px;}
+  .btn-block{width:100%;}
+
+  .dash-header{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .dash-header-actions{display:flex; gap:14px; align-items:center;}
+
+  .league-card{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    border:1px solid var(--line); border-radius:12px; padding:18px 20px;
+    background:#fff; cursor:pointer; width:100%; text-align:left; font:inherit;
+  }
+  .league-card:focus-visible{outline:2px solid var(--bag-blue); outline-offset:2px;}
+  .league-card .primary{font-weight:700; font-size:15px; color:var(--ink-text);}
+  .league-card .secondary{font-size:12px; color:var(--muted); margin-top:2px;}
+  .chev{color:var(--muted); font-size:16px;}
+
+  /* ---------- league shell: sidebar + main ---------- */
+  .app-row{height:100%; display:flex;}
+  .sidenav{width:240px; flex:0 0 auto; background:var(--ink); color:var(--paper); display:flex; flex-direction:column; padding:22px 18px; gap:16px; overflow-y:auto;}
+  .backlink{background:none; border:none; color:var(--muted-dark); font-size:12px; cursor:pointer; text-align:left; padding:0;}
+  .backlink:hover{color:var(--paper);}
+  .sidenav .brand{font-size:10px; opacity:.65; margin:0;}
+  .sidenav .league-name{font-family:"Bebas Neue",sans-serif; font-size:21px; margin:2px 0 0;}
+  .sidenav .league-meta{font-size:11px; opacity:.7; margin:2px 0 0;}
+  .navlist{display:flex; flex-direction:column; gap:2px; margin-top:4px;}
+  .navlink{display:flex; align-items:center; gap:10px; background:none; border:none; color:var(--muted-dark); font-size:13.5px; font-weight:700; padding:9px 10px; border-radius:8px; cursor:pointer; text-align:left;}
+  .navlink .ndot{width:6px; height:6px; border-radius:50%; background:transparent; flex:0 0 auto;}
+  .navlink.active{background:rgba(244,240,228,.09); color:var(--paper);}
+  .navlink.active .ndot{background:var(--bag-gold);}
+  .navlink:hover{color:var(--paper);}
+  .sidenav-footer{margin-top:auto; display:flex; flex-direction:column; gap:10px; padding-top:14px; border-top:1px solid var(--line-dark);}
+  .side-link{display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(244,240,228,.06); border-radius:8px; padding:8px 10px;}
+  .side-link .url{font-size:10.5px; color:var(--muted-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .side-link button{background:none; border:none; color:var(--bag-gold); font-size:11px; font-weight:700; cursor:pointer;}
+  .sidenav-footer .btn-ghost{border-color:var(--muted-dark); color:var(--paper);}
+  .sidenav-footer .btn-ghost:hover{border-color:var(--paper);}
+  .signout{background:none; border:none; color:var(--muted-dark); font-size:11.5px; cursor:pointer; text-align:left; padding:0;}
+  .signout:hover{color:var(--paper);}
+
+  .main{flex:1; min-width:0; overflow-y:auto; padding:30px 40px; background:var(--paper);}
+  .main-inner{max-width:900px; display:flex; flex-direction:column; gap:20px;}
+  .main-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;}
+  .stat-card{border:1px solid var(--line); border-radius:10px; padding:16px; background:#fff; display:flex; flex-direction:column; gap:5px;}
+  .stat-card .label{font-size:11px; color:var(--muted); font-weight:700;}
+  .stat-card .value{font-family:"Bebas Neue",sans-serif; font-size:27px; color:var(--ink);}
+  .stat-card .sub{font-size:11.5px; color:var(--muted);}
+
+  table.data{width:100%; border-collapse:collapse; font-size:13px; background:#fff;}
+  table.data th, table.data td{padding:10px 12px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line);}
+  table.data th{font-size:10.5px; color:var(--muted); font-weight:700; text-align:right;}
+  table.data td:first-child, table.data th:first-child{text-align:left;}
+  table.data tr:first-child td{font-weight:700;}
+  .data-wrap{border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .diff-pos{color:var(--ink-2);}
+  .diff-neg{color:var(--brick);}
+  .tiebreak-note{font-size:11.5px; color:var(--muted); margin:0;}
+
+  .banner{border-radius:8px; padding:10px 14px; font-size:12.5px; line-height:1.4;}
+  .banner-brick{background:rgba(163,68,48,.1); color:var(--brick); border:1px solid rgba(163,68,48,.3);}
+  .banner-gold{background:rgba(217,164,49,.14); color:#7a5714; border:1px solid rgba(217,164,49,.35);}
+  .banner-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+
+  .week-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px;}
+  .week{border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff;}
+  .week-head{display:flex; justify-content:space-between; align-items:center; padding:9px 12px; background:var(--paper-dim); font-size:11.5px; font-weight:700;}
+  .week.current .week-head{background:var(--bag-blue); color:#fff;}
+  .week-body{padding:2px 8px;}
+  .game-row{display:flex; align-items:center; justify-content:space-between; gap:6px; padding:9px 4px; border-bottom:1px solid var(--line); font-size:12.5px; width:100%; background:none; border-left:none; border-right:none; border-top:none; cursor:pointer; font-family:inherit; text-align:left;}
+  .game-row:last-child{border-bottom:none;}
+  .game-row:hover{background:var(--paper-dim);}
+  .game-row:focus-visible{outline:2px solid var(--bag-blue); outline-offset:-2px;}
+  .game-row .team{flex:1;}
+  .game-row .team.right{text-align:right;}
+  .game-row .mid{font-variant-numeric:tabular-nums; font-weight:700; color:var(--muted); min-width:52px; text-align:center;}
+  .game-row.scored .mid{color:var(--ink);}
+  .game-row.scored .team{font-weight:700;}
+  .hint{font-size:11.5px; color:var(--muted); margin:0;}
+
+  .add-row{display:flex; gap:10px; align-items:flex-end;}
+  .add-row .field{flex:1; max-width:320px;}
+
+  /* ---------- score modal ---------- */
+  .modal-overlay{position:absolute; inset:0; background:rgba(20,30,26,.5); display:flex; align-items:center; justify-content:center; padding:24px; z-index:20;}
+  .modal-card{background:#fff; border-radius:14px; padding:24px; max-width:360px; width:100%; box-shadow:0 30px 60px -20px rgba(0,0,0,.5); position:relative; display:flex; flex-direction:column; gap:12px;}
+  .modal-close{position:absolute; top:14px; right:14px; background:none; border:none; font-size:20px; line-height:1; color:var(--muted); cursor:pointer;}
+  .modal-close:focus-visible{outline:2px solid var(--bag-gold);}
+  .score-card{border:1px solid var(--line); border-radius:10px; padding:14px; background:var(--paper-dim);}
+  .score-card .vs{display:flex; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .score-card .team{font-weight:700; font-size:13.5px; flex:1;}
+  .score-inputs{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .score-inputs input{flex:1; text-align:center; border:1px solid var(--line); border-radius:8px; padding:11px 0; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; background:#fff; color:var(--ink-text); font-family:inherit;}
+  .score-inputs input:focus-visible{outline:2px solid var(--bag-blue);}
+  .score-inputs .dash{color:var(--muted); font-weight:700;}
+
+  /* ---------- public / notfound ---------- */
+  .pub-wrap{height:100%; overflow-y:auto; background:var(--ink); color:var(--paper);}
+  .pub-inner{max-width:760px; margin:0 auto; padding:52px 40px 60px; display:flex; flex-direction:column; gap:26px;}
+  .pub-hero{text-align:center;}
+  .pub-hero h2{font-family:"Bebas Neue",sans-serif; font-size:32px; letter-spacing:.03em; text-transform:uppercase; color:var(--paper);}
+  .pub-hero p{margin:4px 0 0; font-size:12px; color:var(--bag-gold); font-weight:700;}
+  .pub-section-title{font-size:11.5px; font-weight:700; color:var(--bag-gold); margin:0 0 10px;}
+  .pub-game-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;}
+  .pub-game{border:1px solid var(--line-dark); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; font-size:13.5px;}
+  .pub-week-strip{display:flex; flex-wrap:wrap; gap:8px;}
+  .pub-week-chip{border:1px solid var(--line-dark); border-radius:999px; padding:6px 14px; font-size:11.5px; color:var(--muted-dark);}
+  .pub-week-chip.now{border-color:var(--bag-gold); color:var(--paper); font-weight:700;}
+  table.pub-data{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.pub-data th, table.pub-data td{padding:8px 6px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line-dark); color:var(--paper);}
+  table.pub-data th{font-size:10.5px; color:var(--muted-dark); font-weight:700;}
+  table.pub-data td:first-child, table.pub-data th:first-child{text-align:left;}
+  .pub-footer{font-size:11px; color:var(--muted-dark); text-align:center; margin-top:2px;}
+
+  .notfound-wrap{height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:24px; text-align:center; color:var(--paper);}
+  .notfound-wrap .display{font-size:28px; letter-spacing:.02em;}
+  .notfound-wrap p{font-size:13px; color:var(--muted-dark); max-width:26em; margin:0;}
+
+  @media (max-width:760px){
+    .site{height:auto; min-height:640px;}
+    .app-row{flex-direction:column; height:auto;}
+    .sidenav{width:100%; overflow-y:visible;}
+    .main{padding:22px 20px;}
+    .page-top{padding:28px 22px;}
+    .pub-inner{padding:40px 22px 48px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Karla:wght@400;500;700&display=swap">
+
+<div class="intro">
+  <p class="kicker">Rec League Manager — MVP walkthrough, desktop</p>
+  <h1 class="display">Same league, laptop-sized.</h1>
+  <p>The identical MVP as <em>League Night</em>, laid out the way Dana actually runs it Sunday night: a sidebar instead of a bottom tab bar, tables instead of stacked rows, and a schedule wide enough to see every week at once. Same data, same rules — click through it the same way.</p>
+  <p class="cast">Organizer: <b>Dana</b> · League: <b>Tuesday Cornhole</b> · Fall 2026 · 6 teams</p>
+</div>
+
+<div class="browser-wrap">
+  <div class="browser-bar">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="address" id="address"></div>
+    <div class="browser-actions" id="browserActions"></div>
+  </div>
+  <div class="browser-body">
+    <div class="site" id="site"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------- round-robin generator (circle method) ---------- */
+  function generateSchedule(names){
+    var list = names.slice();
+    if(list.length % 2 !== 0) list.push('__BYE__');
+    var n = list.length;
+    var rounds = n - 1;
+    var half = n / 2;
+    var arr = list.slice();
+    var games = [];
+    for(var r = 0; r < rounds; r++){
+      for(var i = 0; i < half; i++){
+        var a = arr[i], b = arr[n - 1 - i];
+        if(a === '__BYE__' || b === '__BYE__') continue;
+        games.push({ week: r + 1, home: a, away: b, hs: null, as: null });
+      }
+      var fixed = arr[0];
+      var rest = arr.slice(1);
+      rest.unshift(rest.pop());
+      arr = [fixed].concat(rest);
+    }
+    return { games: games, weeks: rounds };
+  }
+
+  function calcStandings(entrants, games){
+    var rows = {};
+    entrants.forEach(function(name){ rows[name] = { name: name, w:0, l:0, pf:0, pa:0 }; });
+    games.forEach(function(g){
+      if(g.hs == null || g.as == null) return;
+      if(!rows[g.home]) rows[g.home] = { name:g.home, w:0,l:0,pf:0,pa:0 };
+      if(!rows[g.away]) rows[g.away] = { name:g.away, w:0,l:0,pf:0,pa:0 };
+      rows[g.home].pf += g.hs; rows[g.home].pa += g.as;
+      rows[g.away].pf += g.as; rows[g.away].pa += g.hs;
+      if(g.hs > g.as){ rows[g.home].w++; rows[g.away].l++; }
+      else if(g.as > g.hs){ rows[g.away].w++; rows[g.home].l++; }
+    });
+    var list = Object.keys(rows).map(function(k){ var r = rows[k]; r.diff = r.pf - r.pa; return r; });
+    list.sort(function(a,b){
+      if(b.w !== a.w) return b.w - a.w;
+      if(b.diff !== a.diff) return b.diff - a.diff;
+      if(b.pf !== a.pf) return b.pf - a.pf;
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }
+
+  function currentWeek(games, totalWeeks){
+    for(var w = 1; w <= totalWeeks; w++){
+      var weekGames = games.filter(function(g){ return g.week === w; });
+      var open = weekGames.some(function(g){ return g.hs == null || g.as == null; });
+      if(open) return w;
+    }
+    return totalWeeks;
+  }
+
+  var INITIAL_ENTRANTS = ['Bag Ladies','Board Stiff','Air Apparent','In Cahoots','Toss Up','Hole Lotta Love'];
+
+  function freshState(){
+    var built = generateSchedule(INITIAL_ENTRANTS);
+    var games = built.games;
+    var seed = [21,14, 21,18, 15,21, 21,9, 21,17, 14,21];
+    for(var i = 0; i < 6; i++){ games[i].hs = seed[i*2]; games[i].as = seed[i*2+1]; }
+
+    return {
+      stack: ['signin'],
+      authError: false,
+      authDraft: { email: 'dana@duckpinbrewing.com', password: 'demo-pass' },
+      league: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: 8, slug: 'tuesday-cornhole', activeTab: 'overview' },
+      entrants: INITIAL_ENTRANTS.slice(),
+      entrantDraft: '',
+      entrantError: '',
+      games: games,
+      totalWeeks: built.weeks,
+      createDraft: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: '8' },
+      createErrors: {},
+      scoreModalOpen: false,
+      scoreGameIndex: null,
+      scoreDraft: { home: '', away: '', error: '' },
+      copied: false,
+      genRefusal: ''
+    };
+  }
+
+  var state = freshState();
+
+  var siteEl = document.getElementById('site');
+  var addressEl = document.getElementById('address');
+  var actionsEl = document.getElementById('browserActions');
+
+  function view(){ return state.stack[state.stack.length - 1]; }
+  function push(v){ state.stack.push(v); }
+  function pop(){ if(state.stack.length > 1) state.stack.pop(); }
+
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function addressPath(){
+    var v = view();
+    if(v === 'signin') return 'recleague.app/sign-in';
+    if(v === 'leagues') return 'recleague.app/leagues';
+    if(v === 'create') return 'recleague.app/leagues/new';
+    if(v === 'league') return 'recleague.app/l/' + state.league.slug + '/' + state.league.activeTab;
+    if(v === 'public') return 'recleague.app/l/' + state.league.slug;
+    if(v === 'notfound') return 'recleague.app/l/not-a-real-league';
+    return 'recleague.app';
+  }
+
+  function recordFor(name, standings){
+    var row = standings.filter(function(r){ return r.name === name; })[0];
+    return row ? (row.w + '–' + row.l) : '0–0';
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var v = view();
+    siteEl.innerHTML = renderView(v);
+    addressEl.innerHTML = '<b>' + esc(addressPath()) + '</b>';
+
+    var actions = '';
+    if(v === 'public' || v === 'notfound'){
+      actions += '<button class="textbtn" data-action="exit-preview">Exit preview</button>';
+    }
+    actions += '<button class="textbtn" data-action="reset-demo">Reset demo</button>';
+    actionsEl.innerHTML = actions;
+
+    if(state.scoreModalOpen){
+      siteEl.insertAdjacentHTML('beforeend', renderScoreModal());
+    }
+    wireInputs();
+  }
+
+  function renderView(v){
+    if(v === 'signin') return renderSignin();
+    if(v === 'leagues') return renderLeagues();
+    if(v === 'create') return renderCreate();
+    if(v === 'league') return renderLeague();
+    if(v === 'public') return renderPublic();
+    if(v === 'notfound') return renderNotFound();
+    return '';
+  }
+
+  function renderSignin(){
+    return (
+      '<div class="page-center">' +
+        '<div class="auth-card">' +
+          '<p class="wordmark">REC LEAGUE MANAGER</p>' +
+          '<h2 class="scr-title">Sign in<span class="story-tag">US01</span></h2>' +
+          '<div class="field"><label for="in-email">Email</label><input id="in-email" value="' + esc(state.authDraft.email) + '"></div>' +
+          '<div class="field"><label for="in-pass">Password</label><input id="in-pass" type="password" value="' + esc(state.authDraft.password) + '"></div>' +
+          (state.authError ? '<p class="help-error">Email or password is incorrect.</p>' : '') +
+          '<button class="btn btn-primary btn-block" data-action="sign-in">Sign in</button>' +
+          '<button class="textbtn" style="text-align:left;" data-action="show-auth-error">See what a wrong password looks like</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderLeagues(){
+    var cw = currentWeek(state.games, state.totalWeeks);
+    return (
+      '<div class="page-top"><div class="page-inner">' +
+        '<div class="dash-header">' +
+          '<div><p class="wordmark">REC LEAGUE MANAGER</p><h2 class="scr-title">Your leagues<span class="story-tag">US01</span></h2></div>' +
+          '<div class="dash-header-actions">' +
+            '<button class="textbtn" data-action="sign-out">Sign out</button>' +
+            '<button class="btn btn-primary btn-sm" data-action="new-league">+ Create a league</button>' +
+          '</div>' +
+        '</div>' +
+        '<button class="league-card" data-action="open-league">' +
+          '<div><div class="primary">' + esc(state.league.name) + '</div>' +
+          '<div class="secondary">' + esc(state.league.sport) + ' &middot; ' + esc(state.league.season) + ' &middot; Week ' + cw + ' of ' + state.league.weeks + '</div></div>' +
+          '<span class="chev">&rsaquo;</span>' +
+        '</button>' +
+      '</div></div>'
+    );
+  }
+
+  function renderCreate(){
+    var d = state.createDraft, e = state.createErrors;
+    return (
+      '<div class="page-center">' +
+        '<div class="auth-card wide">' +
+          '<button class="backlink" style="color:var(--bag-blue);" data-action="back">&larr; Back to your leagues</button>' +
+          '<h2 class="scr-title">Create a league<span class="story-tag">US02</span></h2>' +
+          '<div class="field"><label for="cr-name">Name</label><input id="cr-name" value="' + esc(d.name) + '">' +
+            (e.name ? '<p class="help-error">' + e.name + '</p>' : '') + '</div>' +
+          '<div class="row-inline">' +
+            '<div class="field"><label for="cr-sport">Sport</label><input id="cr-sport" value="' + esc(d.sport) + '"></div>' +
+            '<div class="field"><label for="cr-weeks">Weeks</label><input id="cr-weeks" value="' + esc(d.weeks) + '">' +
+              (e.weeks ? '<p class="help-error">' + e.weeks + '</p>' : '') + '</div>' +
+          '</div>' +
+          '<div class="field"><label for="cr-season">Season label</label><input id="cr-season" value="' + esc(d.season) + '"></div>' +
+          '<button class="btn btn-primary btn-block" data-action="submit-create">Create league</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderLeague(){
+    var tab = state.league.activeTab;
+    var cw = currentWeek(state.games, state.totalWeeks);
+
+    var navItem = function(key, label){
+      var active = tab === key;
+      return '<button class="navlink' + (active ? ' active' : '') + '" data-action="set-tab" data-tab="' + key + '">' +
+        '<span class="ndot"></span>' + label + '</button>';
+    };
+
+    return (
+      '<div class="app-row">' +
+        '<div class="sidenav">' +
+          '<button class="backlink" data-action="back">&larr; Your leagues</button>' +
+          '<div>' +
+            '<p class="brand">REC LEAGUE MANAGER</p>' +
+            '<p class="league-name">' + esc(state.league.name) + '</p>' +
+            '<p class="league-meta">' + esc(state.league.season) + ' &middot; Week ' + cw + ' of ' + state.league.weeks + '</p>' +
+          '</div>' +
+          '<div class="navlist">' +
+            navItem('overview','Overview') + navItem('entrants','Entrants') + navItem('schedule','Schedule') + navItem('standings','Standings') +
+          '</div>' +
+          '<div class="sidenav-footer">' +
+            '<div class="side-link"><span class="url">recleague.app/l/' + esc(state.league.slug) + '</span>' +
+              '<button data-action="copy-link">' + (state.copied ? 'Copied' : 'Copy') + '</button></div>' +
+            '<button class="btn btn-ghost btn-sm" data-action="preview-public">Preview public page</button>' +
+            '<button class="textbtn" style="text-align:left; color:var(--muted-dark);" data-action="preview-notfound">Preview a broken link</button>' +
+            '<button class="signout" data-action="sign-out">Sign out</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="main"><div class="main-inner">' + renderTabBody(tab, cw) + '</div></div>' +
+      '</div>'
+    );
+  }
+
+  function renderTabBody(tab, cw){
+    if(tab === 'overview') return renderOverviewTab(cw);
+    if(tab === 'entrants') return renderEntrantsTab();
+    if(tab === 'schedule') return renderScheduleTab(cw);
+    return renderStandingsTab();
+  }
+
+  function renderOverviewTab(cw){
+    var standings = calcStandings(state.entrants, state.games);
+    var scoredCount = state.games.filter(function(g){ return g.hs != null; }).length;
+    var leaderText = 'No games played yet';
+    var leaderSub = 'Standings open once week 1 is scored';
+    if(scoredCount){
+      var leader = standings[0];
+      leaderText = esc(leader.name);
+      leaderSub = leader.w + '–' + leader.l + ' record, ' + (leader.diff >= 0 ? '+' : '−') + Math.abs(leader.diff) + ' diff';
+    }
+    return (
+      '<div class="main-head"><h2 class="scr-title">Overview<span class="story-tag">Hub</span></h2></div>' +
+      '<div class="stat-grid">' +
+        '<div class="stat-card"><span class="label">Entrants</span><span class="value">' + state.entrants.length + '</span><span class="sub">registered this season</span></div>' +
+        '<div class="stat-card"><span class="label">Schedule</span><span class="value">Wk ' + cw + '</span><span class="sub">of ' + state.totalWeeks + ' weeks generated</span></div>' +
+        '<div class="stat-card"><span class="label">Standings lead</span><span class="value" style="font-size:19px;">' + leaderText + '</span><span class="sub">' + leaderSub + '</span></div>' +
+      '</div>'
+    );
+  }
+
+  function renderEntrantsTab(){
+    var standings = calcStandings(state.entrants, state.games);
+    var rows = state.entrants.map(function(name){
+      return '<tr><td>' + esc(name) + '</td><td>' + recordFor(name, standings) + '</td></tr>';
+    }).join('');
+    return (
+      '<div class="main-head"><h2 class="scr-title">Entrants<span class="story-tag">US03</span></h2></div>' +
+      '<div class="add-row">' +
+        '<div class="field"><label for="en-name">Team or player name</label><input id="en-name" value="' + esc(state.entrantDraft) + '"></div>' +
+        '<button class="btn btn-primary" data-action="add-entrant">Add entrant</button>' +
+      '</div>' +
+      (state.entrantError ? '<p class="help-error">' + state.entrantError + '</p>' : '') +
+      '<div class="data-wrap"><table class="data"><thead><tr><th>Entrant</th><th>Record</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    );
+  }
+
+  function renderScheduleTab(cw){
+    var scoredAny = state.games.some(function(g){ return g.hs != null; });
+    var banner;
+    if(state.genRefusal){
+      banner = '<div class="banner banner-brick">' + state.genRefusal + '</div>';
+    } else if(scoredAny){
+      banner = '<div class="banner-row"><div class="banner banner-brick">Scores already recorded &mdash; clear them first to regenerate.</div>' +
+        '<button class="btn btn-ghost btn-sm" data-action="clear-scores">Clear scores</button></div>';
+    } else {
+      banner = '<div class="banner-row"><div class="banner banner-gold">Ready to generate &mdash; ' + state.entrants.length + ' entrants, ' + state.totalWeeks + ' weeks.</div>' +
+        '<button class="btn btn-primary btn-sm" data-action="generate-schedule">Generate schedule</button></div>';
+    }
+
+    var weeksHtml = '';
+    for(var w = 1; w <= state.totalWeeks; w++){
+      var weekGames = state.games.filter(function(g){ return g.week === w; });
+      var played = weekGames.length && weekGames.every(function(g){ return g.hs != null; });
+      var tagText = played ? 'Played' : (w === cw ? 'This week' : 'Upcoming');
+      var rows = weekGames.map(function(g){
+        var idx = state.games.indexOf(g);
+        var scored = g.hs != null;
+        return '<button class="game-row' + (scored ? ' scored' : '') + '" data-action="open-score" data-idx="' + idx + '">' +
+          '<span class="team">' + esc(g.home) + '</span>' +
+          '<span class="mid">' + (scored ? (g.hs + '–' + g.as) : 'vs') + '</span>' +
+          '<span class="team right">' + esc(g.away) + '</span>' +
+        '</button>';
+      }).join('');
+      weeksHtml += '<div class="week' + (w === cw && !played ? ' current' : '') + '">' +
+        '<div class="week-head"><span>Week ' + w + '</span><span>' + tagText + '</span></div>' +
+        '<div class="week-body">' + rows + '</div>' +
+      '</div>';
+    }
+
+    return (
+      '<div class="main-head"><h2 class="scr-title">Schedule<span class="story-tag">US04</span></h2></div>' +
+      banner +
+      '<div class="week-grid">' + weeksHtml + '</div>' +
+      '<p class="hint">Click any game to enter or correct its score.</p>'
+    );
+  }
+
+  function renderStandingsTab(){
+    var standings = calcStandings(state.entrants, state.games);
+    var anyPlayed = state.games.some(function(g){ return g.hs != null; });
+    return (
+      '<div class="main-head"><h2 class="scr-title">Standings<span class="story-tag">US06</span></h2></div>' +
+      (anyPlayed ?
+        '<div class="data-wrap"><table class="data"><thead><tr><th>Entrant</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr></thead><tbody>' +
+          standings.map(function(r){
+            return '<tr><td>' + esc(r.name) + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + r.pf + '</td><td>' + r.pa + '</td>' +
+              '<td class="' + (r.diff >= 0 ? 'diff-pos' : 'diff-neg') + '">' + (r.diff > 0 ? '+' : (r.diff === 0 ? '' : '−')) + Math.abs(r.diff) + '</td></tr>';
+          }).join('') +
+        '</tbody></table></div>' +
+        '<p class="tiebreak-note">Ties are broken by wins, then point differential, then points scored.</p>'
+        :
+        '<div class="data-wrap"><table class="data"><thead><tr><th>Entrant</th><th>W</th><th>L</th></tr></thead><tbody>' +
+          state.entrants.map(function(n){ return '<tr><td>' + esc(n) + '</td><td>0</td><td>0</td></tr>'; }).join('') +
+        '</tbody></table></div>' +
+        '<p class="tiebreak-note">No games played yet.</p>'
+      )
+    );
+  }
+
+  function renderScoreModal(){
+    var g = state.games[state.scoreGameIndex];
+    var d = state.scoreDraft;
+    return (
+      '<div class="modal-overlay">' +
+        '<div class="modal-card">' +
+          '<button class="modal-close" data-action="close-score-modal">&times;</button>' +
+          '<h2 class="scr-title">Week ' + g.week + '<span class="story-tag">US05</span></h2>' +
+          '<div class="score-card">' +
+            '<div class="vs"><div class="team">' + esc(g.home) + '</div><div class="team" style="text-align:right;">' + esc(g.away) + '</div></div>' +
+            '<div class="score-inputs">' +
+              '<input id="sc-home" inputmode="numeric" value="' + esc(d.home) + '">' +
+              '<span class="dash">&ndash;</span>' +
+              '<input id="sc-away" inputmode="numeric" value="' + esc(d.away) + '">' +
+            '</div>' +
+            (d.error ? '<p class="help-error">' + d.error + '</p>' : '') +
+            '<button class="btn btn-primary btn-block" data-action="save-score">Save score</button>' +
+          '</div>' +
+          '<p class="hint">Saving again replaces the old score &mdash; Sunday-night corrections are normal.</p>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderPublic(){
+    var standings = calcStandings(state.entrants, state.games);
+    var cw = currentWeek(state.games, state.totalWeeks);
+    var cwGames = state.games.filter(function(g){ return g.week === cw; });
+    var weekChips = '';
+    for(var w = 1; w <= state.totalWeeks; w++){
+      var wg = state.games.filter(function(g){ return g.week === w; });
+      var played = wg.length && wg.every(function(g){ return g.hs != null; });
+      weekChips += '<span class="pub-week-chip' + (w === cw && !played ? ' now' : '') + '">Week ' + w + ' — ' + (played ? 'played' : (w === cw ? 'this week' : 'upcoming')) + '</span>';
+    }
+    return (
+      '<div class="pub-wrap"><div class="pub-inner">' +
+        '<div class="pub-hero"><h2 class="display">' + esc(state.league.name) + '</h2><p>' + esc(state.league.season.toUpperCase()) + ' &middot; US07</p></div>' +
+        '<div><p class="pub-section-title">This week &mdash; week ' + cw + '</p>' +
+          '<div class="pub-game-grid">' + cwGames.map(function(g){
+            return '<div class="pub-game"><span>' + esc(g.home) + '</span><span style="color:var(--muted-dark);">vs</span><span>' + esc(g.away) + '</span></div>';
+          }).join('') + '</div>' +
+        '</div>' +
+        '<div><p class="pub-section-title">Full schedule</p><div class="pub-week-strip">' + weekChips + '</div></div>' +
+        '<div><p class="pub-section-title">Standings</p>' +
+          '<table class="pub-data"><thead><tr><th>Entrant</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr></thead><tbody>' +
+            standings.map(function(r){
+              return '<tr><td>' + esc(r.name) + '</td><td>' + r.w + '</td><td>' + r.l + '</td><td>' + r.pf + '</td><td>' + r.pa + '</td><td>' + (r.diff > 0 ? '+' : (r.diff===0?'':'−')) + Math.abs(r.diff) + '</td></tr>';
+            }).join('') +
+          '</tbody></table>' +
+        '</div>' +
+        '<p class="pub-footer">No sign-in needed. Nothing on this page edits the league.</p>' +
+      '</div></div>'
+    );
+  }
+
+  function renderNotFound(){
+    return (
+      '<div class="pub-wrap"><div class="notfound-wrap">' +
+        '<h2 class="display">League not found</h2>' +
+        '<p>This is what a player sees if a link is mistyped or the league is gone &mdash; never a stack trace. (US07, negative case)</p>' +
+      '</div></div>'
+    );
+  }
+
+  /* ---------- input wiring (no re-render on keystroke) ---------- */
+  function wireInputs(){
+    var map = [
+      ['in-email', function(v){ state.authDraft.email = v; state.authError = false; }],
+      ['in-pass', function(v){ state.authDraft.password = v; state.authError = false; }],
+      ['cr-name', function(v){ state.createDraft.name = v; }],
+      ['cr-sport', function(v){ state.createDraft.sport = v; }],
+      ['cr-season', function(v){ state.createDraft.season = v; }],
+      ['cr-weeks', function(v){ state.createDraft.weeks = v; }],
+      ['en-name', function(v){ state.entrantDraft = v; }],
+      ['sc-home', function(v){ state.scoreDraft.home = v; }],
+      ['sc-away', function(v){ state.scoreDraft.away = v; }]
+    ];
+    map.forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if(el) el.addEventListener('input', function(){ pair[1](this.value); });
+    });
+  }
+
+  /* ---------- actions ---------- */
+  function handleAction(action, el){
+    if(action === 'sign-in'){
+      if(state.authDraft.email.trim() && state.authDraft.password.trim()){
+        state.authError = false;
+        push('leagues');
+      }
+    } else if(action === 'show-auth-error'){
+      state.authError = true;
+    } else if(action === 'sign-out'){
+      state.stack = ['signin'];
+    } else if(action === 'open-league'){
+      push('league');
+    } else if(action === 'new-league'){
+      push('create');
+    } else if(action === 'back'){
+      pop();
+    } else if(action === 'submit-create'){
+      var d = state.createDraft, errs = {};
+      if(!d.name.trim()) errs.name = 'Name is required.';
+      var weeksNum = parseInt(d.weeks, 10);
+      if(isNaN(weeksNum) || weeksNum < 1) errs.weeks = 'Weeks must be at least 1.';
+      state.createErrors = errs;
+      if(Object.keys(errs).length === 0){
+        state.league.name = d.name.trim();
+        state.league.sport = d.sport.trim() || 'Cornhole';
+        state.league.season = d.season.trim() || 'Fall 2026';
+        state.league.weeks = weeksNum;
+        pop();
+        push('league');
+        state.league.activeTab = 'overview';
+      }
+    } else if(action === 'set-tab'){
+      state.league.activeTab = el.getAttribute('data-tab');
+    } else if(action === 'copy-link'){
+      state.copied = true;
+      render();
+      setTimeout(function(){ state.copied = false; render(); }, 1400);
+      return;
+    } else if(action === 'preview-public'){
+      push('public');
+    } else if(action === 'preview-notfound'){
+      push('notfound');
+    } else if(action === 'exit-preview'){
+      pop();
+    } else if(action === 'add-entrant'){
+      var name = state.entrantDraft.trim();
+      if(!name){ /* no-op */ }
+      else if(state.entrants.some(function(n){ return n.toLowerCase() === name.toLowerCase(); })){
+        state.entrantError = 'An entrant with that name already exists in this league.';
+      } else {
+        state.entrants.push(name);
+        state.entrantDraft = '';
+        state.entrantError = '';
+      }
+    } else if(action === 'open-score'){
+      var idx = parseInt(el.getAttribute('data-idx'), 10);
+      var g = state.games[idx];
+      state.scoreGameIndex = idx;
+      state.scoreDraft = { home: g.hs != null ? String(g.hs) : '', away: g.as != null ? String(g.as) : '', error: '' };
+      state.scoreModalOpen = true;
+    } else if(action === 'close-score-modal'){
+      state.scoreModalOpen = false;
+    } else if(action === 'save-score'){
+      var h = state.scoreDraft.home, a = state.scoreDraft.away;
+      var hn = Number(h), an = Number(a);
+      var valid = h !== '' && a !== '' && Number.isInteger(hn) && Number.isInteger(an) && hn >= 0 && an >= 0;
+      if(!valid){
+        state.scoreDraft.error = 'Scores must be whole numbers 0 or greater.';
+      } else {
+        state.games[state.scoreGameIndex].hs = hn;
+        state.games[state.scoreGameIndex].as = an;
+        state.scoreModalOpen = false;
+      }
+    } else if(action === 'generate-schedule'){
+      if(state.entrants.length < 2){
+        state.genRefusal = 'Add at least 2 entrants first.';
+      } else {
+        var built = generateSchedule(state.entrants);
+        state.games = built.games;
+        state.totalWeeks = built.weeks;
+        state.genRefusal = '';
+      }
+    } else if(action === 'clear-scores'){
+      state.games.forEach(function(g){ g.hs = null; g.as = null; });
+      state.genRefusal = '';
+    } else if(action === 'reset-demo'){
+      state = freshState();
+    }
+    render();
+  }
+
+  document.addEventListener('click', function(e){
+    var el = e.target.closest('[data-action]');
+    if(!el) return;
+    e.preventDefault();
+    handleAction(el.getAttribute('data-action'), el);
+  });
+
+  render();
+})();
+</script>
