@@ -16,7 +16,7 @@ Each implementation will live in its own folder under `src/`, and each one runs 
 
 | Folder | Stack | Where the data lives | How the organizer signs in | What it's here to show |
 |---|---|---|---|---|
-| `src/flask/` | Python · Flask · SQLAlchemy · Jinja templates | SQLite file | Session cookie, hashed password you manage yourself | The "build it yourself" baseline. Every piece is visible — routing, templates, the database, auth. The most to learn, and the most to get wrong. |
+| `src/fastapi/` | Python · FastAPI · SQLAlchemy · Jinja templates | SQLite file | Session cookie, hashed password you manage yourself | The "build it yourself" baseline. Every piece is visible — routing, templates, the database, auth. The most to learn, and the most to get wrong. |
 | `src/django/` | Python · Django | SQLite (swaps to Postgres with one setting) | Django's built-in auth | The "batteries included" framework. Admin screens, auth, migrations and forms arrive for free; the cost is learning Django's way of doing things. |
 | `src/streamlit/` | Python · Streamlit | SQLite file | A single organizer password in session state | The fastest path from nothing to a working screen. Great for the organizer's side; awkward for a public, mobile, read-only page — which is exactly the trade-off to see. |
 | `src/supabase/` | HTML + JavaScript in the browser · Supabase | Postgres, hosted by Supabase, with row-level security | Supabase Auth (magic link) | A **managed back end**: no server code of your own. The database, auth and API are a service you configure rather than software you write. Security rules move into the database. |
@@ -24,7 +24,7 @@ Each implementation will live in its own folder under `src/`, and each one runs 
 
 Three of these are Python with a server you run; two are static pages talking to a hosted service. Between them they cover the three debate rounds from Week 7: *managed service vs. build it yourself*, *boring and proven vs. new and capable*, and *what does the agent build best?*
 
-The plan is to build **Flask first**, as the baseline the others are compared against, then the rest in the order above. Shared logic that doesn't depend on the stack — generating a round-robin schedule, computing standings and tiebreaks — will live in `src/core/` so the three Python apps don't each reinvent it. The JavaScript implementations will carry their own copy of that logic; that duplication is itself part of what's being shown.
+The plan is to build **FastAPI first**, as the baseline the others are compared against, then the rest in the order above. Shared logic that doesn't depend on the stack — generating a round-robin schedule, computing standings and tiebreaks — will live in `src/core/` so the three Python apps don't each reinvent it. The JavaScript implementations will carry their own copy of that logic; that duplication is itself part of what's being shown.
 
 None of this exists yet. It's recorded here now so the stack decision in `CP-M3` has something concrete to argue against.
 
