@@ -1,6 +1,6 @@
 # Rec League Manager
 
-**Rec League Manager** lets league organizers manage the people, games, schedules and standings for recreational leagues — pitch, pickleball, darts, cornhole, volleyball, and more. It offers easy ways to collect money, distribute prizes, and organize events.
+**Rec League Manager** lets league organizers manage the people, games, schedules and standings for recreational leagues — pitch, pickleball, darts, cornhole, volleyball, parcheesi and more. It offers easy ways to collect money, distribute prizes, and organize events.
 
 > **This is the reference implementation for IST300 — Prompts to Products.** It is laid out the way the course asks you to lay out your own capstone repository: the thinking in `docs/`, the code in `src/` (from Week 9), the tests in `tests/` (from Week 13), and a commit history that shows the decisions. Read it as a model, not as a template to copy.
 
