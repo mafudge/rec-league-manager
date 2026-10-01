@@ -21,10 +21,11 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 ### US02 · Create a league
 
-**Story.** As the organizer, I want to create a league with a name, a sport, a season label and a number of weeks so that everything for that season lives in one place.
+**Story.** As the organizer, I want to create a league with a name, a location, a sport, a season label and a number of weeks so that everything for that season lives in one place.
 
 **Acceptance criteria**
-- Given I am signed in, when I submit name "Tuesday Cornhole", sport "Cornhole", season "Fall 2026" and 8 weeks, then the league appears in my list with those values.
+- Given I am signed in, when I submit name "Tuesday Cornhole", location "Joe's Tavern", sport "Cornhole", season "Fall 2026" and 8 weeks, then the league appears in my list with those values.
+- Given I leave the location blank, when I submit, then the league is not created and the form shows "Location is required". Location is free text (e.g. "Joe's Tavern", "Syracuse DPW"). *(negative)*
 - Given I leave the name blank, when I submit, then the league is not created and the form shows "Name is required". *(negative)*
 - Given I enter 0 or a negative number of weeks, when I submit, then the league is not created and the form shows "Weeks must be at least 1". *(negative)*
 
@@ -82,6 +83,7 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Acceptance criteria**
 - Given a league's public link, when I open it signed out, then I see the schedule by week and the standings, with no sign-in prompt.
+- Given the public link, when I open it, then the league's location is shown under its name, so players know where to show up.
 - Given the public link, when I open it, then there is no control that creates, edits or deletes anything. *(negative)*
 - Given the public link on a 375-px-wide screen, when I open it, then the current week's games are visible above the fold without horizontal scrolling.
 - Given a league that does not exist, when I open its link, then I see "League not found", not an error page. *(negative)*

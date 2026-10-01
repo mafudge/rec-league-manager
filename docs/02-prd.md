@@ -97,7 +97,7 @@ Deliberately *not* constrained here: which language, framework, database or host
 
 1. **Sign in.** Email + password. Wrong password → same page, one message, nothing leaked. *(US01)*
 2. **League list.** Empty state: "No leagues yet — create one." One button. *(US02)*
-3. **Create league.** Four fields: name, sport (free text — we don't gate on a sport list), season label, weeks. Validation errors inline. *(US02)*
+3. **Create league.** Five fields: name, location (free text — "Joe's Tavern", "Syracuse DPW"), sport (free text — we don't gate on a sport list), season label, weeks. Validation errors inline. *(US02)*
 4. **League home.** Three tabs or sections: **Entrants · Schedule · Standings**, plus a visible "Public link" to copy. *(US03–US07)*
 5. **Entrants.** Add by name. Duplicate name in this league → refused with the exact message in US03. Works on a phone in a parking lot. *(US03)*
 6. **Schedule.** One button: *Generate schedule*. Fewer than 2 entrants → refused. Existing schedule with no scores → replaced. Any score recorded → refused; the organizer must clear scores first. Result: week-by-week list, byes shown explicitly ("Bag Ladies — bye"). *(US04)*
@@ -112,7 +112,7 @@ Wireframes for 4, 6, 8 and 9 land in `docs/design/wireframes/` by Lab 6.
 *Decides: what are the things, and how do they relate?* (Shape only — the storage technology is a `CP-M3` decision.)
 
 - **Organizer** — email, password (hashed, never stored plain). Owns leagues.
-- **League** — name, sport, season label, number of weeks, a public identifier that is safe to put in a URL. Belongs to one organizer.
+- **League** — name, location (free text), sport, season label, number of weeks, a public identifier that is safe to put in a URL. Belongs to one organizer.
 - **Entrant** — name; belongs to one league; name unique within the league. A "team" and an "individual" are the same thing to the product — an entrant. (Decided: no separate Player model in the MVP. Rotating-partner doubles, US10, is the first thing that would need one, and it's a Should.)
 - **Game** — league, week number, home entrant, away entrant, home score, away score (both empty until played). A bye is a game with no away entrant, or is simply the absence of a game for that entrant that week — the architecture doc picks one.
 - **Standings** — *not stored.* Computed from Games.
@@ -146,3 +146,4 @@ Shoulds and Coulds shipped by Dec 11 are a bonus. A Should that half-works costs
 | Date | Change | Why |
 |---|---|---|
 | 2026-09-27 | v1.0 — first complete draft after Workshop 2 peer review | `CP-M2` |
+| 2026-10-01 | v1.1 — a league has a required free-text location, shown on the league list, league header and public page. Designs in `docs/design/` updated to match. | Leagues play at a venue (a tavern, a public-works field); players need to know where to show up. |
