@@ -202,6 +202,7 @@
   .pub-hero{text-align:center;}
   .pub-hero h2{font-family:"Bebas Neue",sans-serif; font-size:32px; letter-spacing:.03em; text-transform:uppercase; color:var(--paper);}
   .pub-hero p{margin:4px 0 0; font-size:12px; color:var(--bag-gold); font-weight:700;}
+  .pub-hero p.where{color:var(--paper); margin-top:5px; font-size:13px;}
   .pub-section-title{font-size:11.5px; font-weight:700; color:var(--bag-gold); margin:0 0 10px;}
   .pub-game-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;}
   .pub-game{border:1px solid var(--line-dark); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; font-size:13.5px;}
@@ -321,13 +322,13 @@
       stack: ['signin'],
       authError: false,
       authDraft: { email: 'dana@duckpinbrewing.com', password: 'demo-pass' },
-      league: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: 8, slug: 'tuesday-cornhole', activeTab: 'overview' },
+      league: { name: 'Tuesday Cornhole', sport: 'Cornhole', location: 'Duck Pin Brewing', season: 'Fall 2026', weeks: 8, slug: 'tuesday-cornhole', activeTab: 'overview' },
       entrants: INITIAL_ENTRANTS.slice(),
       entrantDraft: '',
       entrantError: '',
       games: games,
       totalWeeks: built.weeks,
-      createDraft: { name: 'Tuesday Cornhole', sport: 'Cornhole', season: 'Fall 2026', weeks: '8' },
+      createDraft: { name: 'Tuesday Cornhole', sport: 'Cornhole', location: 'Duck Pin Brewing', season: 'Fall 2026', weeks: '8' },
       createErrors: {},
       scoreModalOpen: false,
       scoreGameIndex: null,
@@ -427,6 +428,7 @@
         '</div>' +
         '<button class="league-card" data-action="open-league">' +
           '<div><div class="primary">' + esc(state.league.name) + '</div>' +
+          '<div class="secondary">' + esc(state.league.location) + '</div>' +
           '<div class="secondary">' + esc(state.league.sport) + ' &middot; ' + esc(state.league.season) + ' &middot; Week ' + cw + ' of ' + state.league.weeks + '</div></div>' +
           '<span class="chev">&rsaquo;</span>' +
         '</button>' +
@@ -443,6 +445,8 @@
           '<h2 class="scr-title">Create a league<span class="story-tag">US02</span></h2>' +
           '<div class="field"><label for="cr-name">Name</label><input id="cr-name" value="' + esc(d.name) + '">' +
             (e.name ? '<p class="help-error">' + e.name + '</p>' : '') + '</div>' +
+          '<div class="field"><label for="cr-location">Location</label><input id="cr-location" placeholder="Joe&#39;s Tavern" value="' + esc(d.location) + '">' +
+          (e.location ? '<p class="help-error">' + e.location + '</p>' : '<p class="hint">Where you play, like Joe&#39;s Tavern or Syracuse DPW.</p>') + '</div>' +
           '<div class="row-inline">' +
             '<div class="field"><label for="cr-sport">Sport</label><input id="cr-sport" value="' + esc(d.sport) + '"></div>' +
             '<div class="field"><label for="cr-weeks">Weeks</label><input id="cr-weeks" value="' + esc(d.weeks) + '">' +
@@ -472,6 +476,7 @@
           '<div>' +
             '<p class="brand">REC LEAGUE MANAGER</p>' +
             '<p class="league-name">' + esc(state.league.name) + '</p>' +
+            '<p class="league-meta">' + esc(state.league.location) + '</p>' +
             '<p class="league-meta">' + esc(state.league.season) + ' &middot; Week ' + cw + ' of ' + state.league.weeks + '</p>' +
           '</div>' +
           '<div class="navlist">' +
@@ -632,7 +637,7 @@
     }
     return (
       '<div class="pub-wrap"><div class="pub-inner">' +
-        '<div class="pub-hero"><h2 class="display">' + esc(state.league.name) + '</h2><p>' + esc(state.league.season.toUpperCase()) + ' &middot; US07</p></div>' +
+        '<div class="pub-hero"><h2 class="display">' + esc(state.league.name) + '</h2><p class="where">' + esc(state.league.location) + '</p><p>' + esc(state.league.season.toUpperCase()) + ' &middot; US07</p></div>' +
         '<div><p class="pub-section-title">This week &mdash; week ' + cw + '</p>' +
           '<div class="pub-game-grid">' + cwGames.map(function(g){
             return '<div class="pub-game"><span>' + esc(g.home) + '</span><span style="color:var(--muted-dark);">vs</span><span>' + esc(g.away) + '</span></div>';
@@ -667,6 +672,7 @@
       ['in-pass', function(v){ state.authDraft.password = v; state.authError = false; }],
       ['cr-name', function(v){ state.createDraft.name = v; }],
       ['cr-sport', function(v){ state.createDraft.sport = v; }],
+      ['cr-location', function(v){ state.createDraft.location = v; }],
       ['cr-season', function(v){ state.createDraft.season = v; }],
       ['cr-weeks', function(v){ state.createDraft.weeks = v; }],
       ['en-name', function(v){ state.entrantDraft = v; }],
@@ -699,12 +705,14 @@
     } else if(action === 'submit-create'){
       var d = state.createDraft, errs = {};
       if(!d.name.trim()) errs.name = 'Name is required.';
+      if(!d.location.trim()) errs.location = 'Location is required.';
       var weeksNum = parseInt(d.weeks, 10);
       if(isNaN(weeksNum) || weeksNum < 1) errs.weeks = 'Weeks must be at least 1.';
       state.createErrors = errs;
       if(Object.keys(errs).length === 0){
         state.league.name = d.name.trim();
         state.league.sport = d.sport.trim() || 'Cornhole';
+        state.league.location = d.location.trim();
         state.league.season = d.season.trim() || 'Fall 2026';
         state.league.weeks = weeksNum;
         pop();
