@@ -1,0 +1,2 @@
+-- TODO: leagues, entrants, games, scores with row-level security
+-- (organizer writes; anonymous visitors read the public schedule and standings).
