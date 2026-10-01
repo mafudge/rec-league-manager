@@ -8,3 +8,4 @@
 - **SCAF-04** Streamlit frontend stub (`src/frontends/streamlit/`) — #4.
 - **SCAF-05** Supabase self-hosted backend stub (`src/backends/supabase/`) — #5.
 - **SCAF-06** Firebase Emulator backend stub (`src/backends/firebase/`) — #6.
+- **SCAF-07** Flutter frontend stub (`src/frontends/flutter/`) — #7.
