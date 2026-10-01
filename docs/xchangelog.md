@@ -5,3 +5,4 @@
 - **SCAF-01** FastAPI backend stub (`src/backends/fastapi/`) — #1. `/api/health` runs, pytest passes.
 - **SCAF-02** Django backend stub (`src/backends/django/`) — #2.
 - **SCAF-03** Next.js web frontend stub (`src/frontends/web/`) — #3.
+- **SCAF-04** Streamlit frontend stub (`src/frontends/streamlit/`) — #4.
