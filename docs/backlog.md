@@ -1,4 +1,4 @@
-# Backlog — Lab 3
+# Backlog: Still to do
 
 Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds against from Week 9. Keep it current, not historical.
 
