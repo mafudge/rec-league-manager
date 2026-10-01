@@ -26,3 +26,24 @@ Rec League Manager — a tool for the volunteer who runs a recreational league (
 11. An issue is not done until tests pass, the server runs and the app runs without error.
 12. As you close Github issues review `docs/todo.md` and move completed items into `docs/xchangelog.md`
 13. start coding on `main` with a clean working directory before you start work on the next issue
+
+## Running the stubs
+Everything lives under `src/`; each folder's `README.md` is the full reference. Run from the repo root. Default ports are chosen so a backend and a frontend can run together.
+
+| Folder | Install (once) | Start | Test | Port |
+|---|---|---|---|---|
+| `src/backends/fastapi` | `cd src/backends/fastapi && . .venv/bin/activate && pip install -r requirements.txt` | `.venv/bin/uvicorn app.main:app --reload` | `.venv/bin/python -m pytest` | 8000 (`/api/health`) |
+| `src/backends/django` | `pip install -r requirements.txt` in its `.venv`, then `.venv/bin/python manage.py migrate` | `.venv/bin/python manage.py runserver` | `.venv/bin/python manage.py test` | 8000 (`/api/health/`) |
+| `src/backends/supabase` | Docker only | `./start.sh` (first run generates `docker/.env`) | `./smoke.sh` | 54321 |
+| `src/backends/firebase` | `npm install` | `npm run emulators` | `./smoke.sh` | 8080 Firestore, 9099 Auth, 5000 Hosting, 4100 UI |
+| `src/frontends/web` | `npm install`, `cp .env.example .env.local` | `npm run dev` | `npm test` | 3000 |
+| `src/frontends/streamlit` | `pip install -r requirements.txt` in its `.venv` | `API_URL=http://localhost:8000 .venv/bin/streamlit run app.py` | `.venv/bin/python -m pytest` | 8501 |
+| `src/frontends/flutter` | `flutter pub get` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` | `flutter analyze && flutter test` | chosen by Flutter |
+
+Gotchas on this machine:
+- `python3 -m venv` fails (no `python3-venv`). Use `python3 -m venv --without-pip .venv`, then `.venv/bin/python get-pip.py` (download from `https://bootstrap.pypa.io/get-pip.py`).
+- Node is 18.19: keep Next.js on 15 and `firebase-tools` on 13. The Firestore emulator needs Java (installed).
+- Flutter is not on `PATH`: `export PATH=$PATH:/home/ubuntu/.local/flutter/bin`.
+- FastAPI and Django both use port 8000, so run only one at a time (or pass `--port`/`runserver 8001`).
+- Stop what you start: don't leave servers, emulators or the Supabase containers (`cd src/backends/supabase/docker && docker compose down`) running when you finish.
+- Never commit `.env`, `docker/.env` or `.venv`; they are git-ignored.
