@@ -143,6 +143,89 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 ---
 
+## Scaffolding (v0.1.0)
+
+Not product stories: runnable stubs so each platform can be built on later (ADR 002). Each stub runs, has one smoke test, and a README with a `TODO:` list of what is not built yet. The backend/frontend pairing is by a shared API contract, defined in a later item.
+
+### SCAF-01 · FastAPI backend stub
+
+**Folder.** `src/backends/fastapi/`
+
+**Scope.** FastAPI + SQLAlchemy (SQLite). `GET /api/health` returns `{"status":"ok"}`. pytest smoke test.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-02 · Django backend stub
+
+**Folder.** `src/backends/django/`
+
+**Scope.** Django + Django REST Framework (SQLite). `GET /api/health/` returns `{"status":"ok"}`. `manage.py test` smoke test.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-03 · Next.js web frontend stub
+
+**Folder.** `src/frontends/web/`
+
+**Scope.** Next.js (React, TypeScript). Home page shows "Rec League Manager" and the backend health from `NEXT_PUBLIC_API_URL`. Smoke test.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-04 · Streamlit frontend stub
+
+**Folder.** `src/frontends/streamlit/`
+
+**Scope.** Streamlit app showing the same placeholder and backend health. `AppTest` smoke test.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-05 · Supabase self-hosted backend stub
+
+**Folder.** `src/backends/supabase/`
+
+**Scope.** Docker Compose for the open-source Supabase stack (ADR 001), `.env.example` with dummy keys only, empty `migrations/`. No cloud account.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-06 · Firebase Emulator backend stub
+
+**Folder.** `src/backends/firebase/`
+
+**Scope.** `firebase.json` for the Auth, Firestore and Hosting emulators, deny-all `firestore.rules`. Emulator only (ADR 001).
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+### SCAF-07 · Flutter frontend stub
+
+**Folder.** `src/frontends/flutter/`
+
+**Scope.** Flutter (web + mobile) placeholder screen showing backend health. Widget smoke test.
+
+**Acceptance criteria**
+- Given a clean clone, when I follow the folder's README, then it installs and starts without error.
+- Given it is running, when I run the smoke test, then it passes.
+- The README lists what is still `TODO`.
+
+---
+
 ## Cut in the edit pass
 
 | Was | Why it's gone |

@@ -12,23 +12,28 @@ The volunteer who runs a rec league — the person who made the spreadsheet, sta
 
 Your capstone is built once, on one stack. This one is different: because it's the reference implementation, the **same product** — same concept brief, same interviews, same backlog, same PRD — will be built on each of the back-end options the course puts in front of you in Week 7. The `docs/` are shared, because the product doesn't change. Only the *how* changes, and that's the point: you can open two folders side by side and see what a stack decision actually costs and buys.
 
-Each implementation will live in its own folder under `src/`, and each one runs on its own with only its own README.
+Implementations live under `src/` in two families — **backends** and **frontends** (see [`docs/decisions/002`](docs/decisions/002-backends-and-frontends-structure.md)). Each folder runs on its own with only its own README; a frontend needs a backend to talk to.
+
+### Backends
 
 | Folder | Stack | Where the data lives | How the organizer signs in | What it's here to show |
 |---|---|---|---|---|
-| `src/fastapi/` | Python · FastAPI · SQLAlchemy · Jinja templates | SQLite file | Session cookie, hashed password you manage yourself | The "build it yourself" baseline. Every piece is visible — routing, templates, the database, auth. The most to learn, and the most to get wrong. |
-| `src/django/` | Python · Django | SQLite (swaps to Postgres with one setting) | Django's built-in auth | The "batteries included" framework. Admin screens, auth, migrations and forms arrive for free; the cost is learning Django's way of doing things. |
-| `src/streamlit/` | Python · Streamlit | SQLite file | A single organizer password in session state | The fastest path from nothing to a working screen. Great for the organizer's side; awkward for a public, mobile, read-only page — which is exactly the trade-off to see. |
-| `src/supabase/` | HTML + JavaScript in the browser · Supabase | Postgres in a **self-hosted Supabase** (the open-source stack run locally via Docker), with row-level security | Supabase Auth (self-hosted GoTrue) | A **managed-style back end**: no server code of your own. The database, auth and API are a service you configure rather than software you write — here run on your own machine, not Supabase's cloud. Security rules move into the database. |
-| `src/firebase/` | HTML + JavaScript in the browser · Firebase | Firestore on the **Firebase Emulator Suite** (local only, no Google project) | Firebase Auth emulator | The other managed-style back end, with a document store instead of tables. Same "no server" shape as Supabase, different data model — and a different answer to "how do I compute standings?" |
+| `src/backends/fastapi/` | Python · FastAPI · SQLAlchemy | SQLite file | Hashed password you manage yourself | The "build it yourself" baseline. Every piece is visible. The most to learn, and the most to get wrong. |
+| `src/backends/django/` | Python · Django · Django REST Framework | SQLite (Postgres with one setting) | Django's built-in auth | Batteries included: auth, migrations and admin arrive for free; the cost is Django's way of doing things. |
+| `src/backends/supabase/` | **Self-hosted Supabase** (open-source stack, Docker) | Postgres with row-level security | Supabase Auth (GoTrue) | A managed-style back end with no server code of your own, run on your machine, not Supabase's cloud. |
+| `src/backends/firebase/` | **Firebase Emulator Suite** (local only, no Google project) | Firestore (document database) | Auth emulator | The same "no server" shape with a document store, and a different answer to "how do I compute standings?" |
 
-Three of these are Python with a server you run; two are static pages talking to a hosted service. Between them they cover the three debate rounds from Week 7: *managed service vs. build it yourself*, *boring and proven vs. new and capable*, and *what does the agent build best?*
+### Frontends
 
-The plan is to build **FastAPI first**, as the baseline the others are compared against, then the rest in the order above. Shared logic that doesn't depend on the stack — generating a round-robin schedule, computing standings and tiebreaks — will live in `src/core/` so the three Python apps don't each reinvent it. The JavaScript implementations will carry their own copy of that logic; that duplication is itself part of what's being shown.
+| Folder | Stack | What it's here to show |
+|---|---|---|
+| `src/frontends/web/` | Next.js · React · TypeScript | The mainstream phone-first web UI. |
+| `src/frontends/flutter/` | Flutter (web + mobile) | One codebase for web and native; a different toolchain from the web. |
+| `src/frontends/streamlit/` | Python · Streamlit | The fastest path to a working screen. Great for the organizer's side; awkward for a public, mobile, read-only page — which is the trade-off to see. |
 
-**Both back-end implementations are fully self-hosted.** `src/supabase/` runs the open-source Supabase stack locally, and `src/firebase/` runs the Firebase Emulator Suite (Firestore, Auth, Hosting). Neither may depend on a hosted Supabase or Firebase account, API keys or cloud project, and each README must explain how to download and start its local stack.
+**Both managed-style back ends are fully self-hosted.** `src/backends/supabase/` runs the open-source Supabase stack locally, and `src/backends/firebase/` runs the Firebase Emulator Suite (Firestore, Auth, Hosting). Neither may depend on a hosted Supabase or Firebase account, API keys or cloud project, and each README must explain how to download and start its local stack.
 
-None of this exists yet. It's recorded here now so the stack decision in `CP-M3` has something concrete to argue against.
+Only stubs exist so far (backlog group *Scaffolding*, v0.1.0). They are recorded here so the stack decision in `CP-M3` has something concrete to argue against.
 
 ## Status
 
@@ -61,6 +66,8 @@ rec-league-manager/
     ├── 01-concept-brief.md   CP-M1
     ├── 02-prd.md             CP-M2
     ├── backlog.md            Lab 3 — stories, AC, MoSCoW, MVP slice
+    ├── todo.md               what we are doing NOW
+    ├── xchangelog.md         what was done
     ├── research/             interview notes — Week 3
     ├── design/               ui notes, wireframes
     └── decisions/            one short file per decision that could have gone the other way
