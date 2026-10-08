@@ -11,16 +11,17 @@ pip install -r requirements.txt
 
 ## Run
 ```bash
-API_URL=http://localhost:8000 streamlit run app.py    # shows "Backend: ok" when a backend is up
+API_URL=http://localhost:8000 streamlit run app.py    # shows "Hello from <backend>" when it reaches one
 ```
 
 ## Test
 ```bash
 python -m pytest
+LIVE_API_URL=http://localhost:8000 LIVE_BACKEND=fastapi python -m pytest   # also calls a running backend
 ```
 
 ## TODO
 - [ ] Organizer screens: sign-in, leagues, entrants, schedule, scores (US01–US05)
 - [ ] Standings view (US06)
 - [ ] Public read-only page and how it behaves on a phone (US07), the known weak spot
-- [ ] Talk to the Supabase/Firebase backends, not just FastAPI/Django
+- [x] One API client for every backend (ADR 003); see [`src/README.md`](../../README.md) for all 12 pairings

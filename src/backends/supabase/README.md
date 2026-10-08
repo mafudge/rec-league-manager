@@ -10,18 +10,21 @@ Docker with the Compose plugin, about 3 GB of images.
 ## Run
 ```bash
 ./start.sh      # first run creates docker/.env, generates secrets, moves the gateway to port 54321
-./smoke.sh      # prints "rest ok" and "auth ok"
+./smoke.sh      # prints "rest ok", "auth ok" and "api ok"
+../../contract-test.sh http://localhost:54321/functions/v1
 ```
-- API gateway: http://localhost:54321 (`/rest/v1`, `/auth/v1`)
+- API gateway: http://localhost:54321 (`/rest/v1`, `/auth/v1`, `/functions/v1`)
+- **Our REST API** (ADR 003): `API_URL=http://localhost:54321/functions/v1`. It is the Edge Function `docker/volumes/functions/api/index.ts`; after editing it, `docker restart supabase-edge-functions`. Upstream's `docker/.gitignore` ignores every function folder, so ours is listed there by name.
 - Studio (dashboard): http://localhost:54321, login from `DASHBOARD_USERNAME`/`DASHBOARD_PASSWORD` in `docker/.env`
 - Stop: `cd docker && docker compose down`; to wipe the data also delete `docker/volumes/db/data`
 
 `docker/.env` holds the generated secrets and is git-ignored. Never commit it.
 
 ## Test
-`./smoke.sh` against a running stack.
+`./smoke.sh` and `../../contract-test.sh http://localhost:54321/functions/v1` against a running stack.
 
 ## TODO
+- [x] Serve the shared REST contract from an Edge Function (ADR 003); see [`src/README.md`](../../README.md)
 - [ ] `migrations/0001_init.sql`: leagues, entrants, games, scores with row-level security
 - [ ] Organizer sign-in with email + password (US01); the stack has no real mail server, so no magic links
 - [ ] Standings computed on read, e.g. a Postgres view or function (US06)

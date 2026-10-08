@@ -2,6 +2,7 @@
   "name": "rec-league-firebase-emulators",
   "private": true,
   "scripts": {
+    "postinstall": "npm --prefix functions install",
     "emulators": "firebase emulators:start --project demo-rec-league"
   },
   "devDependencies": {

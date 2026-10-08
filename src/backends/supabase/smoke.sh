@@ -8,3 +8,5 @@ BASE=http://localhost:54321
 # the REST root lists the schema, which only the service role may read
 curl -fsS "$BASE/rest/v1/" -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" -o /dev/null && echo "rest ok"
 curl -fsS "$BASE/auth/v1/health" -H "apikey: $ANON_KEY" -o /dev/null && echo "auth ok"
+# the REST contract (ADR 003), served by the Edge Function in docker/volumes/functions/api
+curl -fsS "$BASE/functions/v1/api/backend" | grep -q '"backend":"supabase"' && echo "api ok"

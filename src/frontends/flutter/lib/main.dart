@@ -1,26 +1,21 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8000');
+import 'api.dart';
 
-Future<String> fetchBackendStatus() async {
+Future<String> fetchGreeting({String baseUrl = apiUrl}) async {
   try {
-    final r = await http.get(Uri.parse('$apiUrl/api/health')).timeout(const Duration(seconds: 3));
-    if (r.statusCode != 200) return 'backend unreachable';
-    return (jsonDecode(r.body) as Map<String, dynamic>)['status'] as String;
+    return 'Hello from ${await fetchBackendName(baseUrl: baseUrl)}';
   } catch (_) {
-    return 'backend unreachable';
+    return "Can't reach the backend at $baseUrl";
   }
 }
 
 void main() => runApp(const RecLeagueApp());
 
 class RecLeagueApp extends StatelessWidget {
-  const RecLeagueApp({super.key, this.loadStatus = fetchBackendStatus});
+  const RecLeagueApp({super.key, this.loadGreeting = fetchGreeting});
 
-  final Future<String> Function() loadStatus;
+  final Future<String> Function() loadGreeting;
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +26,8 @@ class RecLeagueApp extends StatelessWidget {
         appBar: AppBar(title: const Text('Rec League Manager')),
         body: Center(
           child: FutureBuilder<String>(
-            future: loadStatus(),
-            builder: (context, snap) => Text('Backend: ${snap.data ?? 'checking…'}'),
+            future: loadGreeting(),
+            builder: (context, snap) => Text(snap.data ?? 'Connecting to the backend…'),
           ),
         ),
       ),
