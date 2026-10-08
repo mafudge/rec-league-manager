@@ -23,6 +23,10 @@ flutter run -d emulator-5554 --dart-define=API_URL=http://10.0.2.2:8001    # Dja
 ```
 Only debug builds allow plain `http://` (`android/app/src/debug/AndroidManifest.xml`); `test/android_manifest_test.dart` keeps it that way.
 
+## What it does
+- Shows "Hello from <backend>" for whichever backend `API_URL` points at.
+- **Your name** + **Say hello** (or Enter) calls `GET /api/hello?name=` and shows the reply: "Hello Mike", or the backend's own error, such as "Name is required" for a blank name. The app doesn't check the name itself.
+
 ## Test
 ```bash
 flutter analyze && flutter test
