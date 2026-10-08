@@ -13,7 +13,7 @@ Every backend in `src/backends/` serves the same JSON routes under `{API_URL}/ap
 | `supabase` | An Edge Function named `api` (`docker/volumes/functions/api/`) | `http://localhost:54321/functions/v1` |
 | `firebase` | A Cloud Function named `api`, reached through a Hosting rewrite of `/api/**` | `http://localhost:5000` |
 
-The first routes are `GET /api/health` → `200 {"status":"ok"}` and `GET /api/backend` → `200 {"backend":"<name>"}`, where the name is `fastapi`, `django`, `supabase` or `firebase`. Each frontend's smoke screen says "Hello from <name>", which shows at a glance which backend answered. Every route allows cross-origin requests, because the web and Flutter frontends run in a browser on a different port. `src/contract-test.sh` checks a running backend against the contract.
+The first routes are `GET /api/health` → `200 {"status":"ok"}` and `GET /api/backend` → `200 {"backend":"<name>"}`, where the name is `fastapi`, `django`, `supabase` or `firebase`. Each frontend's smoke screen says "Hello from <name>", which shows at a glance which backend answered. `GET /api/hello?name=<name>` → `200 {"message":"Hello <name>"}`, or `400 {"error":"Name is required"}` for a missing or blank name, is the first route that takes input (SCAF-12); every backend refuses bad input with the same status and body. The full list is in `src/README.md`. Every route allows cross-origin requests, because the web and Flutter frontends run in a browser on a different port. `src/contract-test.sh` checks a running backend against the contract.
 
 ## Why
 
