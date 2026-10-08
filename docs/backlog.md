@@ -292,6 +292,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given the backend is unreachable, when I press Say hello, then the screen says "Can't reach the backend at <API_URL>". *(negative)*
 - Given any of the four backends, in Chrome or the Android emulator, when I do the above, then it works the same.
 
+### SCAF-14 · Web and Streamlit ask the backend to say hello
+
+**Folder.** `src/frontends/web/`, `src/frontends/streamlit/`.
+
+**Scope.** The same feature as SCAF-13 in the other two frontends: under "Hello from <backend>", a "Your name" box and a "Say hello" button (Enter does the same) that call `GET /api/hello?name=` and show the reply. The frontend sends the name as typed and shows whatever the backend says.
+
+**Acceptance criteria**
+- Given I type "Mike" and press Say hello, then the screen shows "Hello Mike", as returned by the backend.
+- Given I leave the box blank and press Say hello, then the screen shows "Name is required", from the backend. *(negative)*
+- Given the backend is unreachable, when I press Say hello, then the screen says "Can't reach the backend at <API_URL>". *(negative)*
+- Given either frontend and any of the four backends, when I do the above, then it works the same.
+
 ---
 
 ## Cut in the edit pass
