@@ -13,6 +13,10 @@ cp .env.example .env.local     # set NEXT_PUBLIC_API_URL to your backend
 npm run dev     # http://localhost:3000, shows "Hello from <backend>" when it reaches one
 ```
 
+## What it does
+- Shows "Hello from <backend>" for whichever backend the API URL points at.
+- **Your name** + **Say hello** (or Enter) calls `GET /api/hello?name=` and shows the reply: "Hello Mike", or the backend's own error, such as "Name is required" for a blank name. The app doesn't check the name itself.
+
 ## Test
 ```bash
 npm test
