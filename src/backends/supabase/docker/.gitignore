@@ -9,6 +9,10 @@ volumes/functions/main/**
 !volumes/functions/hello/
 volumes/functions/hello/**
 !volumes/functions/hello/index.ts
+# Rec League Manager: the REST contract (ADR 003)
+!volumes/functions/api/
+volumes/functions/api/**
+!volumes/functions/api/index.ts
 .env
 test.http
 docker-compose.override.yml

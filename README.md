@@ -12,7 +12,7 @@ The volunteer who runs a rec league — the person who made the spreadsheet, sta
 
 Your capstone is built once, on one stack. This one is different: because it's the reference implementation, the **same product** — same concept brief, same interviews, same backlog, same PRD — will be built on each of the back-end options the course puts in front of you in Week 7. The `docs/` are shared, because the product doesn't change. Only the *how* changes, and that's the point: you can open two folders side by side and see what a stack decision actually costs and buys.
 
-Implementations live under `src/` in two families — **backends** and **frontends** (see [`docs/decisions/002`](docs/decisions/002-backends-and-frontends-structure.md)). Each folder runs on its own with only its own README; a frontend needs a backend to talk to.
+Implementations live under `src/` in two families — **backends** and **frontends** (see [`docs/decisions/002`](docs/decisions/002-backends-and-frontends-structure.md)). Each folder runs on its own with only its own README; a frontend needs a backend to talk to. **Any frontend works with any backend**: every backend serves the same REST API ([`docs/decisions/003`](docs/decisions/003-one-rest-contract-for-every-backend.md)), and [`src/README.md`](src/README.md) shows how to start all 12 pairings.
 
 ### Backends
 
@@ -20,8 +20,8 @@ Implementations live under `src/` in two families — **backends** and **fronten
 |---|---|---|---|---|
 | `src/backends/fastapi/` | Python · FastAPI · SQLAlchemy | SQLite file | Hashed password you manage yourself | The "build it yourself" baseline. Every piece is visible. The most to learn, and the most to get wrong. |
 | `src/backends/django/` | Python · Django · Django REST Framework | SQLite (Postgres with one setting) | Django's built-in auth | Batteries included: auth, migrations and admin arrive for free; the cost is Django's way of doing things. |
-| `src/backends/supabase/` | **Self-hosted Supabase** (open-source stack, Docker) | Postgres with row-level security | Supabase Auth (GoTrue) | A managed-style back end with no server code of your own, run on your machine, not Supabase's cloud. |
-| `src/backends/firebase/` | **Firebase Emulator Suite** (local only, no Google project) | Firestore (document database) | Auth emulator | The same "no server" shape with a document store, and a different answer to "how do I compute standings?" |
+| `src/backends/supabase/` | **Self-hosted Supabase** (open-source stack, Docker) | Postgres with row-level security | Supabase Auth (GoTrue) | A managed-style back end, run on your machine, not Supabase's cloud. The API is a thin Edge Function over Postgres. |
+| `src/backends/firebase/` | **Firebase Emulator Suite** (local only, no Google project) | Firestore (document database) | Auth emulator | The same managed shape with a document store: the API is a Cloud Function over Firestore, and a different answer to "how do I compute standings?" |
 
 ### Frontends
 

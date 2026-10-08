@@ -230,13 +230,20 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 **Folder.** `src/` (all seven stubs) and `src/README.md`.
 
-**Scope.** One REST contract that every backend serves (ADR 003): `GET {API_URL}/api/health` returns `{"status":"ok","backend":"<name>"}` and allows cross-origin requests. Supabase serves it from an Edge Function, Firebase from a Cloud Function. Each frontend shows which backend answered. `src/README.md` has the 4 × 3 table of combinations and how to start each half.
+**Scope.** One REST contract that every backend serves (ADR 003): `GET {API_URL}/api/health` returns `{"status":"ok"}` and `GET {API_URL}/api/backend` returns `{"backend":"<name>"}` (fastapi, django, supabase or firebase), both allowing cross-origin requests. Supabase serves them from an Edge Function, Firebase from a Cloud Function. Each frontend says "Hello from <backend>". `src/README.md` has the 4 × 3 table of combinations and how to start each half.
 
 **Acceptance criteria**
 - Given any of the four backends is running, when I run `src/contract-test.sh <API_URL>`, then it passes.
-- Given any backend and any frontend from the table are running, when I open the frontend, then it shows "Backend: ok (<backend name>)".
+- Given any backend and any frontend from the table are running, when I open the frontend, then it shows "Hello from <backend name>".
 - Given a frontend running in a browser (web, Flutter), when it calls a backend on another port, then the call is not blocked by CORS.
 - Given `src/README.md`, when I read it, then it has a 4 × 3 table with the `API_URL` for every pairing and the commands to start each backend and frontend.
+
+### SCAF-09 · FastAPI tests warn that `httpx` with Starlette's TestClient is deprecated
+
+**Found while doing** SCAF-08. `pytest` in `src/backends/fastapi` prints `StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated; install httpx2 instead`. Tests pass; this is a pin to revisit before the warning becomes an error.
+
+**Acceptance criteria**
+- Given a fresh install from `requirements.txt`, when I run `.venv/bin/python -m pytest`, then it passes with no deprecation warning.
 
 ---
 

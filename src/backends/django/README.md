@@ -13,7 +13,8 @@ python manage.py migrate
 ## Run
 ```bash
 python manage.py runserver
-curl localhost:8000/api/health/   # {"status":"ok"}
+curl localhost:8000/api/backend   # {"backend":"django"}; a trailing slash works too
+../../contract-test.sh http://localhost:8000
 ```
 
 ## Test
@@ -27,4 +28,4 @@ python manage.py test
 - [ ] League, entrant, schedule, score and standings endpoints (US02–US07)
 - [ ] Public read-only endpoints (US07)
 - [ ] Move `SECRET_KEY`/`DEBUG` to environment variables before any deployment
-- [ ] Shared API contract with the frontends
+- [x] The shared REST contract (ADR 003), with CORS for browser frontends (`django-cors-headers`); see [`src/README.md`](../../README.md)

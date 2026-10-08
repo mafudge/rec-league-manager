@@ -1,19 +1,14 @@
-import os
-
-import requests
 import streamlit as st
 
-API_URL = os.environ.get("API_URL", "http://localhost:8000")
+from api import API_URL, backend_name
 
 
-def backend_status() -> str:
+def greeting() -> str:
     try:
-        r = requests.get(f"{API_URL}/api/health", timeout=3)
-        r.raise_for_status()
-        return r.json()["status"]
+        return f"Hello from {backend_name()}"
     except Exception:
-        return "backend unreachable"
+        return f"Can't reach the backend at {API_URL}"
 
 
 st.title("Rec League Manager")
-st.write(f"Backend: {backend_status()}")
+st.write(greeting())
