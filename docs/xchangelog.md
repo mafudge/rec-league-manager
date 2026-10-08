@@ -9,3 +9,4 @@
 - **SCAF-05** Supabase self-hosted backend stub (`src/backends/supabase/`) — #5.
 - **SCAF-06** Firebase Emulator backend stub (`src/backends/firebase/`) — #6.
 - **SCAF-07** Flutter frontend stub (`src/frontends/flutter/`) — #7.
+- **SCAF-08** Any frontend works with any backend (`src/README.md`) — #8. One REST contract (ADR 003): `GET /api/health`, `GET /api/backend`. `src/contract-test.sh` passes on all four backends; all 12 pairings verified live.
