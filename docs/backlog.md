@@ -256,6 +256,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given all four backends are running at once, when I run `src/contract-test.sh` against each one's `API_URL`, then all four pass.
 - Given `src/README.md`, `CLAUDE.md`, ADR 003 and the Django README, when I read them, then they give Django's `API_URL` as `http://localhost:8001` and no longer say to run one Python backend at a time.
 
+### SCAF-11 · Flutter runs in the Android emulator
+
+**Folder.** `src/frontends/flutter/` and `src/README.md`.
+
+**Scope.** The Flutter stub runs on an Android emulator against any of the four backends. Inside the emulator `localhost` is the emulator itself, so the host's backends are at `10.0.2.2` (e.g. Django is `http://10.0.2.2:8001`). Android blocks plain `http://` by default, so the debug build allows it; release builds don't. The release manifest gets the `INTERNET` permission, which only the debug manifest has today.
+
+**Acceptance criteria**
+- Given the Android emulator is running and a backend is up, when I run `flutter run --dart-define=API_URL=http://10.0.2.2:<port>` from `src/frontends/flutter`, then the app opens in the emulator and says "Hello from <backend>".
+- Given each of the four backends in turn, when I point the emulator app at it, then it says hello from that backend.
+- Given a release build, when I inspect its manifest, then it requests `INTERNET` and does not allow cleartext traffic. *(negative)*
+- Given `src/README.md`, when I read the Flutter section, then it says how to start the emulator and which `API_URL` to use for each backend from the emulator.
+
 ---
 
 ## Cut in the edit pass
