@@ -268,6 +268,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given a release build, when I inspect its manifest, then it requests `INTERNET` and does not allow cleartext traffic. *(negative)*
 - Given `src/README.md`, when I read the Flutter section, then it says how to start the emulator and which `API_URL` to use for each backend from the emulator.
 
+### SCAF-12 · Every backend says hello to a name
+
+**Folder.** `src/backends/*` and `src/contract-test.sh`.
+
+**Scope.** A second contract route (ADR 003) that takes input: `GET {API_URL}/api/hello?name=<name>` returns `{"message":"Hello <name>"}`. A missing or blank name is refused with `400 {"error":"Name is required"}`. Surrounding spaces are trimmed. Backends only; no frontend screen yet.
+
+**Acceptance criteria**
+- Given any backend is running, when I open `/api/hello?name=Mike`, then I get `200 {"message":"Hello Mike"}`.
+- Given a name with spaces or accents (`Ada Lovelace`, `José`), when I ask, then the reply has the name exactly as sent.
+- Given no `name`, or a blank one, when I ask, then I get `400 {"error":"Name is required"}`. *(negative)*
+- Given any backend, when I run `src/contract-test.sh <API_URL>`, then it checks all of the above and passes.
+
 ---
 
 ## Cut in the edit pass
