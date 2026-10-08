@@ -83,6 +83,21 @@ flutter pub get                                                       # once
 flutter run -d chrome --dart-define=API_URL=http://localhost:8000
 ```
 
+**In the Android emulator.** Needs the Android SDK and an emulator (here: `~/Android/Sdk`, emulator `rec_league_pixel`). Inside the emulator, `localhost` is the emulator itself; the machine running the backends is `10.0.2.2`.
+```bash
+flutter emulators --launch rec_league_pixel                           # wait for the Android home screen
+flutter run -d emulator-5554 --dart-define=API_URL=http://10.0.2.2:8001
+```
+
+| Backend | `API_URL` from the emulator |
+|---|---|
+| fastapi | `http://10.0.2.2:8000` |
+| django | `http://10.0.2.2:8001` |
+| firebase | `http://10.0.2.2:5000` |
+| supabase | `http://10.0.2.2:54321/functions/v1` |
+
+Debug builds allow plain `http://` for these local backends; release builds don't.
+
 ## The API
 
 Every backend serves these routes under its `API_URL`. Every response is JSON and allows any origin (CORS), because the web and Flutter apps run in a browser on a different port from the backend.

@@ -14,6 +14,11 @@ class ContractTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"backend": "django"})
 
+    def test_answers_the_android_emulator(self):
+        # Inside the Android emulator the host machine is 10.0.2.2 (SCAF-11).
+        response = self.client.get("/api/backend", HTTP_HOST="10.0.2.2:8001")
+        self.assertEqual(response.status_code, 200)
+
     def test_trailing_slash_answers_without_redirect(self):
         self.assertEqual(self.client.get("/api/health/").status_code, 200)
         self.assertEqual(self.client.get("/api/backend/").status_code, 200)
