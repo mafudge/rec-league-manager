@@ -11,3 +11,4 @@
 - **SCAF-07** Flutter frontend stub (`src/frontends/flutter/`) — #7.
 - **SCAF-08** Any frontend works with any backend (`src/README.md`) — #8. One REST contract (ADR 003): `GET /api/health`, `GET /api/backend`. `src/contract-test.sh` passes on all four backends; all 12 pairings verified live.
 - **SCAF-10** Every backend has its own port — #9. FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321; all four ran at once and passed `contract-test.sh`.
+- **SCAF-11** Flutter runs in the Android emulator — #10. Host backends at `10.0.2.2`; debug builds allow cleartext, release builds don't; Django's `ALLOWED_HOSTS` accepts `10.0.2.2`. All four backends verified in the emulator.
