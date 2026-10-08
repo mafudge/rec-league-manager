@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Every build talks to a backend over the network (ADR 003). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="rec_league_manager"
         android:name="${applicationName}"

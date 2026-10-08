@@ -16,6 +16,13 @@ flutter run -d chrome --dart-define=API_URL=http://localhost:8000    # shows "He
 ```
 Every backend in `src/backends` allows CORS, so any of them works; see [`src/README.md`](../../README.md) for each `API_URL`.
 
+**Android emulator.** In the emulator the host machine is `10.0.2.2`, not `localhost`:
+```bash
+flutter emulators --launch rec_league_pixel
+flutter run -d emulator-5554 --dart-define=API_URL=http://10.0.2.2:8001    # Django; see src/README.md for the others
+```
+Only debug builds allow plain `http://` (`android/app/src/debug/AndroidManifest.xml`); `test/android_manifest_test.dart` keeps it that way.
+
 ## Test
 ```bash
 flutter analyze && flutter test

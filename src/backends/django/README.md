@@ -16,6 +16,7 @@ python manage.py runserver     # port 8001, so it can run alongside FastAPI on 8
 curl localhost:8001/api/backend   # {"backend":"django"}; a trailing slash works too
 ../../contract-test.sh http://localhost:8001
 ```
+`ALLOWED_HOSTS` accepts `localhost` and `10.0.2.2`, which is how the Android emulator reaches this machine. A phone on the LAN would need this machine's address added too.
 
 ## Test
 ```bash

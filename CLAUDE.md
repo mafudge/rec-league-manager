@@ -44,6 +44,7 @@ Gotchas on this machine:
 - `python3 -m venv` fails (no `python3-venv`). Use `python3 -m venv --without-pip .venv`, then `.venv/bin/python get-pip.py` (download from `https://bootstrap.pypa.io/get-pip.py`).
 - Node is 18.19: keep Next.js on 15 and `firebase-tools` on 13. The Firestore emulator needs Java (installed).
 - Flutter is not on `PATH`: `export PATH=$PATH:/home/ubuntu/.local/flutter/bin`.
+- Android: the SDK is in `~/Android/Sdk` and the emulator is `rec_league_pixel` (Android 36, x86_64). This machine is a Hyper-V VM; the emulator needs nested virtualization on (`/dev/kvm` must exist). From the emulator, host backends are at `10.0.2.2`, not `localhost`.
 - Every backend has its own port (FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321), so all four can run at once. Django's default comes from `api/management/commands/runserver.py`.
 - Stop what you start: don't leave servers, emulators or the Supabase containers (`cd src/backends/supabase/docker && docker compose down`) running when you finish.
 - Never commit `.env`, `docker/.env` or `.venv`; they are git-ignored.
