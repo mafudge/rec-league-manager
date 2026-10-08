@@ -13,13 +13,13 @@ Find your backend's row and your frontend's column. The cell is the command that
 | Backend ↓ · Frontend → | **web** — `src/frontends/web` | **streamlit** — `src/frontends/streamlit` | **flutter** — `src/frontends/flutter` |
 |---|---|---|---|
 | **fastapi** | `NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev` | `API_URL=http://localhost:8000 .venv/bin/streamlit run app.py` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` |
-| **django** | `NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev` | `API_URL=http://localhost:8000 .venv/bin/streamlit run app.py` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` |
+| **django** | `NEXT_PUBLIC_API_URL=http://localhost:8001 npm run dev` | `API_URL=http://localhost:8001 .venv/bin/streamlit run app.py` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8001` |
 | **supabase** | `NEXT_PUBLIC_API_URL=http://localhost:54321/functions/v1 npm run dev` | `API_URL=http://localhost:54321/functions/v1 .venv/bin/streamlit run app.py` | `flutter run -d chrome --dart-define=API_URL=http://localhost:54321/functions/v1` |
 | **firebase** | `NEXT_PUBLIC_API_URL=http://localhost:5000 npm run dev` | `API_URL=http://localhost:5000 .venv/bin/streamlit run app.py` | `flutter run -d chrome --dart-define=API_URL=http://localhost:5000` |
 
 Then open the web app at http://localhost:3000 or Streamlit at http://localhost:8501. Flutter opens Chrome by itself.
 
-FastAPI and Django both use port 8000, so run one at a time. To run both, start Django with `runserver 8001` and use `http://localhost:8001` in its row.
+Each backend has its own port, so all four can run at once: FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321. A frontend with no `API_URL` set talks to FastAPI on 8000.
 
 ## Start a backend
 
@@ -36,8 +36,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python manage.py migrate                                   # once
-.venv/bin/python manage.py runserver                                 # http://localhost:8000
-../../contract-test.sh http://localhost:8000                         # in a second terminal
+.venv/bin/python manage.py runserver                                 # http://localhost:8001
+../../contract-test.sh http://localhost:8001                         # in a second terminal
 ```
 
 ### supabase — `src/backends/supabase`
@@ -99,7 +99,7 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 | Folder | Unit tests | Against a running backend |
 |---|---|---|
 | `backends/fastapi` | `.venv/bin/python -m pytest` | `../../contract-test.sh http://localhost:8000` |
-| `backends/django` | `.venv/bin/python manage.py test` | `../../contract-test.sh http://localhost:8000` |
+| `backends/django` | `.venv/bin/python manage.py test` | `../../contract-test.sh http://localhost:8001` |
 | `backends/supabase` | — | `./smoke.sh`, then `../../contract-test.sh http://localhost:54321/functions/v1` |
 | `backends/firebase` | — | `./smoke.sh`, then `../../contract-test.sh http://localhost:5000` |
 | `frontends/web` | `npm test` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> npm test` |

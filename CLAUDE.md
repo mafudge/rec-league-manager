@@ -33,7 +33,7 @@ Everything lives under `src/`; each folder's `README.md` is the full reference. 
 | Folder | Install (once) | Start | Test | Port |
 |---|---|---|---|---|
 | `src/backends/fastapi` | `cd src/backends/fastapi && . .venv/bin/activate && pip install -r requirements.txt` | `.venv/bin/uvicorn app.main:app --reload` | `.venv/bin/python -m pytest` | 8000 (`/api/health`) |
-| `src/backends/django` | `pip install -r requirements.txt` in its `.venv`, then `.venv/bin/python manage.py migrate` | `.venv/bin/python manage.py runserver` | `.venv/bin/python manage.py test` | 8000 (`/api/health/`) |
+| `src/backends/django` | `pip install -r requirements.txt` in its `.venv`, then `.venv/bin/python manage.py migrate` | `.venv/bin/python manage.py runserver` | `.venv/bin/python manage.py test` | 8001 (`/api/health`) |
 | `src/backends/supabase` | Docker only | `./start.sh` (first run generates `docker/.env`) | `./smoke.sh` | 54321 (`API_URL` = `/functions/v1`) |
 | `src/backends/firebase` | `npm install` (also installs `functions/`) | `npm run emulators` | `./smoke.sh` | 5000 Hosting = `API_URL`, 5001 Functions, 8080 Firestore, 9099 Auth, 4100 UI |
 | `src/frontends/web` | `npm install`, `cp .env.example .env.local` | `npm run dev` | `npm test` | 3000 |
@@ -44,6 +44,6 @@ Gotchas on this machine:
 - `python3 -m venv` fails (no `python3-venv`). Use `python3 -m venv --without-pip .venv`, then `.venv/bin/python get-pip.py` (download from `https://bootstrap.pypa.io/get-pip.py`).
 - Node is 18.19: keep Next.js on 15 and `firebase-tools` on 13. The Firestore emulator needs Java (installed).
 - Flutter is not on `PATH`: `export PATH=$PATH:/home/ubuntu/.local/flutter/bin`.
-- FastAPI and Django both use port 8000, so run only one at a time (or pass `--port`/`runserver 8001`).
+- Every backend has its own port (FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321), so all four can run at once. Django's default comes from `api/management/commands/runserver.py`.
 - Stop what you start: don't leave servers, emulators or the Supabase containers (`cd src/backends/supabase/docker && docker compose down`) running when you finish.
 - Never commit `.env`, `docker/.env` or `.venv`; they are git-ignored.

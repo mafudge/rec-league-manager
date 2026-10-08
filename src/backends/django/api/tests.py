@@ -1,3 +1,5 @@
+from django.core.management import get_commands, load_command_class
+from django.test import SimpleTestCase
 from rest_framework.test import APITestCase
 
 
@@ -28,3 +30,10 @@ class ContractTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Access-Control-Allow-Origin"], "*")
+
+
+class RunserverTests(SimpleTestCase):
+    def test_runserver_defaults_to_port_8001(self):
+        # FastAPI has 8000; every backend gets its own port so all four can run at once.
+        self.assertEqual(get_commands()["runserver"], "api")
+        self.assertEqual(load_command_class("api", "runserver").default_port, "8001")

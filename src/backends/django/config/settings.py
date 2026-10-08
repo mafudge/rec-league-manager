@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    # First, so its runserver (default port 8001) wins over staticfiles' (8000).
+    'api',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,7 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'api',
 ]
 
 MIDDLEWARE = [
