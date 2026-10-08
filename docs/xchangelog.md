@@ -14,3 +14,4 @@
 - **SCAF-11** Flutter runs in the Android emulator — #10. Host backends at `10.0.2.2`; debug builds allow cleartext, release builds don't; Django's `ALLOWED_HOSTS` accepts `10.0.2.2`. All four backends verified in the emulator.
 - **SCAF-12** Every backend says hello to a name — #11. `GET /api/hello?name=Mike` → `Hello Mike`; blank name → 400. `contract-test.sh` passes on all four.
 - **SCAF-13** Flutter asks the backend to say hello — #12. Name box + Say hello button; shows the backend's reply or its refusal. Verified in the Android emulator on all four backends and in Chrome.
+- **SCAF-14** Web and Streamlit ask the backend to say hello — #13. Same name box + Say hello as Flutter; all three frontends now do it on all four backends.
