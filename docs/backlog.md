@@ -245,6 +245,17 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 **Acceptance criteria**
 - Given a fresh install from `requirements.txt`, when I run `.venv/bin/python -m pytest`, then it passes with no deprecation warning.
 
+### SCAF-10 · Every backend has its own port
+
+**Folder.** `src/backends/django/` and the docs that list ports.
+
+**Scope.** FastAPI and Django both default to port 8000, so only one can run at a time. Move Django's default to 8001 so all four backends can run side by side: FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321. Frontends keep defaulting to FastAPI on 8000.
+
+**Acceptance criteria**
+- Given a clean clone, when I run `.venv/bin/python manage.py runserver` in `src/backends/django`, then it listens on 8001 without my passing a port.
+- Given all four backends are running at once, when I run `src/contract-test.sh` against each one's `API_URL`, then all four pass.
+- Given `src/README.md`, `CLAUDE.md`, ADR 003 and the Django README, when I read them, then they give Django's `API_URL` as `http://localhost:8001` and no longer say to run one Python backend at a time.
+
 ---
 
 ## Cut in the edit pass
