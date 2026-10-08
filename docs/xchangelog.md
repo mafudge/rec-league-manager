@@ -10,3 +10,4 @@
 - **SCAF-06** Firebase Emulator backend stub (`src/backends/firebase/`) — #6.
 - **SCAF-07** Flutter frontend stub (`src/frontends/flutter/`) — #7.
 - **SCAF-08** Any frontend works with any backend (`src/README.md`) — #8. One REST contract (ADR 003): `GET /api/health`, `GET /api/backend`. `src/contract-test.sh` passes on all four backends; all 12 pairings verified live.
+- **SCAF-10** Every backend has its own port — #9. FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321; all four ran at once and passed `contract-test.sh`.
