@@ -280,6 +280,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given no `name`, or a blank one, when I ask, then I get `400 {"error":"Name is required"}`. *(negative)*
 - Given any backend, when I run `src/contract-test.sh <API_URL>`, then it checks all of the above and passes.
 
+### SCAF-13 · Flutter asks the backend to say hello
+
+**Folder.** `src/frontends/flutter/`.
+
+**Scope.** Under "Hello from <backend>", a text box labelled "Your name" and a "Say hello" button. Pressing the button (or Enter) calls `GET /api/hello?name=` (SCAF-12) on whichever backend `API_URL` points at and shows the reply. The app does not validate the name itself; it shows whatever the backend says.
+
+**Acceptance criteria**
+- Given I type "Mike" and press Say hello, then the screen shows "Hello Mike", as returned by the backend.
+- Given I leave the box blank and press Say hello, then the screen shows "Name is required", from the backend. *(negative)*
+- Given the backend is unreachable, when I press Say hello, then the screen says "Can't reach the backend at <API_URL>". *(negative)*
+- Given any of the four backends, in Chrome or the Android emulator, when I do the above, then it works the same.
+
 ---
 
 ## Cut in the edit pass
