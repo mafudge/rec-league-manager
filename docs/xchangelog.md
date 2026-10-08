@@ -13,3 +13,4 @@
 - **SCAF-10** Every backend has its own port — #9. FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321; all four ran at once and passed `contract-test.sh`.
 - **SCAF-11** Flutter runs in the Android emulator — #10. Host backends at `10.0.2.2`; debug builds allow cleartext, release builds don't; Django's `ALLOWED_HOSTS` accepts `10.0.2.2`. All four backends verified in the emulator.
 - **SCAF-12** Every backend says hello to a name — #11. `GET /api/hello?name=Mike` → `Hello Mike`; blank name → 400. `contract-test.sh` passes on all four.
+- **SCAF-13** Flutter asks the backend to say hello — #12. Name box + Say hello button; shows the backend's reply or its refusal. Verified in the Android emulator on all four backends and in Chrome.
