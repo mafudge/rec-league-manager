@@ -6,4 +6,5 @@ from . import views
 urlpatterns = [
     re_path(r"^health/?$", views.health),
     re_path(r"^backend/?$", views.backend),
+    re_path(r"^hello/?$", views.hello),
 ]

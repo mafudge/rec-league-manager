@@ -106,6 +106,10 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 |---|---|
 | `GET /api/health` | `{"status": "ok"}` |
 | `GET /api/backend` | `{"backend": "fastapi"}` — or `django`, `supabase`, `firebase` |
+| `GET /api/hello?name=Mike` | `{"message": "Hello Mike"}`; spaces around the name are trimmed |
+| `GET /api/hello` with no name, or a blank one | `400 {"error": "Name is required"}` |
+
+Try one in a browser: http://localhost:8000/api/hello?name=Mike (or any backend's `API_URL` followed by `/api/hello?name=…`).
 
 `./contract-test.sh <API_URL>` checks a running backend against this table. A new route goes in this table, in every backend, and in the contract test.
 

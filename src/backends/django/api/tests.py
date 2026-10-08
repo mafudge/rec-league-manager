@@ -19,6 +19,21 @@ class ContractTests(APITestCase):
         response = self.client.get("/api/backend", HTTP_HOST="10.0.2.2:8001")
         self.assertEqual(response.status_code, 200)
 
+    def test_hello_greets_by_name(self):
+        response = self.client.get("/api/hello", {"name": "Mike"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"message": "Hello Mike"})
+
+    def test_hello_keeps_spaces_and_accents_but_trims_the_ends(self):
+        self.assertEqual(self.client.get("/api/hello", {"name": " Ada Lovelace "}).json(), {"message": "Hello Ada Lovelace"})
+        self.assertEqual(self.client.get("/api/hello", {"name": "José"}).json(), {"message": "Hello José"})
+
+    def test_hello_refuses_a_missing_or_blank_name(self):
+        for params in ({}, {"name": ""}, {"name": "   "}):
+            response = self.client.get("/api/hello", params)
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json(), {"error": "Name is required"})
+
     def test_trailing_slash_answers_without_redirect(self):
         self.assertEqual(self.client.get("/api/health/").status_code, 200)
         self.assertEqual(self.client.get("/api/backend/").status_code, 200)

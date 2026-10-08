@@ -15,9 +15,14 @@ export default {
   fetch(req: Request): Response {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
-    const path = new URL(req.url).pathname.replace(/\/+$/, '')
+    const url = new URL(req.url)
+    const path = url.pathname.replace(/\/+$/, '')
     if (req.method === 'GET' && path === '/api/health') return json({ status: 'ok' })
     if (req.method === 'GET' && path === '/api/backend') return json({ backend: 'supabase' })
+    if (req.method === 'GET' && path === '/api/hello') {
+      const name = (url.searchParams.get('name') ?? '').trim()
+      return name ? json({ message: `Hello ${name}` }) : json({ error: 'Name is required' }, 400)
+    }
     return json({ error: 'Not found' }, 404)
   },
 }

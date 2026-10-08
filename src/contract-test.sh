@@ -33,4 +33,16 @@ preflight=$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' -X OPTIONS \
   -H "Origin: $ORIGIN" -H "Access-Control-Request-Method: GET" "$API_URL/api/backend")
 case "$preflight" in 200|204) true ;; *) false ;; esac; check "  CORS preflight succeeds (got $preflight)" $?
 
+hello() { # hello <query-string> <expected-status> <expected-body>
+  get "/api/hello$1"
+  [ "$status" = "$2" ] && [ "$body" = "$3" ]
+  check "GET /api/hello$1 returns $2 $3 (got ${status:-no answer} $body)" $?
+}
+hello "?name=Mike" 200 '{"message":"Hello Mike"}'
+hello "?name=Ada%20Lovelace" 200 '{"message":"Hello Ada Lovelace"}'
+hello "?name=Jos%C3%A9" 200 '{"message":"Hello José"}'
+hello "?name=%20Mike%20" 200 '{"message":"Hello Mike"}'
+hello "" 400 '{"error":"Name is required"}'
+hello "?name=%20" 400 '{"error":"Name is required"}'
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
