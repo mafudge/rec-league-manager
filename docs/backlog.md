@@ -226,6 +226,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given it is running, when I run the smoke test, then it passes.
 - The README lists what is still `TODO`.
 
+### SCAF-08 · Any frontend works with any backend
+
+**Folder.** `src/` (all seven stubs) and `src/README.md`.
+
+**Scope.** One REST contract that every backend serves (ADR 003): `GET {API_URL}/api/health` returns `{"status":"ok","backend":"<name>"}` and allows cross-origin requests. Supabase serves it from an Edge Function, Firebase from a Cloud Function. Each frontend shows which backend answered. `src/README.md` has the 4 × 3 table of combinations and how to start each half.
+
+**Acceptance criteria**
+- Given any of the four backends is running, when I run `src/contract-test.sh <API_URL>`, then it passes.
+- Given any backend and any frontend from the table are running, when I open the frontend, then it shows "Backend: ok (<backend name>)".
+- Given a frontend running in a browser (web, Flutter), when it calls a backend on another port, then the call is not blocked by CORS.
+- Given `src/README.md`, when I read it, then it has a 4 × 3 table with the `API_URL` for every pairing and the commands to start each backend and frontend.
+
 ---
 
 ## Cut in the edit pass

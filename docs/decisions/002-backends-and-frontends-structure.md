@@ -19,5 +19,5 @@ Supabase and Firebase stay self-hosted (ADR 001).
 ## Consequences
 
 - Supersedes the one-folder-per-stack table in `README.md` (`src/fastapi/`, `src/django/`, `src/streamlit/`, `src/supabase/`, `src/firebase/`). Streamlit is now a frontend, and the earlier "each folder runs on its own" promise becomes "each folder runs on its own, and a frontend needs a backend".
-- Firebase and Supabase expose their own APIs, not the Django/FastAPI one. A shared API contract, and which frontend talks to which backend, is still to be decided (backlog).
+- Firebase and Supabase expose their own APIs, not the Django/FastAPI one. A shared API contract, and which frontend talks to which backend, is still to be decided (backlog). *Decided in [ADR 003](003-one-rest-contract-for-every-backend.md): one REST contract.*
 - Shared logic (`src/core/`) is deferred.
