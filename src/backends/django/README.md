@@ -12,9 +12,9 @@ python manage.py migrate
 
 ## Run
 ```bash
-python manage.py runserver
-curl localhost:8000/api/backend   # {"backend":"django"}; a trailing slash works too
-../../contract-test.sh http://localhost:8000
+python manage.py runserver     # port 8001, so it can run alongside FastAPI on 8000
+curl localhost:8001/api/backend   # {"backend":"django"}; a trailing slash works too
+../../contract-test.sh http://localhost:8001
 ```
 
 ## Test

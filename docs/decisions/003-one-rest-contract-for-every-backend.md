@@ -9,7 +9,7 @@ Every backend in `src/backends/` serves the same JSON routes under `{API_URL}/ap
 | Backend | How it serves `/api/...` | `API_URL` |
 |---|---|---|
 | `fastapi` | FastAPI routes | `http://localhost:8000` |
-| `django` | DRF views | `http://localhost:8000` |
+| `django` | DRF views | `http://localhost:8001` |
 | `supabase` | An Edge Function named `api` (`docker/volumes/functions/api/`) | `http://localhost:54321/functions/v1` |
 | `firebase` | A Cloud Function named `api`, reached through a Hosting rewrite of `/api/**` | `http://localhost:5000` |
 

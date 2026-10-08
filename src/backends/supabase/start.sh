@@ -1,7 +1,7 @@
 #!/bin/sh
 # Start the self-hosted Supabase stack from ./docker (no cloud account needed).
 # First run: creates docker/.env, moves the API gateway to port 54321 (so it
-# does not clash with FastAPI/Django on 8000) and generates fresh secrets.
+# does not clash with FastAPI on 8000 or Django on 8001) and generates fresh secrets.
 set -e
 cd "$(dirname "$0")/docker"
 if [ ! -f .env ]; then
