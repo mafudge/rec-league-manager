@@ -77,6 +77,8 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Evidence.** I1-#11 (columns W, L, PF, PA, diff; tiebreak by differential); I1-#1 "every season somebody breaks [the formulas]".
 
+**Open question (found building #14).** Can a game end tied? No AC says so. For now a tie counts toward PF and PA and toward neither W nor L, and entrants that are equal on W, Diff and PF are listed by name. Ask the organizer, then either add an AC here or have US05 refuse a tied score.
+
 ### US07 · Public link to schedule and standings
 
 **Story.** As a player, I want to open a link on my phone and see this week's games and the standings so that I stop asking the organizer "who do we play next week."
