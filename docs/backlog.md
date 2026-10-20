@@ -79,6 +79,15 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Open question (found building #14).** Can a game end tied? No AC says so. For now a tie counts toward PF and PA and toward neither W nor L, and entrants that are equal on W, Diff and PF are listed by name. Ask the organizer, then either add an AC here or have US05 refuse a tied score.
 
+### US06-01 · Standings refuse games that don't match the entrants
+
+**Found while reviewing** #14. `compute_standings` raises a bare `KeyError` when a played game names an entrant who isn't in the entrant list (say, one removed mid-season), and counts a game where an entrant plays itself as both a W and an L for that entrant. Decision: bad game data is a clear error, not silently skipped.
+
+**Acceptance criteria**
+- Given a game whose home or away entrant is not in the entrant list, when standings are computed, then a `ValueError` is raised naming the week and the unknown entrant id. *(negative)*
+- Given a game where home and away are the same entrant, when standings are computed, then a `ValueError` is raised naming the week and that entrant. *(negative)*
+- Given a bye (`away_id` is `None`), when standings are computed, then no error is raised and it still contributes nothing.
+
 ### US07 · Public link to schedule and standings
 
 **Story.** As a player, I want to open a link on my phone and see this week's games and the standings so that I stop asking the organizer "who do we play next week."
