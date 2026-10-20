@@ -15,3 +15,7 @@
 - **SCAF-12** Every backend says hello to a name — #11. `GET /api/hello?name=Mike` → `Hello Mike`; blank name → 400. `contract-test.sh` passes on all four.
 - **SCAF-13** Flutter asks the backend to say hello — #12. Name box + Say hello button; shows the backend's reply or its refusal. Verified in the Android emulator on all four backends and in Chrome.
 - **SCAF-14** Web and Streamlit ask the backend to say hello — #13. Same name box + Say hello as Flutter; all three frontends now do it on all four backends.
+
+## v0.2.0 MVP
+
+- **US06 (calculation)** FastAPI computes standings from games — #14. `app/standings.py` `compute_standings(entrants, games)`: W, L, PF, PA, Diff; sorted W → Diff → PF (then name); byes and unplayed games contribute nothing. One test per AC, 14/14 pass. The endpoint, the page (tiebreak text, "No games played yet") and the other three backends are still to do.
