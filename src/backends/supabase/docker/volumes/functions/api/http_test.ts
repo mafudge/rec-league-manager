@@ -87,3 +87,35 @@ Deno.test('ApiError carries status and message', () => {
   const e = new ApiError(401, 'x')
   assertEquals([e.status, e.message], [401, 'x'])
 })
+
+// Routes with :params (Task 2: /api/leagues/:id and below)
+const paramRoutes: Route[] = [
+  { method: 'GET', path: '/api/leagues', handler: () => json({ list: true }) },
+  { method: 'GET', path: '/api/leagues/:id', handler: (_r, _u, p) => json({ id: p.id }) },
+  { method: 'GET', path: '/api/leagues/:id/entrants', handler: (_r, _u, p) => json({ entrants: p.id }) },
+  { method: 'POST', path: '/api/leagues/:id/entrants', handler: (_r, _u, p) => json({ added: p.id }, 201) },
+]
+const callP = async (r: Request) => {
+  const res = await handle(r, paramRoutes)
+  return [res.status, await res.json()]
+}
+
+Deno.test('a :param segment matches one path segment and is passed to the handler', async () => {
+  assertEquals(await callP(req('GET', '/api/leagues')), [200, { list: true }])
+  assertEquals(await callP(req('GET', '/api/leagues/abc')), [200, { id: 'abc' }])
+  assertEquals(await callP(req('GET', '/api/leagues/abc/')), [200, { id: 'abc' }])
+  assertEquals(await callP(req('GET', '/api/leagues/abc/entrants')), [200, { entrants: 'abc' }])
+  assertEquals(await callP(req('POST', '/api/leagues/abc/entrants', '{}')), [201, { added: 'abc' }])
+})
+
+Deno.test('a :param is percent-decoded; a broken escape is passed through raw, never a 500', async () => {
+  assertEquals(await callP(req('GET', '/api/leagues/a%20b')), [200, { id: 'a b' }])
+  assertEquals(await callP(req('GET', '/api/leagues/%zz')), [200, { id: '%zz' }])
+})
+
+Deno.test('extra or missing segments are 404; a wrong method on a :param path is 405', async () => {
+  assertEquals(await callP(req('GET', '/api/leagues/abc/nope')), [404, { error: 'Not Found' }])
+  assertEquals(await callP(req('GET', '/api/leagues/abc/entrants/x')), [404, { error: 'Not Found' }])
+  assertEquals(await callP(req('DELETE', '/api/leagues/abc')), [405, { error: 'Method Not Allowed' }])
+  assertEquals(await callP(req('PUT', '/api/leagues/abc/entrants')), [405, { error: 'Method Not Allowed' }])
+})

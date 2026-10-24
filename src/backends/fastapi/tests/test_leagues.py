@@ -93,6 +93,20 @@ def test_weeks_52_is_kept(client):
     assert make(client, signed_in(client), weeks=52).status_code == 201
 
 
+def test_integral_float_weeks_counts_as_whole(client):
+    # JS backends can't tell 3.0 from 3, so every backend takes it (as for scores)
+    r = make(client, signed_in(client), weeks=3.0)
+    assert r.status_code == 201
+    assert r.json()["weeks"] == 3 and type(r.json()["weeks"]) is int
+
+
+@pytest.mark.parametrize("weeks,msg", [(2.5, "Weeks must be at least 1"), (True, "Weeks must be at least 1"),
+                                       (0.0, "Weeks must be at least 1"), (53.0, "Weeks must be between 1 and 52")])
+def test_float_weeks_refusals(client, weeks, msg):
+    r = make(client, signed_in(client), weeks=weeks)
+    assert (r.status_code, r.json()) == (400, {"error": msg})
+
+
 def test_name_of_100_characters_is_kept_and_101_refused(client):
     h = signed_in(client)
     assert make(client, h, name="a" * 100).status_code == 201
