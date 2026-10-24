@@ -83,9 +83,13 @@ The single rule that makes the matrix work: **a frontend knows only `API_URL`.**
 | `GET /api/backend` | `200 {"backend": "fastapi"}` — or `django`, `supabase`, `firebase` |
 | `GET /api/hello?name=Mike` | `200 {"message": "Hello Mike"}` (name trimmed) |
 | `GET /api/hello` with no or blank name | `400 {"error": "Name is required"}` |
+| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
+| `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
+| `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required` |
 
 Rules that apply to every route, present and future:
 
+- **Protected routes need a bearer token.** `Authorization: Bearer <token>`; a missing, malformed or expired token is `401 {"error": "Sign in required"}`. A malformed body is `400 {"error": "Invalid request"}`, never 422.
 - **JSON in, JSON out.** Errors are `{"error": "<message for a person>"}` with a 4xx status, and every backend uses the same status and message for the same mistake. Frontends show the backend's message rather than writing their own.
 - **Cross-origin is allowed** (CORS, any origin), because the web and Flutter apps run in a browser on a different port from the backend.
 - **No trailing-slash surprises.** Django, whose convention is a trailing slash, accepts both forms without redirecting.

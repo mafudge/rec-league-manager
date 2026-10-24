@@ -57,4 +57,20 @@ hello "?name=%20Mike%20" 200 '{"message":"Hello Mike"}'
 hello "" 400 '{"error":"Name is required"}'
 hello "?name=%20" 400 '{"error":"Name is required"}'
 
+# --- US13 · sign up ---
+email="contract-$(date +%s)-$$@example.com"
+post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "201" ]; check "POST /api/auth/signup returns 201 (got ${status:-no answer})" $?
+echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
+check "  body has token and refresh_token" $?
+post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "409" ] && [ "$body" = '{"error":"An account with that email already exists"}' ]
+check "signing up the same email again returns 409 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"email\":\"short-$email\",\"password\":\"short\"}"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Password must be at least 8 characters"}' ]
+check "a short password returns 400 (got ${status:-no answer} $body)" $?
+post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
+[ "$status" = "400" ] && [ "$body" = '{"error":"Enter a valid email address"}' ]
+check "an email without @ returns 400 (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

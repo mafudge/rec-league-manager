@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 
-import { BackendRefused, fetchBackendName, fetchHello } from "../app/api";
+import { BackendRefused, fetchBackendName, fetchHello, request } from "../app/api";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -21,6 +21,11 @@ test("encodes the name and keeps the base path", async () => {
 test("a 400 carries the backend's own error message", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: "Name is required" }) }));
   await expect(fetchHello("")).rejects.toEqual(new BackendRefused("Name is required"));
+});
+
+test("request treats a 409 with an error body as a refusal", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: "Taken" }) }));
+  await expect(request("POST", "/api/x", { body: {} })).rejects.toEqual(new BackendRefused("Taken"));
 });
 
 // Live: LIVE_API_URL=http://localhost:5000 LIVE_BACKEND=firebase npm test

@@ -22,8 +22,9 @@ python -m pytest
 ```
 
 ## TODO
-- [ ] SQLAlchemy models and SQLite database (leagues, entrants, games)
-- [ ] Organizer sign-in (US01)
+- [x] SQLAlchemy models and SQLite database (`DATABASE_URL`, default `sqlite:///./rec_league.db`) and one error shape (US13)
+- [x] Organizer sign-up: `POST /api/auth/signup` (US13)
+- [ ] Organizer sign-in and token refresh (US01)
 - [ ] League, entrant, schedule, score and standings endpoints (US02–US07)
 - [ ] Public read-only endpoints (US07)
 - [x] The shared REST contract (ADR 003), with CORS for browser frontends; see [`src/README.md`](../../README.md)
