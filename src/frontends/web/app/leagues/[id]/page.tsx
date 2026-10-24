@@ -12,6 +12,8 @@ import Schedule from "./schedule";
 import Standings from "./standings";
 import { LeagueTabs, tabFrom } from "./tabs";
 
+const publicUrl = (slug: string) => `${location.origin}/l/${slug}`;
+
 // The league home: a tab bar over Entrants, Schedule and Standings.
 export default function LeaguePage() {
   // useSearchParams needs a Suspense boundary for the static build.
@@ -39,7 +41,7 @@ function LeagueHome() {
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(`${location.origin}/l/${league!.slug}`);
+      await navigator.clipboard.writeText(publicUrl(league!.slug));
       setCopied("Link copied");
     } catch {
       setCopied("Couldn't copy the link");
@@ -64,6 +66,9 @@ function LeagueHome() {
               Copy public link
             </button>{" "}
             <span aria-live="polite">{copied}</span>
+            <p className={styles.muted}>
+              <a href={publicUrl(league.slug)}>{publicUrl(league.slug)}</a>
+            </p>
             <LeagueTabs active={tab} />
             {tab === "entrants" && <Entrants leagueId={id} />}
             {tab === "schedule" && <Schedule leagueId={id} />}

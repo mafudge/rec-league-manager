@@ -13,10 +13,14 @@ export default function Entrants({ leagueId }: { leagueId: string }) {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     listEntrants(leagueId)
-      .then(setEntrants)
+      .then((list) => {
+        setEntrants(list);
+        setLoaded(true);
+      })
       .catch((e) => setMessage(onError(e) ?? ""));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId]);
@@ -48,6 +52,7 @@ export default function Entrants({ leagueId }: { leagueId: string }) {
       <p className={styles.message} aria-live="polite">
         {message}
       </p>
+      {loaded && entrants.length === 0 && <p className={styles.muted}>No entrants yet — add the first one.</p>}
       <ul className={styles.list}>
         {entrants.map((e) => (
           <li key={e.id} className={styles.card}>
