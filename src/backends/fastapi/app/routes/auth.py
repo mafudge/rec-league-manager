@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..auth import hash_password, issue_tokens
+from ..auth import check_password, current_organizer, hash_password, issue_tokens, read_token
 from ..db import get_session
 from ..errors import ApiError
 from ..models import Organizer
@@ -35,3 +35,31 @@ def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> di
         session.rollback()
         raise ApiError(409, "An account with that email already exists")
     return issue_tokens(organizer.id)
+
+
+@router.post("/login")
+def login(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
+    data = body if isinstance(body, dict) else {}
+    email = data.get("email")
+    email = email.strip().lower() if isinstance(email, str) else ""
+    password = data.get("password")
+    organizer = session.scalar(select(Organizer).where(Organizer.email == email))
+    # One refusal for unknown email and wrong/missing password, so the form can't be used to find accounts.
+    if organizer is None or not isinstance(password, str) or not check_password(password, organizer.password_hash):
+        raise ApiError(401, "Email or password is incorrect")
+    return issue_tokens(organizer.id)
+
+
+@router.post("/refresh")
+def refresh(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
+    data = body if isinstance(body, dict) else {}
+    token = data.get("refresh_token")
+    organizer_id = read_token(token, "refresh") if isinstance(token, str) else None
+    if organizer_id is None or session.get(Organizer, organizer_id) is None:
+        raise ApiError(401, "Sign in required")
+    return issue_tokens(organizer_id)
+
+
+@router.get("/me")
+def me(organizer: Organizer = Depends(current_organizer)) -> dict[str, str]:
+    return {"email": organizer.email}

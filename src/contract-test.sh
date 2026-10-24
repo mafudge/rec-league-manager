@@ -77,4 +77,27 @@ post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
 [ "$status" = "400" ] && [ "$body" = '{"error":"Enter a valid email address"}' ]
 check "an email without @ returns 400 (got ${status:-no answer} $body)" $?
 
+# --- US01 · sign in, refresh, the sign-in gate ---
+post /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "200" ]; check "POST /api/auth/login returns 200 (got ${status:-no answer})" $?
+echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
+check "  body has token and refresh_token" $?
+access=$(echo "$body" | jq -r '.token'); refresh=$(echo "$body" | jq -r '.refresh_token')
+post /api/auth/login "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
+[ "$status" = "401" ] && [ "$body" = '{"error":"Email or password is incorrect"}' ]
+check "a wrong password returns 401 (got ${status:-no answer} $body)" $?
+post /api/auth/refresh "{\"refresh_token\":\"$refresh\"}"
+[ "$status" = "200" ]; check "POST /api/auth/refresh returns 200 (got ${status:-no answer})" $?
+echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
+check "  body has a new token and refresh_token" $?
+post /api/auth/refresh '{"refresh_token":"garbage"}'
+[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+check "refreshing with garbage returns 401 (got ${status:-no answer} $body)" $?
+get /api/auth/me
+[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+check "GET /api/auth/me without a token returns 401 (got ${status:-no answer} $body)" $?
+send GET /api/auth/me "" "$access"
+[ "$status" = "200" ] && [ "$body" = "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')" ]
+check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

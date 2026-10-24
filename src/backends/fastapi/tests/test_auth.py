@@ -1,3 +1,4 @@
+from tests.conftest import signed_in
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -90,3 +91,85 @@ def test_signup_losing_a_race_on_the_unique_email_is_409_not_500(client, monkeyp
     r = client.post("/api/auth/signup", json=GOOD)
     assert r.status_code == 409
     assert r.json() == {"error": "An account with that email already exists"}
+
+
+# --- US01 · sign in, refresh, and the sign-in gate ---
+def test_login_with_correct_password_returns_tokens(client):
+    client.post("/api/auth/signup", json=GOOD)
+    r = client.post("/api/auth/login", json=GOOD)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["token"] and body["refresh_token"]
+
+
+def test_login_wrong_password_and_unknown_email_get_the_same_refusal(client):
+    client.post("/api/auth/signup", json=GOOD)
+    wrong = client.post("/api/auth/login", json={**GOOD, "password": "nope-nope"})
+    unknown = client.post("/api/auth/login", json={"email": "who@example.com", "password": "cornhole1"})
+    missing = client.post("/api/auth/login", json={"email": GOOD["email"]})
+    for r in (wrong, unknown, missing):
+        assert r.status_code == 401
+        assert r.json() == {"error": "Email or password is incorrect"}
+
+
+def test_login_email_is_case_insensitive(client):
+    client.post("/api/auth/signup", json=GOOD)
+    r = client.post("/api/auth/login", json={**GOOD, "email": " DANA@Example.com "})
+    assert r.status_code == 200
+
+
+def test_refresh_returns_a_new_pair(client):
+    first = client.post("/api/auth/signup", json=GOOD).json()
+    r = client.post("/api/auth/refresh", json={"refresh_token": first["refresh_token"]})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["token"] and body["refresh_token"]
+    me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
+    assert me.status_code == 200
+
+
+def test_refresh_refuses_an_access_token_or_garbage(client):
+    first = client.post("/api/auth/signup", json=GOOD).json()
+    for bad in (first["token"], "garbage", None, 5):
+        r = client.post("/api/auth/refresh", json={"refresh_token": bad})
+        assert r.status_code == 401
+        assert r.json() == {"error": "Sign in required"}
+    assert client.post("/api/auth/refresh", json={}).status_code == 401
+
+
+def test_protected_route_needs_a_token(client):
+    import jwt
+    from datetime import datetime, timedelta, timezone
+
+    from app.auth import _secret
+
+    headers = signed_in(client)
+    me = client.get("/api/auth/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json() == {"email": "dana@example.com"}
+
+    organizer_id = read_token(headers["Authorization"].split()[1], "access")
+    expired = jwt.encode(
+        {"sub": organizer_id, "type": "access", "exp": datetime.now(timezone.utc) - timedelta(seconds=5)},
+        _secret(),
+        algorithm="HS256",
+    )
+    refresh = issue_tokens(organizer_id)["refresh_token"]
+    for h in (
+        {},
+        {"Authorization": "Bearer garbage"},
+        {"Authorization": "garbage"},
+        {"Authorization": f"Bearer {expired}"},
+        {"Authorization": f"Bearer {refresh}"},  # a refresh token is not an access token
+    ):
+        r = client.get("/api/auth/me", headers=h)
+        assert r.status_code == 401
+        assert r.json() == {"error": "Sign in required"}
+
+
+def test_token_for_a_deleted_organizer_is_refused(client):
+    headers = signed_in(client)
+    with Session(client.engine) as s:
+        s.delete(s.scalar(select(Organizer)))
+        s.commit()
+    assert client.get("/api/auth/me", headers=headers).status_code == 401

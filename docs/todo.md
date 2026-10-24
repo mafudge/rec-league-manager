@@ -4,7 +4,6 @@
 
 ## MVP (v0.2.0)
 
-- **US01** Organizer signs in — #18.
 - **US02** Create a league — #19.
 - **US03** Add entrants — #20.
 - **US04** Generate a round-robin schedule — #21.

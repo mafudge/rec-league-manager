@@ -1,4 +1,4 @@
-import { saveSession } from "./session";
+import { clearSession, getRefreshToken, getToken, saveSession } from "./session";
 
 // The one client for every backend: they all serve the same REST contract (ADR 003).
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -33,32 +33,82 @@ export async function fetchHello(name: string, apiUrl: string = API_URL): Promis
 /** Signed in is required and could not be restored: send the organizer to /signin. */
 export class SignInRequired extends Error {}
 
-type Options = { body?: unknown; auth?: boolean; apiUrl?: string };
+/** The backend answered, but with a failure it did not explain (5xx, or a 4xx with no `error`). */
+export class BackendProblem extends Error {
+  constructor(public status: number) {
+    super(`The backend had a problem (${status})`);
+  }
+}
 
-/**
- * One call for every contract route. Any 4xx with an `error` body becomes BackendRefused(error).
- * Task 3 (US01) completes `auth: true`: attach the bearer token, and on 401 refresh once, retry,
- * and throw SignInRequired if the refresh fails. Until then `auth` is accepted but not acted on.
- */
-export async function request<T>(method: string, path: string, opts: Options = {}): Promise<T> {
-  const href = url(opts.apiUrl ?? API_URL, path);
+/** What to show for a failed call: the backend's own words, or where we looked if nothing answered. */
+export const messageFor = (e: unknown): string =>
+  e instanceof BackendRefused || e instanceof BackendProblem ? e.message : `Can't reach the backend at ${API_URL}`;
+
+type Options = { body?: unknown; auth?: boolean; apiUrl?: string };
+type Tokens = { token: string; refresh_token: string };
+
+function send(method: string, href: string, opts: Options, token: string | null): Promise<Response> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
-  const r = await fetch(href, {
+  if (opts.auth && token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(href, {
     method,
     headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
   });
-  if (r.status >= 400 && r.status < 500) {
-    const { error } = await r.json().catch(() => ({ error: undefined }));
-    if (error) throw new BackendRefused(error);
-    throw new Error(`${method} ${href} returned ${r.status}`);
-  }
-  if (!r.ok) throw new Error(`${method} ${href} returned ${r.status}`);
-  return r.json();
 }
 
-type Tokens = { token: string; refresh_token: string };
+// One refresh at a time: requests that all hit 401 together share a single refresh call.
+let refreshing: Promise<boolean> | null = null;
+
+/** Trade the refresh token for a new pair. False (and the session cleared) if the backend says no. */
+function refreshSession(apiUrl: string): Promise<boolean> {
+  refreshing ??= (async () => {
+    const refresh_token = getRefreshToken();
+    if (!refresh_token) return false;
+    const r = await fetch(url(apiUrl, "/api/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token }),
+    });
+    if (!r.ok) return false;
+    saveSession((await r.json()) as Tokens);
+    return true;
+  })().finally(() => {
+    refreshing = null;
+  });
+  return refreshing;
+}
+
+/**
+ * One call for every contract route. A 4xx with an `error` body becomes BackendRefused(error); any other
+ * non-2xx becomes BackendProblem. With `auth: true` the bearer token is attached; on 401 the tokens are
+ * refreshed once and the call retried, and if that fails the session is cleared and SignInRequired thrown.
+ */
+export async function request<T>(method: string, path: string, opts: Options = {}): Promise<T> {
+  const apiUrl = opts.apiUrl ?? API_URL;
+  const href = url(apiUrl, path);
+  let r = await send(method, href, opts, getToken());
+  if (opts.auth && r.status === 401) {
+    if (!(await refreshSession(apiUrl))) {
+      clearSession();
+      throw new SignInRequired();
+    }
+    r = await send(method, href, opts, getToken());
+    if (r.status === 401) {
+      clearSession();
+      throw new SignInRequired();
+    }
+  }
+  if (!r.ok) {
+    if (r.status >= 400 && r.status < 500) {
+      const { error } = await r.json().catch(() => ({ error: undefined }));
+      if (typeof error === "string" && error) throw new BackendRefused(error);
+    }
+    throw new BackendProblem(r.status);
+  }
+  return r.json();
+}
 
 export async function signUp(email: string, password: string): Promise<void> {
   saveSession(await request<Tokens>("POST", "/api/auth/signup", { body: { email, password } }));
@@ -67,3 +117,5 @@ export async function signUp(email: string, password: string): Promise<void> {
 export async function signIn(email: string, password: string): Promise<void> {
   saveSession(await request<Tokens>("POST", "/api/auth/login", { body: { email, password } }));
 }
+
+export const fetchMe = (): Promise<{ email: string }> => request("GET", "/api/auth/me", { auth: true });
