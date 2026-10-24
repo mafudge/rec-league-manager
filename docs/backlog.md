@@ -109,6 +109,40 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given a game where home and away are the same entrant, when standings are computed, then a `ValueError` is raised naming the week and that entrant. *(negative)*
 - Given a bye (`away_id` is `None`), when standings are computed, then no error is raised and it still contributes nothing.
 
+### US05-01 · Clear one game's score
+
+**Found in** the v0.2.0 review (#25 review, I4). A score saved on the wrong game could only be undone with "Clear all scores", which clears the whole season. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given a played game, when I press "Clear" on that game, then it shows as unplayed again, its score no longer counts in standings, and every other game keeps its score.
+- Given the API, when `PUT /api/games/{id}/score` is sent with both scores `null`, then the game is cleared (200, both scores `null`). One `null` and one number is still refused with "Scores must be whole numbers 0 or greater". *(negative)*
+- Given a bye, when both scores are `null`, then it is still refused with "A bye has no score". *(negative)*
+
+### US02-01 · Names and weeks have limits
+
+**Found in** the v0.2.0 review. Nothing capped a name's length or a league's weeks. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given a league name or an entrant name longer than 100 characters (after trimming), when I submit, then it is refused with "Name must be 100 characters or fewer". *(negative)*
+- Given weeks above 52, when I create a league, then it is refused with "Weeks must be between 1 and 52". Weeks of 0 or less still get "Weeks must be at least 1" (US02). *(negative)*
+- Given a league already has 52 entrants, when I add another, then it is refused with "A league can have at most 52 entrants", because 53 entrants need a 53-week schedule. *(negative)*
+
+### US04-01 · Schedule fairness and freshness
+
+**Found in** the v0.2.0 build. Entrants added after the schedule was generated got no games, silently; and the first entrant was the home side every week. **Decided 2026-10-24: fix both in v0.2.0.**
+
+**Acceptance criteria**
+- Given a schedule exists, when an entrant has no games in it (added after generating), then the Schedule tab says "Regenerate the schedule to include new entrants."
+- Given any number of entrants from 2 to 52, when the schedule is generated, then each entrant's home games and away games differ by at most one (byes don't count).
+- Given a league that ends up with 1 week, when the schedule is generated and the weeks change, then the message says "1 week", not "1 weeks".
+
+### SCAF-16 · The hello demo reports server errors honestly
+
+**Found in** US01 (#18). The home page's "Hello from …" greeting and Say hello box still said "Can't reach the backend at …" for a server error. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given the backend answers 500, when the home page loads or I press Say hello, then it says "The backend had a problem (500)". "Can't reach the backend at …" is only for a backend that doesn't answer.
+
 ### US07 · Public link to schedule and standings
 
 **Story.** As a player, I want to open a link on my phone and see this week's games and the standings so that I stop asking the organizer "who do we play next week."
