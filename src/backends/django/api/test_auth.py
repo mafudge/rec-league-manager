@@ -47,6 +47,23 @@ class SignupTests(ApiTestCase):
         r = self.post("/api/auth/signup", {**GOOD, "password": "seven77"})
         self.assertEqual((r.status_code, r.json()), (400, {"error": "Password must be at least 8 characters"}))
 
+    def test_signup_refuses_password_over_72_characters(self):
+        r = self.post("/api/auth/signup", {**GOOD, "password": "a" * 73})
+        self.assertEqual((r.status_code, r.json()), (400, {"error": "Password must be 72 characters or fewer"}))
+        self.assertEqual(self.post("/api/auth/login", {**GOOD, "password": "a" * 73}).status_code, 401)
+
+    def test_signup_accepts_72_characters_and_login_works_with_them(self):
+        pw = "😀" * 71 + "a"  # 72 code points
+        self.assertEqual(self.post("/api/auth/signup", {**GOOD, "password": pw}).status_code, 201)
+        self.assertEqual(self.post("/api/auth/login", {**GOOD, "password": pw}).status_code, 200)
+
+    def test_long_password_is_checked_after_email_and_before_duplicate(self):
+        self.post("/api/auth/signup", GOOD)
+        r = self.post("/api/auth/signup", {**GOOD, "password": "a" * 73})
+        self.assertEqual(r.status_code, 400)
+        r = self.post("/api/auth/signup", {"email": "nope", "password": "a" * 73})
+        self.assertEqual(r.json(), {"error": "Enter a valid email address"})
+
     def test_signup_refuses_email_without_at(self):
         r = self.post("/api/auth/signup", {**GOOD, "email": "dana.example.com"})
         self.assertEqual((r.status_code, r.json()), (400, {"error": "Enter a valid email address"}))

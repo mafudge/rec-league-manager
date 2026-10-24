@@ -47,7 +47,8 @@ export function createAuth(deps: Deps) {
   async function signup(email: unknown, password: unknown): Promise<Tokens> {
     const address = cleanEmail(email)
     if (!address.includes('@')) fail(400, 'Enter a valid email address')
-    if (typeof password !== 'string' || codePoints(password) < 8) fail(400, 'Password must be at least 8 characters')
+    if (typeof password !== 'string' || codePoints(password) < 8) return fail(400, 'Password must be at least 8 characters')
+    if (codePoints(password) > 72) return fail(400, 'Password must be 72 characters or fewer')
     const { status, reply } = await gotrue('/signup', { email: address, password })
     if (status === 200) return tokensFrom(status, reply)
     const msg = String(reply.msg ?? '')
@@ -55,7 +56,7 @@ export function createAuth(deps: Deps) {
       return fail(409, 'An account with that email already exists')
     }
     if (reply.error_code === 'validation_failed' && /email/i.test(msg)) return fail(400, 'Enter a valid email address')
-    // e.g. a password over GoTrue's 72-character limit: the contract has no message for it
+    // any other GoTrue refusal: the contract has no message for it (over-72 passwords are refused above, never sent)
     if (status === 400 || status === 422) return fail(400, 'Invalid request')
     return unexpected('signup', status, reply)
   }

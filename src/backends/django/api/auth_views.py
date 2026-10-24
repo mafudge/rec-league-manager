@@ -36,6 +36,8 @@ def signup(request):
     # refuse passwords the other backends accept.
     if not isinstance(password, str) or len(password) < 8:
         raise ApiError(400, "Password must be at least 8 characters")
+    if len(password) > 72:
+        raise ApiError(400, "Password must be 72 characters or fewer")
     if User.objects.filter(username=email).exists():
         raise ApiError(409, TAKEN)
     try:

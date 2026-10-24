@@ -24,6 +24,8 @@ def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> di
         raise ApiError(400, "Enter a valid email address")
     if not isinstance(password, str) or len(password) < 8:
         raise ApiError(400, "Password must be at least 8 characters")
+    if len(password) > 72:
+        raise ApiError(400, "Password must be 72 characters or fewer")
     if session.scalar(select(Organizer).where(Organizer.email == email)):
         raise ApiError(409, "An account with that email already exists")
     organizer = Organizer(email=email, password_hash=hash_password(password))

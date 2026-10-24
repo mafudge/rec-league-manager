@@ -36,6 +36,27 @@ def test_signup_refuses_short_password(client):
     assert r.json() == {"error": "Password must be at least 8 characters"}
 
 
+def test_signup_refuses_password_over_72_characters(client):
+    r = client.post("/api/auth/signup", json={**GOOD, "password": "a" * 73})
+    assert r.status_code == 400
+    assert r.json() == {"error": "Password must be 72 characters or fewer"}
+    assert client.post("/api/auth/login", json={**GOOD, "password": "a" * 73}).status_code == 401
+
+
+def test_signup_accepts_72_characters_and_login_works_with_them(client):
+    pw = "😀" * 71 + "a"  # 72 code points
+    assert client.post("/api/auth/signup", json={**GOOD, "password": pw}).status_code == 201
+    assert client.post("/api/auth/login", json={**GOOD, "password": pw}).status_code == 200
+
+
+def test_long_password_is_checked_after_email_and_short_and_before_duplicate(client):
+    client.post("/api/auth/signup", json=GOOD)
+    r = client.post("/api/auth/signup", json={**GOOD, "password": "a" * 73})
+    assert r.status_code == 400
+    r = client.post("/api/auth/signup", json={"email": "nope", "password": "a" * 73})
+    assert r.json() == {"error": "Enter a valid email address"}
+
+
 def test_signup_refuses_email_without_at(client):
     r = client.post("/api/auth/signup", json={**GOOD, "email": "dana.example.com"})
     assert r.status_code == 400
