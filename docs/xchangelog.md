@@ -20,3 +20,4 @@
 ## v0.2.0 MVP
 
 - **US06 (calculation)** FastAPI computes standings from games — #14. `app/standings.py` `compute_standings(entrants, games)`: W, L, PF, PA, Diff; sorted W → Diff → PF (then name); byes and unplayed games contribute nothing. One test per AC, 14/14 pass. The endpoint, the page (tiebreak text, "No games played yet") and the other three backends are still to do.
+- **US13** Organizer signs up — #17. FastAPI: SQLite via SQLAlchemy, one `{"error"}` shape (never 422), bcrypt + JWT pair (1 h access, 30 d refresh), `POST /api/auth/signup` with emails trimmed and lower-cased and a signup race answered 409. Web: `/signup`, tokens in `localStorage`. `contract-test.sh` now needs `jq` and checks signup. pytest 25 passed, web 16 passed, contract ok.

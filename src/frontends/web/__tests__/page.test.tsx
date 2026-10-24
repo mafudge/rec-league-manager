@@ -28,3 +28,10 @@ test("treats an error status as unreachable", async () => {
   render(<Home />);
   expect(await screen.findByText("Can't reach the backend at http://localhost:8000")).toBeTruthy();
 });
+
+test("links to sign up and sign in", () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ backend: "fastapi" }) }));
+  render(<Home />);
+  expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/signup");
+  expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/signin");
+});

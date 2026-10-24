@@ -4,7 +4,6 @@
 
 ## MVP (v0.2.0)
 
-- **US13** Organizer signs up — #17.
 - **US01** Organizer signs in — #18.
 - **US02** Create a league — #19.
 - **US03** Add entrants — #20.

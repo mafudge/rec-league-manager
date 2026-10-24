@@ -1,0 +1,93 @@
+/* Shared look for the organizer screens; colors from docs/design/web-prototype.html. */
+.page {
+  --ink: #16342c;
+  --paper: #f4f0e4;
+  --bag-blue: #2e5fa3;
+  --bag-gold: #d9a431;
+  --brick: #a34430;
+  --line: #d8d2c0;
+  --muted: #5b6e67;
+  min-height: 100svh;
+  padding: 1rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.narrow {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.form label {
+  font-weight: 600;
+}
+
+.form input {
+  width: 100%;
+  max-width: 28rem;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.button {
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--bag-blue);
+  border: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.message {
+  margin: 0;
+  min-height: 1.5rem;
+  color: var(--brick);
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  color: var(--muted);
+}
+
+.links a,
+.tab {
+  color: var(--bag-blue);
+}
+
+.tab {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 3px solid transparent;
+  text-decoration: none;
+}
+
+.tab[aria-current="page"] {
+  border-bottom-color: var(--bag-gold);
+  color: var(--ink);
+  font-weight: 700;
+}
