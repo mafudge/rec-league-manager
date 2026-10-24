@@ -46,7 +46,9 @@ Future<Map<String, dynamic>> _get(Uri uri, http.Client? client) async {
   // JSON is always UTF-8; decode the bytes ourselves rather than rely on how http guesses the charset.
   final body = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
   if (r.statusCode == 400) {
-    throw BackendRefused(body['error'] as String? ?? 'The backend refused the request');
+    throw BackendRefused(
+      body['error'] as String? ?? 'The backend refused the request',
+    );
   }
   return body;
 }
@@ -205,4 +207,74 @@ class Api {
       ((await request('GET', '/api/auth/me', auth: true))
               as Map<String, dynamic>)['email']
           as String;
+
+  Future<List<League>> listLeagues() async => [
+    for (final l in await request('GET', '/api/leagues', auth: true) as List)
+      League.fromJson(l as Map<String, dynamic>),
+  ];
+
+  /// Sends [fields] as typed; the backend validates and answers [BackendRefused] with its own message.
+  Future<League> createLeague(Map<String, dynamic> fields) async =>
+      League.fromJson(
+        await request('POST', '/api/leagues', body: fields, auth: true)
+            as Map<String, dynamic>,
+      );
+
+  Future<League> getLeague(String id) async => League.fromJson(
+    await request('GET', '/api/leagues/$id', auth: true)
+        as Map<String, dynamic>,
+  );
+
+  Future<List<Entrant>> listEntrants(String leagueId) async => [
+    for (final e
+        in await request('GET', '/api/leagues/$leagueId/entrants', auth: true)
+            as List)
+      Entrant.fromJson(e as Map<String, dynamic>),
+  ];
+
+  Future<Entrant> addEntrant(String leagueId, String name) async =>
+      Entrant.fromJson(
+        await request(
+              'POST',
+              '/api/leagues/$leagueId/entrants',
+              body: {'name': name},
+              auth: true,
+            )
+            as Map<String, dynamic>,
+      );
+}
+
+class League {
+  League({
+    required this.id,
+    required this.slug,
+    required this.name,
+    required this.location,
+    required this.sport,
+    required this.season,
+    required this.weeks,
+    required this.allowTies,
+  });
+
+  factory League.fromJson(Map<String, dynamic> j) => League(
+    id: j['id'] as String,
+    slug: j['slug'] as String,
+    name: j['name'] as String,
+    location: j['location'] as String,
+    sport: (j['sport'] as String?) ?? '',
+    season: (j['season'] as String?) ?? '',
+    weeks: j['weeks'] as int,
+    allowTies: (j['allow_ties'] as bool?) ?? false,
+  );
+
+  final String id, slug, name, location, sport, season;
+  final int weeks;
+  final bool allowTies;
+}
+
+class Entrant {
+  Entrant({required this.id, required this.name});
+  factory Entrant.fromJson(Map<String, dynamic> j) =>
+      Entrant(id: j['id'] as String, name: j['name'] as String);
+  final String id, name;
 }

@@ -93,8 +93,7 @@ void main() {
       });
       expect(find.text('My leagues'), findsOneWidget);
       expect(find.text('dana@example.com'), findsOneWidget);
-      final me = fake.sent.last;
-      expect(me.url.path, '/api/auth/me');
+      final me = fake.sent.firstWhere((r) => r.url.path == '/api/auth/me');
       expect(me.headers['authorization'], 'Bearer t1');
     });
 
@@ -191,11 +190,12 @@ void main() {
         fake.api.setTokens('t1', 'r1');
         await show(tester, fake.api, '/leagues');
         expect(find.text('dana@example.com'), findsOneWidget);
+        final before = fake.sent.length;
         await tester.tap(find.text('Sign out'));
         await tester.pumpAndSettle();
         expect(fake.api.signedIn, isFalse);
         expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
-        expect(fake.sent, hasLength(1)); // only /api/auth/me
+        expect(fake.sent, hasLength(before)); // signing out sends nothing
         // Back must not reveal the organizer page.
         expect(find.text('My leagues'), findsNothing);
       },
