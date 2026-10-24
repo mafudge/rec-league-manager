@@ -14,6 +14,14 @@ class ApiError(APIException):
         self.message = message
 
 
+TEXT_FIELDS = ("email", "password", "name", "location", "sport", "season")
+
+
+def has_bad_text(value) -> bool:
+    """True for a string holding U+0000 or an unpaired surrogate (Python reads a lone \\ud800 as a code point in U+D800-U+DFFF)."""
+    return isinstance(value, str) and any(ch == "\0" or "\ud800" <= ch <= "\udfff" for ch in value)
+
+
 def object_body(request) -> dict:
     """The parsed JSON body, which must be an object; anything else is the contract's 400 Invalid request.
 
@@ -24,8 +32,8 @@ def object_body(request) -> dict:
         data = json.loads(request.body)
     except ValueError:  # includes JSONDecodeError and UnicodeDecodeError
         raise ApiError(400, "Invalid request")
-    if not isinstance(data, dict):
-        raise ApiError(400, "Invalid request")
+    if not isinstance(data, dict) or any(has_bad_text(data.get(f)) for f in TEXT_FIELDS):
+        raise ApiError(400, "Invalid request")  # NUL or a lone surrogate is refused with the body rule, before field validation
     return data
 
 

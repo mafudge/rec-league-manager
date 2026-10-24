@@ -21,7 +21,14 @@ export const fail = (status: number, message: string): never => {
   throw new ApiError(status, message)
 }
 
-/** The parsed JSON body, which must be an object; anything else is 400 Invalid request. */
+const TEXT_FIELDS = ['email', 'password', 'name', 'location', 'sport', 'season']
+// U+0000, a high surrogate not followed by a low one, or a low one not preceded by a high one (no `u` flag: it works on UTF-16 units).
+const BAD_TEXT = /\u0000|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
+
+/**
+ * The parsed JSON body, which must be an object; anything else is 400 Invalid request. So is a text field
+ * holding U+0000 or an unpaired surrogate, which Postgres can't store: refused here, before field validation.
+ */
 export async function objectBody(req: Request): Promise<Record<string, unknown>> {
   let body: unknown
   try {
@@ -30,7 +37,12 @@ export async function objectBody(req: Request): Promise<Record<string, unknown>>
     return fail(400, 'Invalid request')
   }
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return fail(400, 'Invalid request')
-  return body as Record<string, unknown>
+  const fields = body as Record<string, unknown>
+  for (const f of TEXT_FIELDS) {
+    const v = fields[f]
+    if (typeof v === 'string' && BAD_TEXT.test(v)) return fail(400, 'Invalid request')
+  }
+  return fields
 }
 
 export type Params = Record<string, string>
