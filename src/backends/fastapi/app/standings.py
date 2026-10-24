@@ -33,6 +33,15 @@ class StandingsRow:
         return self.pf - self.pa
 
 
+def is_played(game) -> bool:
+    """A played game is a non-bye game with both scores; works on the model rows and the dataclass alike."""
+    return game.away_id is not None and game.home_score is not None and game.away_score is not None
+
+
+def played_count(games) -> int:
+    return sum(1 for g in games if is_played(g))
+
+
 def compute_standings(entrants: list[Entrant], games: list[Game]) -> list[StandingsRow]:
     rows = {e.id: StandingsRow(e.id, e.name) for e in entrants}
     # Bad game data is an error whether or not the game was played, so the result never depends on a score.
@@ -44,7 +53,7 @@ def compute_standings(entrants: list[Entrant], games: list[Game]) -> list[Standi
             raise ValueError(f"Week {g.week}: entrant {g.home_id} ({rows[g.home_id].name}) can't play itself")
     for g in games:
         # Byes and unplayed games contribute nothing (US06 AC4).
-        if g.away_id is None or g.home_score is None or g.away_score is None:
+        if not is_played(g):
             continue
         home, away = rows[g.home_id], rows[g.away_id]
         home.pf += g.home_score
