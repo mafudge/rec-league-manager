@@ -177,3 +177,24 @@ test("a tie refusal is shown as the backend worded it", async () => {
   fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
   await screen.findByText("This league doesn't allow ties");
 });
+
+test("Clear appears only on a played game, sends both null with no confirmation, and the row reads unplayed again", async () => {
+  const confirm = vi.fn(() => true);
+  vi.stubGlobal("confirm", confirm);
+  window.confirm = confirm;
+  const scored = [{ ...generated[0], home_score: 21, away_score: 14 }, generated[1], generated[2]];
+  const f = backend({ games: scored });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies 21 – 14 Corn Stars");
+  // one played game, one unplayed game, one bye: a single Clear
+  expect(screen.getAllByRole("button", { name: /^Clear Bag Ladies vs Corn Stars/ })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: /^Clear (?!all)/ })).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "Clear Bag Ladies vs Corn Stars" }));
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: null, away_score: null });
+  expect(confirm).not.toHaveBeenCalled();
+  expect((screen.getAllByLabelText("Bag Ladies score")[0] as HTMLInputElement).value).toBe("");
+  expect((screen.getAllByLabelText("Corn Stars score")[0] as HTMLInputElement).value).toBe("");
+  expect(screen.queryAllByRole("button", { name: /^Clear (?!all)/ })).toHaveLength(0);
+  expect(calls(f, "GET", "/games").length).toBeGreaterThanOrEqual(2); // reloaded
+});

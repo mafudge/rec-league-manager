@@ -259,6 +259,20 @@ check "a literal 21.0 and 14.0 is accepted as 21 and 14 (got ${status:-no answer
 put "/api/games/$GAME_ID/score" '{"home_score":1000000000000000000000000000000,"away_score":14}' "$access"
 [ "$status" = "400" ] && same '{"error":"Scores must be whole numbers 0 or greater"}'
 check "a score too large to store returns 400 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":null}' "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg id "$GAME_ID" '.id==$id and .home_score==null and .away_score==null and (keys|length==8)' >/dev/null
+check "PUT score null/null clears the game, returning 200 with both scores null (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID/standings" "" "$access"
+echo "$body" | jq -e '.played==0' >/dev/null
+check "a cleared game no longer counts in standings (got $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":null}' "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e '.home_score==null and .away_score==null' >/dev/null
+check "clearing an unplayed game returns 200 with both scores null (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":21}' "$access"
+[ "$status" = "400" ] && same '{"error":"Scores must be whole numbers 0 or greater"}'
+check "null + 21 returns 400 whole-numbers message (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
+[ "$status" = "200" ]; check "scoring the game 21-14 again after clearing returns 200 (got ${status:-no answer} $body)" $?
 put "/api/games/$GAME_ID/score" '[]' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "PUT score with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
