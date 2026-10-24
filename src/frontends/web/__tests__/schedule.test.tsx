@@ -157,13 +157,13 @@ test("saving sends the scores and shows the game as played, still editable", asy
   await screen.findByText("Bag Ladies 21 – 17 Corn Stars");
 });
 
-test("blank inputs are sent as null so the backend's message shows next to that game", async () => {
+test("blank inputs are sent as empty strings (null means Clear) so the backend's message shows next to that game", async () => {
   const f = backend({ games: generated, put: [400, { error: "Scores must be whole numbers 0 or greater" }] });
   render(<Schedule leagueId="abc123" />);
   await screen.findByText("Bag Ladies vs Corn Stars");
   fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
   const msg = await screen.findByText("Scores must be whole numbers 0 or greater");
-  expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: null, away_score: null });
+  expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: "", away_score: "" });
   expect(msg.closest("li")!.textContent).toContain("Bag Ladies");
   expect(screen.getByText("Bag Ladies vs Corn Stars")).toBeTruthy();
 });
@@ -197,4 +197,14 @@ test("Clear appears only on a played game, sends both null with no confirmation,
   expect((screen.getAllByLabelText("Corn Stars score")[0] as HTMLInputElement).value).toBe("");
   expect(screen.queryAllByRole("button", { name: /^Clear (?!all)/ })).toHaveLength(0);
   expect(calls(f, "GET", "/games").length).toBeGreaterThanOrEqual(2); // reloaded
+});
+
+test("one blank input with Save sends \"\" for it and shows the backend's message", async () => {
+  const f = backend({ games: generated, put: [400, { error: "Scores must be whole numbers 0 or greater" }] });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  type("Bag Ladies score", "21");
+  fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
+  await screen.findByText("Scores must be whole numbers 0 or greater");
+  expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: 21, away_score: "" });
 });

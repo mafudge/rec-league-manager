@@ -77,7 +77,8 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
   );
 }
 
-const toScore = (text: string) => (text.trim() === "" ? null : Number(text));
+// A blank field goes to the backend as "" (never null, which means Clear) so its whole-numbers message is what shows.
+const toScore = (text: string) => (text.trim() === "" ? "" : Number(text));
 
 // One game: who plays whom (or the score), plus two score fields that stay available so a score can be corrected.
 function GameRow({ game: g, onSaved, onCleared }: { game: Game; onSaved: (g: Game) => void; onCleared: () => void }) {
