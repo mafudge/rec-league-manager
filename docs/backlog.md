@@ -22,6 +22,14 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Evidence.** Gap found planning v0.2.0: US01 signs in an organizer, but nothing creates one. PRD §7: an organizer owns leagues; a league belongs to one organizer. Not a co-organizer feature: each organizer sees only their own leagues (PRD §3).
 
+### US13-01 · Passwords are at most 72 characters
+
+**Found porting to Supabase.** Supabase's sign-in service refuses passwords over 72 characters, FastAPI's bcrypt silently uses only the first 72, and Django accepts any length, so the backends disagreed. **Decided 2026-10-24: cap it in v0.2.0, on every backend.**
+
+**Acceptance criteria**
+- Given a password longer than 72 characters, when I sign up, then no account is created and I see "Password must be 72 characters or fewer". *(negative)*
+- Given a password of exactly 72 characters, when I sign up, then the account is created and I can sign in with it.
+
 ### US01 · Organizer signs in
 
 **Story.** As the organizer, I want to sign in with an email and password so that only I can change the league.
@@ -404,6 +412,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - `DATABASE_URL`'s default is relative to the working directory.
 - The public and standings routes repeat the same load-and-compute block.
 - FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
+- Supabase's sign-in service refuses some addresses that contain an `@` (such as `a@`), answering "Enter a valid email address" where FastAPI and Django accept them.
 - Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
 - Django answers an unknown URL outside `/api/` with its HTML 404 page.
 
