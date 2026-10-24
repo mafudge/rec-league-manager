@@ -167,3 +167,22 @@ a.button {
   gap: 1rem;
   margin: 1rem 0 0.5rem;
 }
+
+/* Two score fields and Save on one line, even at 375 px. */
+.scoreRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.scoreRow input {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.6rem 0.5rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink);
+}

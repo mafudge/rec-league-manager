@@ -166,3 +166,5 @@ export const listGames = (leagueId: string): Promise<Game[]> =>
   request("GET", `${leaguePath(leagueId)}/games`, { auth: true });
 export const clearScores = (leagueId: string): Promise<{ cleared: number }> =>
   request("DELETE", `${leaguePath(leagueId)}/scores`, { auth: true });
+export const saveScore = (gameId: string, home_score: number | null, away_score: number | null): Promise<Game> =>
+  request("PUT", `/api/games/${gameId}/score`, { auth: true, body: { home_score, away_score } });

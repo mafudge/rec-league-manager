@@ -25,7 +25,7 @@ const generated = [
 ];
 
 /** Backend stub: GET /games returns `games` (starts as given), POST /schedule swaps in `generated`. */
-function backend(opts: { games?: unknown[]; post?: [number, unknown] } = {}) {
+function backend(opts: { games?: unknown[]; post?: [number, unknown]; put?: [number, unknown] } = {}) {
   let games = opts.games ?? [];
   const fetch = vi.fn(async (href: string, init?: { method?: string }) => {
     const path = new URL(href).pathname;
@@ -35,6 +35,14 @@ function backend(opts: { games?: unknown[]; post?: [number, unknown] } = {}) {
       const [status, body] = opts.post ?? [201, { weeks: 2, message: null }];
       if (status < 400) games = generated;
       return reply(status, body);
+    }
+    const put = path.match(/^\/api\/games\/(\w+)\/score$/);
+    if (put && method === "PUT") {
+      const [status, body] = opts.put ?? [200, null];
+      if (status >= 400) return reply(status, body);
+      const sent = JSON.parse((init as { body: string }).body);
+      games = games.map((g) => ((g as { id: string }).id === put[1] ? { ...(g as object), ...sent } : g));
+      return reply(200, games.find((g) => (g as { id: string }).id === put[1]));
     }
     if (path === "/api/leagues/abc123/scores" && method === "DELETE") return reply(200, { cleared: 1 });
     return reply(404, { error: "no route" });
@@ -111,4 +119,61 @@ test("Clear all scores asks first and only deletes on OK", async () => {
   await waitFor(() => expect(calls(f, "DELETE", "/scores")).toHaveLength(1));
   // the games are reloaded after clearing
   await waitFor(() => expect(calls(f, "GET", "/games").length).toBeGreaterThanOrEqual(2));
+});
+
+const type = (label: string, value: string) =>
+  fireEvent.change(screen.getAllByLabelText(label)[0], { target: { value } });
+
+test("each game has two labelled number inputs and a Save button; a bye has none", async () => {
+  backend({ games: generated });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  for (const label of ["Bag Ladies score", "Corn Stars score", "Hole Patrol score"]) {
+    const el = screen.getAllByLabelText(label)[0] as HTMLInputElement;
+    expect(el.type).toBe("number");
+    expect(el.min).toBe("0");
+    expect(el.step).toBe("1");
+  }
+  expect(screen.getAllByRole("button", { name: /^Save/ })).toHaveLength(2);
+  const bye = screen.getByText("Hole Patrol — bye").closest("li")!;
+  expect(bye.querySelectorAll("input")).toHaveLength(0);
+});
+
+test("saving sends the scores and shows the game as played, still editable", async () => {
+  const f = backend({ games: generated });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  type("Bag Ladies score", "21");
+  type("Corn Stars score", "14");
+  fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
+  await screen.findByText("Bag Ladies 21 – 14 Corn Stars");
+  const [, init] = calls(f, "PUT", "/score")[0];
+  expect(JSON.parse(init.body)).toEqual({ home_score: 21, away_score: 14 });
+  expect((screen.getAllByLabelText("Bag Ladies score")[0] as HTMLInputElement).value).toBe("21");
+  expect((screen.getAllByLabelText("Corn Stars score")[0] as HTMLInputElement).value).toBe("14");
+  // correcting it replaces the score
+  type("Corn Stars score", "17");
+  fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
+  await screen.findByText("Bag Ladies 21 – 17 Corn Stars");
+});
+
+test("blank inputs are sent as null so the backend's message shows next to that game", async () => {
+  const f = backend({ games: generated, put: [400, { error: "Scores must be whole numbers 0 or greater" }] });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
+  const msg = await screen.findByText("Scores must be whole numbers 0 or greater");
+  expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: null, away_score: null });
+  expect(msg.closest("li")!.textContent).toContain("Bag Ladies");
+  expect(screen.getByText("Bag Ladies vs Corn Stars")).toBeTruthy();
+});
+
+test("a tie refusal is shown as the backend worded it", async () => {
+  backend({ games: generated, put: [400, { error: "This league doesn't allow ties" }] });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  type("Bag Ladies score", "15");
+  type("Corn Stars score", "15");
+  fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
+  await screen.findByText("This league doesn't allow ties");
 });

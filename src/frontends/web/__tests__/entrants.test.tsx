@@ -23,7 +23,7 @@ function backend(initial: string[] = []) {
     const method = init?.method ?? "GET";
     if (path === "/api/auth/me") return reply(200, { email: "dana@example.com" });
     if (path === "/api/leagues/abc123") return reply(200, league);
-    if (path === "/api/leagues/abc123/entrants" && method === "GET") return reply(200, entrants);
+    if (path === "/api/leagues/abc123/entrants" && method === "GET") return reply(200, [...entrants]);
     if (path === "/api/leagues/abc123/entrants" && method === "POST") {
       const name = JSON.parse(init!.body!).name.trim();
       if (!name) return reply(400, { error: "Name is required" });

@@ -209,4 +209,53 @@ check "generating with 1 entrant returns 400 (got ${status:-no answer} $body)" $
 delete "/api/leagues/$LEAGUE_ID/scores" "$access"
 [ "$status" = "200" ] && [ "$body" = '{"cleared":0}' ]; check "DELETE scores with none recorded returns 200 cleared 0 (got ${status:-no answer} $body)" $?
 
+# --- US05 · record a score ---
+send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
+GAME_ID=$(echo "$body" | jq -r '[.[]|select(.week==1 and .away_id!=null)][0].id')
+put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg id "$GAME_ID" '.id==$id and .home_score==21 and .away_score==14 and (keys|length==8)' >/dev/null
+check "PUT score 21-14 returns 200 with both scores (got ${status:-no answer} $body)" $?
+for bad in '{"home_score":-1,"away_score":14}' '{"home_score":21.5,"away_score":14}' '{"home_score":"21","away_score":14}' '{"home_score":true,"away_score":14}' '{"home_score":null,"away_score":14}'; do
+  put "/api/games/$GAME_ID/score" "$bad" "$access"
+  [ "$status" = "400" ] && [ "$body" = '{"error":"Scores must be whole numbers 0 or greater"}' ]
+  check "score $bad returns 400 whole-numbers message (got ${status:-no answer} $body)" $?
+done
+put "/api/games/$GAME_ID/score" '{"home_score":15,"away_score":15}' "$access"
+[ "$status" = "400" ] && [ "$body" = "{\"error\":\"This league doesn't allow ties\"}" ]
+check "a tie in a no-ties league returns 400 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":21.0,"away_score":14.0}' "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e '.home_score==21 and .away_score==14' >/dev/null
+check "a literal 21.0 and 14.0 is accepted as 21 and 14 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":1000000000000000000000000000000,"away_score":14}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Scores must be whole numbers 0 or greater"}' ]
+check "a score too large to store returns 400 (got ${status:-no answer} $body)" $?
+put "/api/games/nope/score" '{"home_score":21,"away_score":14}' "$access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"Game not found"}' ]
+check "an unknown game id returns 404 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"Game not found"}' ]
+check "a second organizer scoring my game gets 404 (got ${status:-no answer} $body)" $?
+post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
+[ "$status" = "409" ] && [ "$body" = '{"error":"Scores already recorded — clear them first"}' ]
+check "regenerating with a score returns 409 (got ${status:-no answer} $body)" $?
+delete "/api/leagues/$LEAGUE_ID/scores" "$access"
+[ "$status" = "200" ] && [ "$body" = '{"cleared":1}' ]; check "DELETE scores returns 200 cleared 1 (got ${status:-no answer} $body)" $?
+post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
+[ "$status" = "201" ]; check "regenerating after clearing returns 201 (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"Odd","location":"B","weeks":3}' "$access"
+ODD_ID=$(echo "$body" | jq -r '.id')
+for n in A B C; do post "/api/leagues/$ODD_ID/entrants" "{\"name\":\"$n\"}" "$access"; done
+post "/api/leagues/$ODD_ID/schedule" "" "$access"
+send GET "/api/leagues/$ODD_ID/games" "" "$access"
+BYE_ID=$(echo "$body" | jq -r '[.[]|select(.away_id==null)][0].id')
+for bye_body in '{"home_score":21,"away_score":14}' '{"home_score":null,"away_score":null}'; do
+  put "/api/games/$BYE_ID/score" "$bye_body" "$access"
+  [ "$status" = "400" ] && [ "$body" = '{"error":"A bye has no score"}' ]
+  check "scoring a bye with $bye_body returns 400 (got ${status:-no answer} $body)" $?
+done
+send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
+GAME_ID=$(echo "$body" | jq -r '[.[]|select(.week==1 and .away_id!=null)][0].id')
+put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
+[ "$status" = "200" ]; check "scoring a week-1 game 21-14 again returns 200 (left for the standings checks) (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
