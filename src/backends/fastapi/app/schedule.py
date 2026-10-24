@@ -7,8 +7,9 @@ def round_robin(entrant_ids: list[str]) -> list[list[tuple[str, str | None]]]:
     """Circle method: one list of (home, away) pairs per week; away is None for the bye.
 
     Ring of n slots (n even). With an odd count the bye placeholder None takes slot 0, so it is the fixed
-    slot and the real entrants rotate. Slot 0 stays put and the rest rotate one place per week; slot i
-    meets slot n-1-i. A pair holding the placeholder is a bye, written (real id, None): real id at home.
+    slot and the real entrants rotate. Slot 0 never moves; each week the entrant in the last slot moves to
+    slot 1 and the others shift up one (ring = [ring[0], ring[-1], *ring[1:-1]]). Slot i meets slot n-1-i. A pair holding the placeholder is a bye, written (real id, None): real id at home. This bye swap is
+    applied after the parity flip below.
 
     Orientation, so every entrant's home and away games differ by at most one (byes don't count): number
     the pairs of a week 0, 1, 2, ... by slot i. Pair 0 is (slot 0, slot n-1) in even weeks (counting weeks
