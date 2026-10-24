@@ -1,6 +1,6 @@
 from django.urls import re_path
 
-from . import auth_views, league_views, views
+from . import auth_views, league_views, schedule_views, views
 
 # The contract has no trailing slash (ADR 003); accept one too, without a redirect.
 urlpatterns = [
@@ -14,4 +14,8 @@ urlpatterns = [
     re_path(r"^leagues/?$", league_views.leagues),
     re_path(r"^leagues/(?P<league_id>[^/]+)/?$", league_views.league_detail),
     re_path(r"^leagues/(?P<league_id>[^/]+)/entrants/?$", league_views.entrants),
+    re_path(r"^leagues/(?P<league_id>[^/]+)/schedule/?$", schedule_views.generate),
+    re_path(r"^leagues/(?P<league_id>[^/]+)/games/?$", schedule_views.games),
+    re_path(r"^leagues/(?P<league_id>[^/]+)/scores/?$", schedule_views.clear_scores),
+    re_path(r"^games/(?P<game_id>[^/]+)/score/?$", schedule_views.record_score),
 ]
