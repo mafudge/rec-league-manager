@@ -1,4 +1,4 @@
-# Firebase backend, Emulator Suite (stub)
+# Firebase backend, Emulator Suite
 
 The Firebase Emulator Suite (Auth, Firestore, Hosting) run locally. **No Google account, Firebase project or API key is used**: the project id `demo-rec-league` is a `demo-` id, which the emulators treat as offline (see [ADR 001](../../../docs/decisions/001-self-hosted-supabase-and-firebase.md)). The emulators are for development, not production.
 

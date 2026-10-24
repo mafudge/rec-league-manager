@@ -1,4 +1,4 @@
-# Streamlit frontend (stub)
+# Streamlit frontend
 
 Python · Streamlit. The fastest path to a working screen; best for the organizer's side.
 

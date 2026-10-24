@@ -1,4 +1,4 @@
-# Django backend (stub)
+# Django backend
 
 Python · Django · Django REST Framework · SQLite. Batteries included.
 

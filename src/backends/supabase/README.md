@@ -1,4 +1,4 @@
-# Supabase backend, self-hosted (stub)
+# Supabase backend, self-hosted
 
 The open-source Supabase stack (Postgres, Auth, REST, Studio…) run locally with Docker Compose. **No Supabase cloud account, project or API key is used** (see [ADR 001](../../../docs/decisions/001-self-hosted-supabase-and-firebase.md)).
 
