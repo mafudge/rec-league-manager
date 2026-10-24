@@ -390,6 +390,36 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 ---
 
+## Polish found building v0.2.0 (not scheduled)
+
+Minor findings from the per-story and whole-branch reviews of the FastAPI + web reference build. None breaks an acceptance criterion; each is a candidate for a later release. Label `polish` when one is scheduled.
+
+### POL-01 · Backend hardening (FastAPI)
+- Warn at startup when `JWT_SECRET` is unset (belongs with REL-01 deploys).
+- An email of just `@` passes the "has an @" rule.
+- bcrypt silently uses only the first 72 bytes of a password; document it or refuse longer ones.
+- Login answers faster for an unknown email than a wrong password (bcrypt skipped), which reveals whether an account exists.
+- The entrant duplicate check isn't enforced by the database, so two simultaneous adds could both pass.
+- A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
+- `DATABASE_URL`'s default is relative to the working directory.
+- The public and standings routes repeat the same load-and-compute block.
+
+### POL-02 · Web screens
+- The weeks-change message on the Schedule tab uses the error colour although it is information.
+- No feedback after "Clear all scores" succeeds.
+- The Standings tab is blank while it loads.
+- An empty `<p>` renders on the league home when sport and season are both blank.
+- The organizer header ignores a non-sign-in failure from `/auth/me`.
+- The entrant form is still usable when the entrant list failed to load.
+- The stale-schedule notice hides a failed entrants fetch silently.
+- Save's accessible name ("Save A vs B") differs from its visible text.
+- When browser storage is blocked, signing in bounces back to `/signin` with no message.
+
+### POL-03 · Tests
+- No test that the league home redirects without a token; no web test of the T cell value with ties on; the public page's ties and blank sport/season branches are untested.
+- A few weak assertions (the "no league content" check on sign-in, the one-row entrant layout check by class name).
+- The contract test leaves extra "Tiny" and "Odd" leagues behind on the target backend.
+
 ## Releases and delivery
 
 Not features. These are how the project is shipped and shown.
