@@ -95,7 +95,16 @@ Rules that apply to every route, present and future:
 - **No trailing-slash surprises.** Django, whose convention is a trailing slash, accepts both forms without redirecting.
 - **`src/contract-test.sh <API_URL>` is the definition of "conforms".** A new route goes into the table above (kept in `src/README.md`), into all four backends, and into the contract test, in the same change.
 
-Product routes (leagues, entrants, schedule, scores, standings) will be added to this contract story by story.
+Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.md` has every status code and error message, and `contract-test.sh` checks them. 🔒 = needs a token.
+
+| Route | Returns |
+|---|---|
+| 🔒 `GET`/`POST /api/leagues`, 🔒 `GET /api/leagues/{id}` (US02) | `League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `slug` is the 6-character public identifier |
+| 🔒 `GET`/`POST /api/leagues/{id}/entrants` (US03) | `Entrant` = `{id, name}` |
+| 🔒 `POST /api/leagues/{id}/schedule`, `GET .../games`, `DELETE .../scores` (US04) | A round robin; `Game` = `{id, week, home_id, home_name, away_id, away_name, home_score, away_score}`, a bye has no away side |
+| 🔒 `PUT /api/games/{id}/score` (US05) | The updated `Game` |
+| 🔒 `GET /api/leagues/{id}/standings` (US06) | `Standings` = `{rows, played, tiebreak}`, computed on every request |
+| `GET /api/public/{slug}` (US07) | `200 {league, current_week, games, standings}` with **no token**: `league` is a `League` without `id`; `current_week` is the lowest week with an unplayed non-bye game, the last week once all are played, `null` with no schedule; `404 League not found` for an unknown slug. The only route the public page calls, and it has no write twin |
 
 ## 5 · Backends
 

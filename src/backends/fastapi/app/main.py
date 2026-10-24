@@ -9,6 +9,7 @@ from .errors import register_handlers
 from .routes import auth as auth_routes
 from .routes import entrants as entrant_routes
 from .routes import leagues as league_routes
+from .routes import public as public_routes
 from .routes import schedule as schedule_routes
 from .routes import scores as score_routes
 from .routes import standings as standings_routes
@@ -25,6 +26,7 @@ register_handlers(app)
 app.include_router(auth_routes.router)
 app.include_router(league_routes.router)
 app.include_router(entrant_routes.router)
+app.include_router(public_routes.router)
 app.include_router(schedule_routes.router)
 app.include_router(score_routes.router)
 app.include_router(standings_routes.router)

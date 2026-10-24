@@ -24,8 +24,8 @@ LIVE_API_URL=http://localhost:8000 LIVE_BACKEND=fastapi npm test   # also calls 
 ```
 
 ## TODO
-- [ ] Public league page: schedule and standings, phone-first at 375 px (US07)
+- [x] Public league page at `/l/[slug]`: schedule and standings, phone-first at 375 px (US07)
 - [x] Organizer sign-up at `/signup` (US13)
-- [ ] Organizer sign-in and league screens (US01–US06)
+- [x] Organizer sign-in and league screens (US01–US06); the v0.2.0 reference build is complete
 - [x] One API client for every backend (ADR 003); see [`src/README.md`](../../README.md) for all 12 pairings
 - [ ] Replace the default create-next-app styles

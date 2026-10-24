@@ -269,4 +269,12 @@ send GET "/api/leagues/$LEAGUE_ID/standings" "" "$other_access"
 [ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
 check "a second organizer reading my standings gets 404 (got ${status:-no answer} $body)" $?
 
+# --- US07 · public link: no token ---
+send GET "/api/public/$LEAGUE_SLUG" "" ""
+[ "$status" = "200" ] && echo "$body" | jq -e '(.league|has("id")|not) and .league.name=="Tuesday Cornhole" and (.league.location|length>0) and (.games|length==15) and .current_week==1 and .standings.played==1 and (.standings.rows|length==6)' >/dev/null
+check "GET /public/{slug} with no token returns 200: league without id, 15 games, current_week 1, played 1 (got ${status:-no answer} $body)" $?
+send GET "/api/public/zzzzzz" "" ""
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "GET /public/zzzzzz returns 404 League not found (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
