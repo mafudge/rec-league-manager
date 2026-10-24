@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
@@ -24,6 +24,8 @@ def _email(data: dict) -> str:
 
 
 @api_view(["POST"])
+@authentication_classes([])  # open route: a stale token in the header is ignored, as on FastAPI
+@permission_classes([])
 def signup(request):
     data = object_body(request)
     email = _email(data)
@@ -46,6 +48,8 @@ def signup(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])  # open route: a stale token in the header is ignored, as on FastAPI
+@permission_classes([])
 def login(request):
     data = object_body(request)
     password = data.get("password")
@@ -57,6 +61,8 @@ def login(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])  # open route: a stale token in the header is ignored, as on FastAPI
+@permission_classes([])
 def refresh(request):
     data = object_body(request)
     token = data.get("refresh_token")

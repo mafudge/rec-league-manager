@@ -163,9 +163,9 @@ class MeTests(ApiTestCase):
 
     def test_wrong_method_is_405_in_the_contract_shape(self):
         r = self.client.get("/api/auth/login")
-        self.assertEqual((r.status_code, r.json()), (405, {"error": "Method not allowed"}))
+        self.assertEqual((r.status_code, r.json()), (405, {"error": "Method Not Allowed"}))
         r = self.client.post("/api/auth/me", **self.signed_in())
-        self.assertEqual((r.status_code, r.json()), (405, {"error": "Method not allowed"}))
+        self.assertEqual((r.status_code, r.json()), (405, {"error": "Method Not Allowed"}))
 
 
 class ExceptionHandlerTests(ApiTestCase):
@@ -192,7 +192,7 @@ class ExceptionHandlerTests(ApiTestCase):
         self.assertEqual(self.answer(exceptions.NotFound("League not found")), (404, {"error": "League not found"}))
 
     def test_method_not_allowed(self):
-        self.assertEqual(self.answer(exceptions.MethodNotAllowed("GET")), (405, {"error": "Method not allowed"}))
+        self.assertEqual(self.answer(exceptions.MethodNotAllowed("GET")), (405, {"error": "Method Not Allowed"}))
 
     def test_permission_denied_and_throttled_still_use_the_error_key(self):
         status, body = self.answer(exceptions.PermissionDenied())
@@ -207,3 +207,37 @@ class ExceptionHandlerTests(ApiTestCase):
 
     def test_non_drf_exceptions_are_left_to_django(self):
         self.assertIsNone(exception_handler(ValueError("boom"), {}))
+
+
+class StaleTokenOnOpenRoutesTests(ApiTestCase):
+    """Routes that need no sign-in ignore the Authorization header, as FastAPI does (a client may send its expired token along)."""
+
+    GARBAGE = {"HTTP_AUTHORIZATION": "Bearer garbage"}
+
+    def test_signup_login_and_refresh_ignore_a_garbage_token(self):
+        r = self.post("/api/auth/signup", GOOD, **self.GARBAGE)
+        self.assertEqual(r.status_code, 201)
+        r = self.post("/api/auth/login", GOOD, **self.GARBAGE)
+        self.assertEqual(r.status_code, 200)
+        r = self.post("/api/auth/refresh", {"refresh_token": r.json()["refresh_token"]}, **self.GARBAGE)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(set(r.json()), {"token", "refresh_token"})
+
+    def test_open_routes_answer_their_own_refusals_not_sign_in_required(self):
+        r = self.post("/api/auth/login", {**GOOD, "password": "wrong-password"}, **self.GARBAGE)
+        self.assertEqual((r.status_code, r.json()), (401, {"error": "Email or password is incorrect"}))
+        r = self.post("/api/auth/signup", {"email": "x", "password": "cornhole1"}, **self.GARBAGE)
+        self.assertEqual((r.status_code, r.json()), (400, {"error": "Enter a valid email address"}))
+
+    def test_health_backend_and_hello_ignore_a_garbage_token(self):
+        for path, body in (
+            ("/api/health", {"status": "ok"}),
+            ("/api/backend", {"backend": "django"}),
+            ("/api/hello?name=Mike", {"message": "Hello Mike"}),
+        ):
+            r = self.client.get(path, **self.GARBAGE)
+            self.assertEqual((r.status_code, r.json()), (200, body), path)
+
+    def test_me_still_refuses_a_garbage_token(self):
+        r = self.client.get("/api/auth/me", **self.GARBAGE)
+        self.assertEqual((r.status_code, r.json()), (401, SIGN_IN_REQUIRED))

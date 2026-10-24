@@ -403,7 +403,8 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
 - `DATABASE_URL`'s default is relative to the working directory.
 - The public and standings routes repeat the same load-and-compute block.
-- FastAPI accepts the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); Django and the JS backends refuse them as `400 Invalid request`. FastAPI should refuse them too.
+- FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
+- Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
 - Django answers an unknown URL outside `/api/` with its HTML 404 page.
 
 ### POL-02 · Web screens
