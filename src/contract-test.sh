@@ -185,4 +185,28 @@ post "/api/leagues/$LEAGUE_ID/entrants" '{"name":"Intruders"}' "$other_access"
 [ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
 check "a second organizer adding an entrant to my league gets 404 (got ${status:-no answer} $body)" $?
 
+# --- US04 · generate a schedule, clear scores ---
+post "/api/leagues/$LEAGUE_ID/schedule" "" "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "a second organizer generating my schedule gets 404 (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
+[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a league with no schedule has no games (got ${status:-no answer} $body)" $?
+post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
+[ "$status" = "201" ] && [ "$body" = '{"weeks":5,"message":"This schedule needs 5 weeks, so the league now runs 5 weeks instead of 8."}' ]
+check "POST schedule on 6 entrants returns 201 weeks 5 and the weeks message (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e 'length==15 and (map(.week)|unique)==[1,2,3,4,5] and ([.[].week]==([.[].week]|sort)) and all(.[]; (keys|length==8) and (.id|type=="string") and .home_score==null and .away_score==null)' >/dev/null
+check "GET games lists 15 games across weeks 1-5 in week order (got ${status:-no answer})" $?
+post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
+[ "$status" = "201" ] && [ "$body" = '{"weeks":5,"message":null}' ]
+check "generating again returns 201 with message null (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"Tiny","location":"B","weeks":3}' "$access"
+TINY_ID=$(echo "$body" | jq -r '.id')
+post "/api/leagues/$TINY_ID/entrants" '{"name":"Solo"}' "$access"
+post "/api/leagues/$TINY_ID/schedule" "" "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Add at least 2 entrants first"}' ]
+check "generating with 1 entrant returns 400 (got ${status:-no answer} $body)" $?
+delete "/api/leagues/$LEAGUE_ID/scores" "$access"
+[ "$status" = "200" ] && [ "$body" = '{"cleared":0}' ]; check "DELETE scores with none recorded returns 200 cleared 0 (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

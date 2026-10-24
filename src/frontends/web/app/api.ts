@@ -146,3 +146,23 @@ export const listEntrants = (leagueId: string): Promise<Entrant[]> =>
   request("GET", `/api/leagues/${encodeURIComponent(leagueId)}/entrants`, { auth: true });
 export const addEntrant = (leagueId: string, name: string): Promise<Entrant> =>
   request("POST", `/api/leagues/${encodeURIComponent(leagueId)}/entrants`, { auth: true, body: { name } });
+
+export type Game = {
+  id: string;
+  week: number;
+  home_id: string;
+  home_name: string;
+  away_id: string | null;
+  away_name: string | null;
+  home_score: number | null;
+  away_score: number | null;
+};
+
+const leaguePath = (leagueId: string) => `/api/leagues/${encodeURIComponent(leagueId)}`;
+
+export const generateSchedule = (leagueId: string): Promise<{ weeks: number; message: string | null }> =>
+  request("POST", `${leaguePath(leagueId)}/schedule`, { auth: true });
+export const listGames = (leagueId: string): Promise<Game[]> =>
+  request("GET", `${leaguePath(leagueId)}/games`, { auth: true });
+export const clearScores = (leagueId: string): Promise<{ cleared: number }> =>
+  request("DELETE", `${leaguePath(leagueId)}/scores`, { auth: true });
