@@ -4,5 +4,4 @@
 
 ## MVP (v0.2.0)
 
-- **US06** Standings compute themselves — #23 (closes US06-01, #15).
 - **US07** Public link to schedule and standings — #24.
