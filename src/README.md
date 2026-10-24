@@ -112,6 +112,8 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 
 A route marked with a lock needs `Authorization: Bearer <token>`; a missing, malformed or expired token gets `401 {"error": "Sign in required"}`. Every route that takes a body (signup, login, refresh, `POST /leagues`, `POST …/entrants`, `PUT …/score`) answers `400 {"error": "Invalid request"}`, never 422, when the body is missing, is not valid JSON, or is valid JSON that is not an object (`[]`, `"x"`, `5`); an object with missing or wrong-typed fields gets that route's own message instead. A string field (`email`, `password`, `name`, `location`, `sport`, `season`) containing U+0000 or an unpaired surrogate (a lone `\ud800`–`\udfff` escape) is `400 {"error": "Invalid request"}` too, checked together with the body rule, before field validation and before any lookup; no backend can store such text, and nothing is stored. Response bodies are compared as JSON, so spacing, key order and `\u` escapes don't matter. Access tokens last 1 hour, refresh tokens 30 days.
 
+Known exception: on Firebase the Cloud Functions runtime parses a JSON body before our code runs, so a malformed body sent with `Content-Type: application/json` gets the runtime's HTML 400 instead of `{"error": "Invalid request"}` (backlog POL-01). The contract test only sends syntactically valid JSON (including valid non-object JSON, which Firebase answers correctly), so it does not exercise this case.
+
 Try one in a browser: http://localhost:8000/api/hello?name=Mike (or any backend's `API_URL` followed by `/api/hello?name=…`).
 
 `./contract-test.sh <API_URL>` checks a running backend against this table. A new route goes in this table, in every backend, and in the contract test.

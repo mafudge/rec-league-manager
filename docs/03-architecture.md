@@ -114,11 +114,11 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 |---|---|---|---|---|
 | Language | Python 3.12 | Python 3.12 | TypeScript (Deno) for the API; SQL for data | JavaScript (Node 18) |
 | Framework | FastAPI 0.142, Uvicorn 0.54 | Django 5.2, DRF 3.18 | Supabase self-hosted: Edge Runtime 1.76, Postgres 17.6, GoTrue 2.196, PostgREST 14.17, Envoy gateway | Firebase Emulator Suite (firebase-tools 13.35): Functions (firebase-functions 6.6), Firestore, Auth, Hosting |
-| Where data lives | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins) |
+| Where data lives | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins): `leagues/{id}`, its `entrants` subcollection, the schedule as one document (`schedule/current`, a generation and its games) so generating and scoring are transactions on it, and `slugs/{slug}` for the public link |
 | How it serves the contract | FastAPI routes | DRF views | One Edge Function, `api` | One Cloud Function, `api`, behind a Hosting rewrite of `/api/**` |
-| Sign-in (US01) | Hashed password + token we write | Django's `User` model + simplejwt, behind the contract's `{token, refresh_token}` | Supabase Auth (GoTrue), called by the Edge Function, which maps its answers to the contract's statuses and messages | Auth emulator |
-| Who may see a league | A check in the route code | A check in the view code | Row-level security: queries run with the organizer's own token, so Postgres hides other organizers' leagues (the function's 404 is that check). Only the public page uses the service-role key, and it reads by slug | `firestore.rules` as a second line behind the function |
-| Where standings are computed | `standings.py`, per request | `standings.py`, per request | In the Edge Function (`standings.ts`), per request from the games rows; no view, no stored table | Inside the Cloud Function |
+| Sign-in (US01) | Hashed password + token we write | Django's `User` model + simplejwt, behind the contract's `{token, refresh_token}` | Supabase Auth (GoTrue), called by the Edge Function, which maps its answers to the contract's statuses and messages | Auth emulator, called by the Cloud Function over its REST API; the function maps its answers to the contract's and verifies access tokens with the Admin SDK |
+| Who may see a league | A check in the route code | A check in the view code | Row-level security: queries run with the organizer's own token, so Postgres hides other organizers' leagues (the function's 404 is that check). Only the public page uses the service-role key, and it reads by slug | Ownership is checked in the function's code (the Admin SDK bypasses rules, so every organizer route compares the league's `organizerId` with the token's uid). `firestore.rules` deny every client read and write, so the browser never touches Firestore |
+| Where standings are computed | `standings.py`, per request | `standings.py`, per request | In the Edge Function (`standings.ts`), per request from the games rows; no view, no stored table | Inside the Cloud Function (`standings.js`), per request from the schedule document; nothing is stored |
 | Port / `API_URL` | 8000 / `http://localhost:8000` | 8001 / `http://localhost:8001` | 54321 / `http://localhost:54321/functions/v1` | 5000 / `http://localhost:5000` |
 | Here to show | Building it yourself: every piece visible, most to get wrong | Batteries included: auth, migrations, admin for free, at the price of Django's way | A managed platform's shape on Postgres, run on your own machine | The same managed shape on a document store, and a different answer to "where are standings computed?" |
 
@@ -161,12 +161,12 @@ All four backends can run at once, each on its own port.
 | PRD §5 constraint | How the architecture meets it | State |
 |---|---|---|
 | Phone-first, 375 px | Each frontend's job, in a phone's browser | Not built (no product screens yet) |
-| Public means public | Public routes need no token; the public page exposes no write route | Not built |
-| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in a Postgres view or the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | Not built; the rule is fixed here |
+| Public means public | Public routes need no token; the public page exposes no write route | In place on all four backends (the Firebase route validates the slug before any Firestore call) |
+| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in a Postgres view or the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | In place on all four backends |
 | Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | Not built |
 | Empty and error states | Errors are defined in the contract and shown as the backend sends them | In place for the current routes |
 | Runs from the repo | Every stub runs from its README; `src/README.md` covers all pairings | Done |
-| Data survives restarts | SQLite files (FastAPI, Django) and the Postgres volume (Supabase) persist. **The Firestore emulator forgets everything on exit** unless started with `--import`/`--export-on-exit` | Gap for Firebase; on its README's TODO |
+| Data survives restarts | SQLite files (FastAPI, Django) and the Postgres volume (Supabase) persist. Firebase's `npm run emulators` starts with `--import=./emulator-data --export-on-exit`, so the Firestore and Auth emulators keep their data when stopped with Ctrl+C (SIGINT; a killed process loses the session). Round trip proved with a league, its schedule and a score | Done |
 
 ## 9 · Decisions the PRD handed to this document
 

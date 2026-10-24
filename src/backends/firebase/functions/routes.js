@@ -1,7 +1,7 @@
 // The contract's routes. Each handler returns [status, body]. Lock routes call organizerFrom first.
 const { objectBody } = require("./http");
 
-function createRoutes(auth, leagues, schedule, scores) {
+function createRoutes(auth, leagues, schedule, scores, standings, pub) {
   return [
     { method: "GET", path: "/api/health", handler: () => [200, { status: "ok" }] },
     { method: "GET", path: "/api/backend", handler: () => [200, { backend: "firebase" }] },
@@ -32,6 +32,8 @@ function createRoutes(auth, leagues, schedule, scores) {
     { method: "POST", path: "/api/leagues/:id/schedule", handler: async (req, p) => schedule.generate(await auth.organizerFrom(req), p.id) },
     { method: "GET", path: "/api/leagues/:id/games", handler: async (req, p) => schedule.listGames(await auth.organizerFrom(req), p.id) },
     { method: "DELETE", path: "/api/leagues/:id/scores", handler: async (req, p) => schedule.clearScores(await auth.organizerFrom(req), p.id) },
+    { method: "GET", path: "/api/leagues/:id/standings", handler: async (req, p) => standings.get(await auth.organizerFrom(req), p.id) },
+    { method: "GET", path: "/api/public/:slug", handler: (_req, p) => pub.get(p.slug) }, // no token; any Authorization is ignored
     {
       method: "PUT",
       path: "/api/games/:id/score",

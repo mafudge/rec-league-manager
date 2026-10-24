@@ -407,7 +407,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - An email of just `@` passes the "has an @" rule.
 - Login still accepts a password over 72 bytes on FastAPI (bcrypt truncates it) and Supabase (GoTrue truncates it), while Django refuses it; refuse it with `401 Email or password is incorrect` on all three (the signup half is done, US13-01).
 - Login answers faster for an unknown email than a wrong password (bcrypt skipped), which reveals whether an account exists.
-- The entrant duplicate check isn't enforced by the database, so two simultaneous adds could both pass.
+- On FastAPI, Django and Supabase the entrant duplicate check isn't enforced by the database, so two simultaneous adds could both pass. (Firebase does the check and the insert in one Firestore transaction, so it is not affected.)
 - A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
 - `DATABASE_URL`'s default is relative to the working directory.
 - The public and standings routes repeat the same load-and-compute block.

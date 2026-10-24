@@ -2,7 +2,7 @@
 const { fail } = require("./http");
 const { gameJson, namesOf } = require("./schedule");
 
-const GAME_ID = /^([0-9a-f]{32})\.([0-9a-f]{8})\.(\d{1,4})$/;
+const GAME_ID = /^([0-9a-f]{32})\.([0-9a-f]{8})\.(0|[1-9]\d{0,3})$/;
 const LIMIT = 2 ** 31; // int4, so every backend agrees on what fits
 const NOT_FOUND = "Game not found";
 

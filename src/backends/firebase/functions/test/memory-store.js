@@ -10,6 +10,7 @@ function memoryStore() {
   return {
     calls,
     getLeague: rec("getLeague", async (id) => leagues.get(id) ?? null),
+    getLeagueBySlug: rec("getLeagueBySlug", async (slug) => [...leagues.values()].find((l) => l.slug === slug) ?? null),
     listLeagues: rec("listLeagues", async (uid) => [...leagues.values()].filter((l) => l.organizerId === uid)),
     createLeague: rec("createLeague", async (league) => {
       if (slugs.has(league.slug)) return false;

@@ -2,6 +2,8 @@
 const { createLeagues } = require("../leagues");
 const { createSchedule } = require("../schedule");
 const { createScores } = require("../scores");
+const { createStandings } = require("../standings");
+const { createPublic } = require("../public");
 const { createSlugs } = require("../slugs");
 const { dispatch, ApiError } = require("../http");
 const { createRoutes } = require("../routes");
@@ -16,10 +18,10 @@ function setup() {
   const scores = createScores({ store, leagues });
   const users = { a: { id: "uA", email: "a@x.com" }, b: { id: "uB", email: "b@x.com" } };
   const auth = { organizerFrom: async (req) => users[req.headers.authorization] ?? Promise.reject(new ApiError(401, "Sign in required")) };
-  const routes = createRoutes(auth, leagues, schedule, scores);
+  const routes = createRoutes(auth, leagues, schedule, scores, createStandings({ store, leagues }), createPublic({ store }));
   const call = (who, method, path, body) =>
-    dispatch({ method, path, headers: { authorization: who }, rawBody: body === undefined ? "" : JSON.stringify(body) }, routes);
-  const raw = (who, method, path, rawBody) => dispatch({ method, path, headers: { authorization: who }, rawBody }, routes);
+    dispatch({ method, path, headers: who === undefined ? {} : { authorization: who }, rawBody: body === undefined ? "" : JSON.stringify(body) }, routes);
+  const raw = (who, method, path, rawBody) => dispatch({ method, path, headers: who === undefined ? {} : { authorization: who }, rawBody }, routes);
   return { store, call, raw };
 }
 
