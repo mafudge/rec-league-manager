@@ -7,7 +7,9 @@ INVALID = {"error": "Invalid request"}
 JSON = "application/json"
 
 
-class ScoreTests(ScheduleTestCase):
+class ScoreHelpers:
+    """Setup shared with the standings and public-page tests (a mixin, so importing it adds no test cases)."""
+
     def setup_league(self, n=4, ties=False, email="dana@example.com"):
         h = self.signed_in_as(email)
         lid = self.make_league(h, n, allow_ties=ties)
@@ -23,6 +25,8 @@ class ScoreTests(ScheduleTestCase):
     def put_raw(self, h, gid, text):
         return self.client.put(f"/api/games/{gid}/score", data=text, content_type=JSON, **h)
 
+
+class ScoreTests(ScoreHelpers, ScheduleTestCase):
     def test_score_saved_and_shown_on_the_game(self):
         h, lid = self.setup_league()
         g = self.played(h, lid)

@@ -39,9 +39,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 .venv/bin/python manage.py runserver                                 # http://localhost:8001
 ../../contract-test.sh http://localhost:8001                         # in a second terminal
 ```
-The Django port is being built section by section (v0.2.0 #30–#33). Until it is finished, check what exists with
-`CONTRACT_UPTO=accounts ../../contract-test.sh http://localhost:8001` (`accounts`, `leagues`, `schedule` or `all`, the default).
-Django serves accounts so far (signup, login, refresh, `/auth/me`); the organizer is Django's `User`, signed in with simplejwt.
+Django serves the whole contract (v0.2.0): `../../contract-test.sh http://localhost:8001` prints `contract ok`. Run `manage.py migrate` once before the first start, or every league route fails on a missing table. The organizer is Django's `User`, signed in with simplejwt; any pairing in the table above works, e.g. web with `NEXT_PUBLIC_API_URL=http://localhost:8001`.
 
 ### supabase — `src/backends/supabase`
 Needs Docker with the Compose plugin; the first start downloads about 3 GB of images.
