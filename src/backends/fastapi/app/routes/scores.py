@@ -11,9 +11,18 @@ from ..schedule import game_json
 router = APIRouter(prefix="/api/games")
 
 
-def whole(v: object) -> bool:
-    # bool is an int subclass in Python; `true` is not a score. Floats like 21.0 are not whole-number JSON ints either.
-    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+LIMIT = 2**31  # int4, so every backend (Postgres included) agrees on what fits
+
+
+def whole(v: object) -> int | None:
+    """The score as an int, or None if it isn't one. JS backends can't tell 21.0 from 21, so integral floats count."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, float):
+        v = int(v) if v.is_integer() else None  # NaN and inf are not integers
+    if isinstance(v, int) and 0 <= v < LIMIT:
+        return v
+    return None
 
 
 @router.put("/{id}/score")
@@ -36,8 +45,8 @@ async def record_score(
         raise ApiError(400, "Invalid request")
     if not isinstance(body, dict):
         raise ApiError(400, "Invalid request")
-    home, away = body.get("home_score"), body.get("away_score")
-    if not (whole(home) and whole(away)):
+    home, away = whole(body.get("home_score")), whole(body.get("away_score"))
+    if home is None or away is None:
         raise ApiError(400, "Scores must be whole numbers 0 or greater")
     if home == away and not league.allow_ties:
         raise ApiError(400, "This league doesn't allow ties")

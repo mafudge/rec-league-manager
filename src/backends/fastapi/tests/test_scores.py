@@ -52,6 +52,8 @@ def test_second_put_replaces_the_score(client):
         {"home_score": "21", "away_score": 14},
         {"home_score": True, "away_score": 14},
         {"home_score": 21, "away_score": False},
+        {"home_score": 10**30, "away_score": 14},
+        {"home_score": 21, "away_score": 2**31},
     ],
 )
 def test_not_whole_numbers_refused_and_nothing_stored(client, body):
@@ -113,3 +115,13 @@ def test_signed_out_is_401(client):
     h, lid = setup(client)
     r = client.put(f"/api/games/{played(client, h, lid)['id']}/score", json={"home_score": 1, "away_score": 0})
     assert r.status_code == 401
+
+
+def test_integral_floats_are_accepted_as_ints(client):
+    h, lid = setup(client)
+    gid = played(client, h, lid)["id"]
+    r = client.put(f"/api/games/{gid}/score", content='{"home_score": 21.0, "away_score": 14.0}',
+                   headers={**h, "Content-Type": "application/json"})
+    assert r.status_code == 200
+    assert r.json()["home_score"] == 21 and r.json()["away_score"] == 14
+    assert type(r.json()["home_score"]) is int
