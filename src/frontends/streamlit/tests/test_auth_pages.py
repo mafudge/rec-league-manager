@@ -40,7 +40,7 @@ def test_sign_up_lands_on_the_leagues_page_signed_in():
     assert (method, url) == ("POST", f"{BASE}/api/auth/signup")
     assert kw["headers"] == {"Content-Type": "application/json"}
     assert json.loads(kw["data"]) == {"email": "dana@example.com", "password": "password1"}
-    assert at.title[0].value == "Your leagues"
+    assert at.title[0].value == "My leagues"
     assert at.session_state["token"] == "t1"
     assert at.session_state["refresh_token"] == "r1"
 
@@ -49,7 +49,7 @@ def test_sign_in_lands_on_the_leagues_page():
     with backend(Reply(200, TOKENS), Reply(200, {"email": "dana@example.com"})) as b:
         at = submit(page("signin"), "dana@example.com", "password1")
     assert (b.calls[0][0], b.calls[0][1]) == ("POST", f"{BASE}/api/auth/login")
-    assert at.title[0].value == "Your leagues"
+    assert at.title[0].value == "My leagues"
 
 
 def test_the_backends_refusal_is_shown_verbatim_and_nothing_is_saved():
@@ -97,9 +97,9 @@ def test_the_two_pages_link_to_each_other():
 
 def test_the_leagues_page_shows_the_email_and_sign_out_forgets_the_tokens():
     state = {"token": "t1", "refresh_token": "r1"}
-    with backend(Reply(200, {"email": "dana@example.com"})) as b:
+    with backend(Reply(200, {"email": "dana@example.com"}), Reply(200, [])) as b:
         at = page("leagues", state)
-        assert at.title[0].value == "Your leagues"
+        assert at.title[0].value == "My leagues"
         assert at.markdown[0].value == "dana@example.com"
         assert (b.calls[0][0], b.calls[0][1]) == ("GET", f"{BASE}/api/auth/me")
         assert b.calls[0][2]["headers"] == {"Authorization": "Bearer t1"}
@@ -108,7 +108,7 @@ def test_the_leagues_page_shows_the_email_and_sign_out_forgets_the_tokens():
         assert not at.exception
     assert at.title[0].value == "Sign in"
     assert "token" not in at.session_state and "refresh_token" not in at.session_state
-    assert len(b.calls) == 1  # sign-out sends nothing to the backend
+    assert len(b.calls) == 2  # /me and the list; sign-out sends nothing to the backend
 
 
 def test_signed_out_visitors_are_sent_to_sign_in():

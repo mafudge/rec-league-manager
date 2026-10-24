@@ -18,8 +18,11 @@ API_URL=http://localhost:8000 streamlit run app.py    # shows "Hello from <backe
 - Shows "Hello from <backend>" for whichever backend the API URL points at.
 - **Your name** + **Say hello** (or Enter) calls `GET /api/hello?name=` and shows the reply: "Hello Mike", or the backend's own error, such as "Name is required" for a blank name. The app doesn't check the name itself.
 
-- **Sign up** (`/signup`) and **Sign in** (`/signin`) send the email and password as typed to `POST /api/auth/signup` / `login` and show the backend's own message verbatim ("An account with that email already exists", "Email or password is incorrect", ...). Success lands on **Your leagues** (`/leagues`, a heading until US02 lands). Each page links to the other; Home links to both.
+- **Sign up** (`/signup`) and **Sign in** (`/signin`) send the email and password as typed to `POST /api/auth/signup` / `login` and show the backend's own message verbatim ("An account with that email already exists", "Email or password is incorrect", ...). Success lands on **My leagues** (`/leagues`). Each page links to the other; Home links to both.
 - Signed in, the header shows the email from `GET /api/auth/me` and **Sign out**, which forgets the tokens (nothing is sent). Pages that change data send a signed-out visitor to Sign in.
+- **My leagues** lists each league's name and location (click the name to open it), says "No leagues yet — create one." when empty, and links to **Create a league** (`/leagues-new`: Name, Location, Sport, Season, Weeks, "Games can end in a tie"; sent as typed, blank Weeks as `null`, the backend's refusal shown verbatim; success opens the league).
+- **League home** (`/league`): name, location, "sport · season" (when set), the public link as copyable text, and tabs Entrants · Schedule · Standings (the last two are empty until their stories land). **Entrants** has a Name box + Add, the list in order, "No entrants yet — add the first one.", and the backend's refusals verbatim (a refused add keeps the typed text). An add or create is sent only on the run the click caused, so a later rerun never re-sends it.
+- `PUBLIC_BASE_URL` (default `http://localhost:8501`) is this app's own address; the public link is `<PUBLIC_BASE_URL>/?league=<slug>`.
 - Tokens live in `st.session_state` (lost on reload, accepted). `api.py` is the one client: every call takes the session mapping; on a 401 it refreshes once with the newest refresh token and retries; a refresh refused with 400/401/403 forgets the tokens, any other refresh failure keeps them. No body and no `Content-Type` on routes that take none.
 - Layout: `app.py` is the router (`st.navigation`, hidden; one file per page in `screens/`, logic in `views.py`). The public page will be chosen there from `?league=<slug>`, before any sign-in check.
 
@@ -31,7 +34,8 @@ LIVE_API_URL=http://localhost:8000 LIVE_BACKEND=fastapi python -m pytest   # als
 
 ## TODO
 - [x] Sign up, sign in, sign out (US01, US13)
-- [ ] Organizer screens: leagues, entrants, schedule, scores (US01–US05)
+- [x] Leagues and entrants (US02, US03)
+- [ ] Organizer screens: schedule, scores (US01–US05)
 - [ ] Standings view (US06)
 - [ ] Public read-only page and how it behaves on a phone (US07), the known weak spot
 - [x] One API client for every backend (ADR 003); see [`src/README.md`](../../README.md) for all 12 pairings
