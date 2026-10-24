@@ -7,6 +7,7 @@ import 'screens/league_home.dart';
 import 'screens/league_form.dart';
 import 'screens/leagues.dart';
 import 'screens/organizer_scaffold.dart';
+import 'screens/public.dart';
 
 export 'screens/home.dart' show fetchGreeting, sayHello;
 
@@ -32,7 +33,7 @@ class RecLeagueApp extends StatelessWidget {
 
   /// Routes read the path of the (hash) URL, so `/#/l/<slug>` deep links work on any static server.
   /// Organizer screens (`/leagues`, `/leagues/new`, `/leagues/<id>`) are wrapped in [OrganizerScaffold], which sends a
-  /// signed-out visit to `/signin`; the public page `/l/<slug>` will not be.
+  /// signed-out visit to `/signin`; the public page `/l/<slug>` is not.
   Route<dynamic> _route(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '/');
     final path = uri.path;
@@ -53,6 +54,8 @@ class RecLeagueApp extends StatelessWidget {
           api: api,
           child: LeagueHome(api: api, id: seg[1], origin: origin),
         ),
+      _ when seg.length == 2 && seg[0] == 'l' && seg[1].isNotEmpty =>
+        PublicPage(api: api, slug: seg[1]),
       _ => HomePage(loadGreeting: loadGreeting, sayHello: sayHello),
     };
     return MaterialPageRoute<void>(settings: settings, builder: (_) => screen);
