@@ -83,6 +83,16 @@ def test_bad_weeks(client, weeks):
     assert (r.status_code, r.json()) == (400, {"error": "Weeks must be at least 1"})
 
 
+@pytest.mark.parametrize("weeks", [2**31, 3_000_000_000, 10**20])
+def test_weeks_too_large_to_store_is_refused_not_500(client, weeks):
+    r = make(client, signed_in(client), weeks=weeks)
+    assert (r.status_code, r.json()) == (400, {"error": "Weeks must be at least 1"})
+
+
+def test_weeks_just_under_the_limit_is_kept(client):
+    assert make(client, signed_in(client), weeks=2**31 - 1).status_code == 201
+
+
 def test_missing_weeks(client):
     r = client.post("/api/leagues", json={"name": "A", "location": "B"}, headers=signed_in(client))
     assert (r.status_code, r.json()) == (400, {"error": "Weeks must be at least 1"})
@@ -95,8 +105,10 @@ def test_refused_league_is_not_stored(client):
 
 
 def test_non_object_body_is_refused_not_500(client):
-    r = client.post("/api/leagues", json=[1], headers=signed_in(client))
-    assert (r.status_code, r.json()) == (400, {"error": "Name is required"})
+    h = signed_in(client)
+    for body in ([1], [], "x", 5, None):
+        r = client.post("/api/leagues", json=body, headers=h)
+        assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})
 
 
 def test_other_organizer_cannot_see_it(client):

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { BackendProblem, BackendRefused, SignInRequired, fetchBackendName, fetchHello, request } from "../app/api";
+import { BackendProblem, BackendRefused, SignInRequired, fetchBackendName, fetchHello, request, saveScore } from "../app/api";
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.unstubAllGlobals());
@@ -112,4 +112,47 @@ test.skipIf(!live)("a running backend names itself", async () => {
   if (process.env.LIVE_BACKEND) expect(name).toBe(process.env.LIVE_BACKEND);
   expect(await fetchHello("Mike", live!)).toBe("Hello Mike");
   await expect(fetchHello(" ", live!)).rejects.toBeInstanceOf(BackendRefused);
+});
+
+test("a refresh that meets a 503 keeps the session and reports a backend problem", async () => {
+  localStorage.setItem("rlm.token", "old");
+  localStorage.setItem("rlm.refresh_token", "r-old");
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(reply(401, { error: "Sign in required" }))
+    .mockResolvedValueOnce(reply(503, "unavailable"));
+  vi.stubGlobal("fetch", fetch);
+  await expect(request("GET", "/api/auth/me", { auth: true })).rejects.toEqual(new BackendProblem(503));
+  expect(localStorage.getItem("rlm.token")).toBe("old");
+  expect(localStorage.getItem("rlm.refresh_token")).toBe("r-old");
+});
+
+test.each([400, 401, 403])("a refresh answered %i is a refusal: the session is cleared", async (status) => {
+  localStorage.setItem("rlm.token", "old");
+  localStorage.setItem("rlm.refresh_token", "r-old");
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValueOnce(reply(401, {})).mockResolvedValueOnce(reply(status, { error: "no" })),
+  );
+  await expect(request("GET", "/api/auth/me", { auth: true })).rejects.toBeInstanceOf(SignInRequired);
+  expect(localStorage.getItem("rlm.token")).toBeNull();
+});
+
+test("two calls that both get 401 share one refresh", async () => {
+  localStorage.setItem("rlm.token", "old");
+  localStorage.setItem("rlm.refresh_token", "r-old");
+  const fetch = vi.fn(async (href: string, init?: { headers?: Record<string, string> }) => {
+    if (href.endsWith("/api/auth/refresh")) return reply(200, { token: "new", refresh_token: "r-new" });
+    return init?.headers?.Authorization === "Bearer new" ? reply(200, { ok: true }) : reply(401, {});
+  });
+  vi.stubGlobal("fetch", fetch);
+  await Promise.all([request("GET", "/api/a", { auth: true }), request("GET", "/api/b", { auth: true })]);
+  expect(fetch.mock.calls.filter(([href]) => String(href).endsWith("/api/auth/refresh"))).toHaveLength(1);
+});
+
+test("saveScore encodes the game id like the other paths", async () => {
+  const fetch = vi.fn().mockResolvedValue(reply(200, {}));
+  vi.stubGlobal("fetch", fetch);
+  await saveScore("a/b c", 1, 2);
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/games/a%2Fb%20c/score");
 });

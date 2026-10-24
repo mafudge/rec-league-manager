@@ -16,6 +16,8 @@ curl localhost:8000/api/backend   # {"backend":"fastapi"}
 ../../contract-test.sh http://localhost:8000
 ```
 
+Set `JWT_SECRET` to a long random value anywhere but a local laptop; the built-in default is public.
+
 ## Test
 ```bash
 python -m pytest

@@ -162,6 +162,16 @@ test("the league home shows name, location, sport · season and copies the publi
   expect(await screen.findByText("Link copied")).toBeTruthy();
 });
 
+test("the public link is shown as text so it can be shared when copying is unavailable", async () => {
+  backend({ "GET /api/leagues/abc123": reply(200, league()) });
+  vi.stubGlobal("navigator", {});
+  render(<LeaguePage />);
+  expect(await screen.findByText(`${location.origin}/l/k7m2pq`)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Copy public link" }));
+  expect(await screen.findByText("Couldn't copy the link")).toBeTruthy();
+  expect(screen.getByText(`${location.origin}/l/k7m2pq`)).toBeTruthy();
+});
+
 test("the sport · season line leaves out what is blank", async () => {
   backend({ "GET /api/leagues/abc123": reply(200, league({ season: "" })) });
   render(<LeaguePage />);

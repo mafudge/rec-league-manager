@@ -61,7 +61,7 @@ function send(method: string, href: string, opts: Options, token: string | null)
 // One refresh at a time: requests that all hit 401 together share a single refresh call.
 let refreshing: Promise<boolean> | null = null;
 
-/** Trade the refresh token for a new pair. False (and the session cleared) if the backend says no. */
+/** Trade the refresh token for a new pair. False if the backend refuses it; BackendProblem if it merely failed. */
 function refreshSession(apiUrl: string): Promise<boolean> {
   refreshing ??= (async () => {
     const refresh_token = getRefreshToken();
@@ -71,7 +71,9 @@ function refreshSession(apiUrl: string): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token }),
     });
-    if (!r.ok) return false;
+    // Only a refusal (400/401/403) means the tokens are no good. A blip (5xx, 429) must not sign the organizer out.
+    if (r.status === 400 || r.status === 401 || r.status === 403) return false;
+    if (!r.ok) throw new BackendProblem(r.status);
     saveSession((await r.json()) as Tokens);
     return true;
   })().finally(() => {
@@ -168,7 +170,7 @@ export const listGames = (leagueId: string): Promise<Game[]> =>
 export const clearScores = (leagueId: string): Promise<{ cleared: number }> =>
   request("DELETE", `${leaguePath(leagueId)}/scores`, { auth: true });
 export const saveScore = (gameId: string, home_score: number | null, away_score: number | null): Promise<Game> =>
-  request("PUT", `/api/games/${gameId}/score`, { auth: true, body: { home_score, away_score } });
+  request("PUT", `/api/games/${encodeURIComponent(gameId)}/score`, { auth: true, body: { home_score, away_score } });
 
 export type StandingsRow = {
   entrant_id: string;

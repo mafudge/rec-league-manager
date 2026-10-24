@@ -126,3 +126,20 @@ test("the Schedule and Standings tabs show only the tab bar for now", async () =
     unmount();
   }
 });
+
+test("an empty league says so, and the line goes once someone is added", async () => {
+  backend();
+  render(<Entrants leagueId="abc123" />);
+  expect(await screen.findByText("No entrants yet — add the first one.")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Bag Ladies" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add" }));
+  await screen.findByText("Bag Ladies");
+  expect(screen.queryByText("No entrants yet — add the first one.")).toBeNull();
+});
+
+test("the empty line is not shown to a league that has entrants", async () => {
+  backend(["Bag Ladies"]);
+  render(<Entrants leagueId="abc123" />);
+  await screen.findByText("Bag Ladies");
+  expect(screen.queryByText("No entrants yet — add the first one.")).toBeNull();
+});

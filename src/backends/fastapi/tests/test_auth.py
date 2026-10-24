@@ -1,3 +1,4 @@
+import pytest
 from tests.conftest import signed_in
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -47,8 +48,22 @@ def test_email_message_wins_over_password_message(client):
 
 
 def test_signup_with_missing_or_non_string_fields_is_400_not_500(client):
-    for body in ({}, {"email": 5, "password": "cornhole1"}, {"email": "a@b.c", "password": None}, [1]):
+    for body in ({}, {"email": 5, "password": "cornhole1"}, {"email": "a@b.c", "password": None}):
         assert client.post("/api/auth/signup", json=body).status_code == 400
+
+
+@pytest.mark.parametrize("path", ["/api/auth/signup", "/api/auth/login", "/api/auth/refresh"])
+@pytest.mark.parametrize("body", [[], "x", 5, None])
+def test_non_object_body_is_invalid_request(client, path, body):
+    r = client.post(path, json=body)
+    assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})
+
+
+@pytest.mark.parametrize("path", ["/api/auth/signup", "/api/auth/login", "/api/auth/refresh"])
+def test_broken_or_missing_json_is_invalid_request(client, path):
+    broken = client.post(path, content="nope", headers={"Content-Type": "application/json"})
+    missing = client.post(path)
+    assert [(r.status_code, r.json()) for r in (broken, missing)] == [(400, {"error": "Invalid request"})] * 2
 
 
 def test_invalid_json_is_400_not_422(client):

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import check_password, current_organizer, hash_password, issue_tokens, read_token
 from ..db import get_session
-from ..errors import ApiError
+from ..errors import ApiError, object_body
 from ..models import Organizer
 
 router = APIRouter(prefix="/api/auth")
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/auth")
 @router.post("/signup", status_code=201)
 def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
     # Body is read loosely and validated by hand, in the contract's order.
-    data = body if isinstance(body, dict) else {}
+    data = object_body(body)
     email = data.get("email")
     email = email.strip().lower() if isinstance(email, str) else ""
     password = data.get("password")
@@ -39,7 +39,7 @@ def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> di
 
 @router.post("/login")
 def login(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
-    data = body if isinstance(body, dict) else {}
+    data = object_body(body)
     email = data.get("email")
     email = email.strip().lower() if isinstance(email, str) else ""
     password = data.get("password")
@@ -52,7 +52,7 @@ def login(body: Any = Body(...), session: Session = Depends(get_session)) -> dic
 
 @router.post("/refresh")
 def refresh(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
-    data = body if isinstance(body, dict) else {}
+    data = object_body(body)
     token = data.get("refresh_token")
     organizer_id = read_token(token, "refresh") if isinstance(token, str) else None
     if organizer_id is None or session.get(Organizer, organizer_id) is None:
