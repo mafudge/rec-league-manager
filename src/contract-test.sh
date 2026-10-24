@@ -88,6 +88,20 @@ check "the same email upper-cased and padded with spaces returns 409 (got ${stat
 post /api/auth/signup "{\"email\":\"short-$email\",\"password\":\"short\"}"
 [ "$status" = "400" ] && same '{"error":"Password must be at least 8 characters"}'
 check "a short password returns 400 (got ${status:-no answer} $body)" $?
+long=$(printf 'a%.0s' $(seq 73)); ok72=$(printf 'a%.0s' $(seq 72))
+emoji72=$(printf '😀%.0s' $(seq 18))  # 72 UTF-8 bytes
+post /api/auth/signup "{\"email\":\"long-$email\",\"password\":\"$long\"}"
+[ "$status" = "400" ] && same '{"error":"Password must be 72 characters or fewer"}'
+check "a 73-character password returns 400 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"email\":\"long8-$email\",\"password\":\"${emoji72}a\"}"
+[ "$status" = "400" ] && same '{"error":"Password must be 72 characters or fewer"}'
+check "a 73-byte emoji password returns 400 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"email\":\"72-$email\",\"password\":\"$ok72\"}"
+[ "$status" = "201" ]; check "a 72-character password signs up (got ${status:-no answer})" $?
+post /api/auth/signup "{\"email\":\"emoji-$email\",\"password\":\"$emoji72\"}"
+[ "$status" = "201" ]; check "a 72-byte emoji password signs up (got ${status:-no answer} $body)" $?
+post /api/auth/login "{\"email\":\"emoji-$email\",\"password\":\"$emoji72\"}"
+[ "$status" = "200" ]; check "  and signs in with it (got ${status:-no answer} $body)" $?
 post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
 [ "$status" = "400" ] && same '{"error":"Enter a valid email address"}'
 check "an email without @ returns 400 (got ${status:-no answer} $body)" $?

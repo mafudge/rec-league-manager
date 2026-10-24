@@ -36,6 +36,40 @@ def test_signup_refuses_short_password(client):
     assert r.json() == {"error": "Password must be at least 8 characters"}
 
 
+MSG72 = {"error": "Password must be 72 characters or fewer"}
+EMOJI72 = "😀" * 18  # 72 UTF-8 bytes, 18 code points
+
+
+def test_signup_refuses_73_ascii_characters(client):
+    r = client.post("/api/auth/signup", json={**GOOD, "password": "a" * 73})
+    assert (r.status_code, r.json()) == (400, MSG72)
+    assert client.post("/api/auth/login", json={**GOOD, "password": "a" * 73}).status_code == 401
+
+
+def test_signup_accepts_72_ascii_characters_and_login_works(client):
+    pw = "a" * 72
+    assert client.post("/api/auth/signup", json={**GOOD, "password": pw}).status_code == 201
+    assert client.post("/api/auth/login", json={**GOOD, "password": pw}).status_code == 200
+
+
+def test_cap_counts_utf8_bytes_so_72_byte_emoji_password_is_exact(client):
+    assert client.post("/api/auth/signup", json={**GOOD, "password": EMOJI72}).status_code == 201
+    assert client.post("/api/auth/login", json={**GOOD, "password": EMOJI72}).status_code == 200
+    # bcrypt would have ignored anything past 72 bytes; a different tail must not log in
+    other = "😀" * 17 + "😁"
+    assert client.post("/api/auth/login", json={**GOOD, "password": other}).status_code == 401
+    r = client.post("/api/auth/signup", json={"email": "b@example.com", "password": EMOJI72 + "a"})
+    assert (r.status_code, r.json()) == (400, MSG72)
+
+
+def test_long_password_is_checked_after_email_and_short_and_before_duplicate(client):
+    client.post("/api/auth/signup", json=GOOD)
+    r = client.post("/api/auth/signup", json={**GOOD, "password": "a" * 73})
+    assert (r.status_code, r.json()) == (400, MSG72)
+    r = client.post("/api/auth/signup", json={"email": "nope", "password": "a" * 73})
+    assert r.json() == {"error": "Enter a valid email address"}
+
+
 def test_signup_refuses_email_without_at(client):
     r = client.post("/api/auth/signup", json={**GOOD, "email": "dana.example.com"})
     assert r.status_code == 400

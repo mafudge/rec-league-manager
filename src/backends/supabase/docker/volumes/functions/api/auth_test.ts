@@ -41,6 +41,20 @@ Deno.test('password length counts code points, not UTF-16 units', async () => {
   assertEquals(calls.length, 1)
 })
 
+Deno.test('passwords over 72 UTF-8 bytes are refused before GoTrue is called; 72 bytes pass', async () => {
+  const { calls, auth } = stub(200, session)
+  const msg = 'Password must be 72 characters or fewer'
+  await refuses(auth.signup('a@b.com', 'a'.repeat(73)), 400, msg)
+  await refuses(auth.signup('a@b.com', '😀'.repeat(18) + 'a'), 400, msg)
+  await refuses(auth.signup('a@b.com', 'é'.repeat(37)), 400, msg)
+  await refuses(auth.signup('no-at-sign', 'a'.repeat(73)), 400, 'Enter a valid email address')
+  assertEquals(calls.length, 0)
+  await auth.signup('a@b.com', 'a'.repeat(72))
+  await auth.signup('a@b.com', '😀'.repeat(18))
+  await auth.signup('a@b.com', 'é'.repeat(36))
+  assertEquals(calls.length, 3)
+})
+
 Deno.test('signup trims and lower-cases the email, sends the anon key, returns the pair', async () => {
   const { calls, auth } = stub(200, session)
   assertEquals(await auth.signup('  Ann@Example.COM ', 'cornhole1'), { token: 'AT', refresh_token: 'RT' })
@@ -54,11 +68,12 @@ Deno.test('signup maps GoTrue user_already_exists (422) to 409', async () => {
   await refuses(auth.signup('a@b.com', 'cornhole1'), 409, 'An account with that email already exists')
 })
 
-Deno.test('signup maps GoTrue email-format and long-password refusals to the contract', async () => {
+Deno.test('signup maps GoTrue email-format refusal to the contract; a long password never reaches it', async () => {
   const bad = stub(400, { code: 400, error_code: 'validation_failed', msg: 'Unable to validate email address: invalid format' })
   await refuses(bad.auth.signup('a@', 'cornhole1'), 400, 'Enter a valid email address')
   const long = stub(400, { code: 400, error_code: 'validation_failed', msg: 'Password cannot be longer than 72 characters' })
-  await refuses(long.auth.signup('a@b.com', 'a'.repeat(100)), 400, 'Invalid request')
+  await refuses(long.auth.signup('a@b.com', 'a'.repeat(100)), 400, 'Password must be 72 characters or fewer')
+  assertEquals(long.calls.length, 0)
 })
 
 Deno.test('a GoTrue failure we cannot name is an ApiError 500, never its body', async () => {
