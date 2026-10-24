@@ -414,7 +414,6 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
 - Supabase's sign-in service refuses some addresses that contain an `@` (such as `a@`), answering "Enter a valid email address" where FastAPI and Django accept them.
 - Firebase's Auth emulator, like Supabase's, refuses some addresses that contain an `@` (such as `a@b`).
-- Firebase: a deleted user's ID token keeps working for up to an hour (no revocation check).
 - Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
 - Django answers an unknown URL outside `/api/` with its HTML 404 page.
 - The Supabase email check uses JavaScript `trim()`, FastAPI and Django use Python `strip()`; they differ on U+FEFF (JS trims it, Python does not) and on `\x1c`-`\x1f` (Python strips them, JS does not).
@@ -424,10 +423,11 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - GoTrue rate-limiting (429) on signup or login is answered as 500 "The backend had a problem"; it should be a 4xx the frontends can show.
 - Signup on a Supabase stack with email auto-confirm turned off answers 500, because GoTrue returns no session.
 - On Supabase, the 409 "scores are recorded" guard on schedule replace is checked in a separate request from the replace, so a score saved in between slips through; move the guard into `replace_schedule`.
-- Supabase reads that need two requests (a league, then its entrants or games) can see two different moments; fold them into one query or one function.
+- Supabase reads that need two requests (a league, then its entrants or games) can see two different moments; fold them into one query or one function. Firebase has the same shape: `allowTies` is read outside the score transaction, and the list, standings and public routes read the league, entrants and schedule non-transactionally (harmless today: nothing changes `allowTies` and entrants are append-only).
+- Firebase: calls to the Auth emulator have no timeout; a hung emulator holds the request until the function's 60 s limit.
 - A deleted user's Supabase access token still works until it expires (up to an hour); decide whether that is acceptable or whether the function should check the user exists.
-- Firebase: a request with `Content-Type: application/json` and a malformed or non-object body (`{bad`, `5`, `"x"`) is refused by the Cloud Functions runtime's own body parser with an HTML 400 page before our code runs, so it is not `{"error": "Invalid request"}`; `contract-test.sh` sends these without that header and does not catch it. Needs a decision (a proxy in front, or accept and document).
-- Supabase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
+- Firebase: any body sent as `application/json` that isn't a JSON object (malformed, or `5`, `"x"`, `null`, `true`) is refused by the Cloud Functions runtime's own body parser with an HTML 400 page without CORS headers before our code runs, so it is not `{"error": "Invalid request"}`; clients must send no body and no `Content-Type` on routes that take none. `contract-test.sh` sends only `[]` as non-object JSON, so it does not catch it. Needs a decision (a proxy in front, or accept and document).
+- Supabase and Firebase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
 
 ### POL-02 · Web screens
 - The weeks-change message on the Schedule tab uses the error colour although it is information.
@@ -445,6 +445,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - No test that the league home redirects without a token; no web test of the T cell value with ties on; the public page's ties and blank sport/season branches are untested.
 - A few weak assertions (the "no league content" check on sign-in, the one-row entrant layout check by class name).
 - The contract test leaves extra "Tiny" and "Odd" leagues behind on the target backend.
+- Firebase: the Firestore transactions (score and entrant writes) and the two-step slug lookup are only exercised live, not in unit tests (the in-memory store has no transactions); three FastAPI coverage cases have no JS counterpart, and the text rule is only tested through `name`.
 
 ## Releases and delivery
 

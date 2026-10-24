@@ -124,6 +124,8 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 
 **What the contract cost Supabase and Firebase.** Both are designed for the browser to talk to the database directly through their client SDKs. Here they instead run a small server function that serves the shared API (ADR 003). That's what lets one client per frontend work, but it means writing server code on platforms marketed as "no server", and it makes row-level security and `firestore.rules` a second line of defence rather than the only one.
 
+**The Firebase emulators are development-only, not a security boundary.** The Auth emulator stores passwords in plaintext (also in `emulator-data/`), the Firestore emulator serves every document, and with the Auth emulator the Admin SDK accepts unsigned tokens. `firestore.rules` deny client access, but that is not a guarantee the deployment gives. Only Hosting (:5000, the API) listens on the LAN; Auth 9099, Functions 5001, Firestore 8080, UI 4100, hub 4400 and logging 4500 are bound to `127.0.0.1`. The function checks that a token is not revoked and the user still exists.
+
 **What each backend will repeat.** The round-robin scheduler and the standings calculation will exist four times: twice in Python, once in TypeScript and once in JavaScript. Shared logic (`src/core/`) is deferred (ADR 002); the contract test, plus each backend's unit tests for the PRD's scheduling cases, is what keeps the four honest. FastAPI and Django could later share one Python package.
 
 ## 6 · Frontends

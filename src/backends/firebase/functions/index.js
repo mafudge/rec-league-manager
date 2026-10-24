@@ -18,7 +18,7 @@ admin.initializeApp(); // the emulator sets the env, so it accepts emulator toke
 const auth = createAuth({
   fetch: (url, init) => fetch(url, init),
   host: () => process.env.FIREBASE_AUTH_EMULATOR_HOST,
-  verifyIdToken: (token) => admin.auth().verifyIdToken(token),
+  verifyIdToken: (token, checkRevoked) => admin.auth().verifyIdToken(token, checkRevoked),
 });
 
 const store = createStore(admin.firestore());
