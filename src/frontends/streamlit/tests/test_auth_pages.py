@@ -77,13 +77,13 @@ def test_a_wrong_password_stays_on_sign_in_with_the_backends_message():
 def test_an_unreachable_backend_says_where_it_looked():
     with backend(ConnectionError()):
         at = submit(page("signin"), "a@b.c", "password1")
-    assert [e.value for e in at.error] == ["Can't reach the backend at http://localhost:8000"]
+    assert [e.value for e in at.error] == [r"Can't reach the backend at http\://localhost\:8000"]
 
 
 def test_a_5xx_says_the_backend_had_a_problem():
     with backend(Reply(500, None)):
         at = submit(page("signup"), "a@b.c", "password1")
-    assert [e.value for e in at.error] == ["The backend had a problem (500)"]
+    assert [e.value for e in at.error] == [r"The backend had a problem \(500\)"]
 
 
 def test_the_two_pages_link_to_each_other():
@@ -100,7 +100,7 @@ def test_the_leagues_page_shows_the_email_and_sign_out_forgets_the_tokens():
     with backend(Reply(200, {"email": "dana@example.com"}), Reply(200, [])) as b:
         at = page("leagues", state)
         assert at.title[0].value == "My leagues"
-        assert at.markdown[0].value == "dana@example.com"
+        assert at.markdown[0].value == r"dana@example\.com"
         assert (b.calls[0][0], b.calls[0][1]) == ("GET", f"{BASE}/api/auth/me")
         assert b.calls[0][2]["headers"] == {"Authorization": "Bearer t1"}
         assert "data" not in b.calls[0][2]
@@ -139,4 +139,4 @@ def test_signing_in_as_someone_else_shows_the_new_email_not_the_cached_one():
         at = submit(page("signin", state), "b@example.com", "password1")
     assert (b.calls[1][0], b.calls[1][1]) == ("GET", f"{BASE}/api/auth/me")
     assert b.calls[1][2]["headers"] == {"Authorization": "Bearer t1"}
-    assert at.markdown[0].value == "b@example.com"
+    assert at.markdown[0].value == r"b@example\.com"

@@ -84,7 +84,7 @@ def test_the_list_shows_each_leagues_name_and_location_and_opens_its_home():
 def test_the_list_shows_the_backends_message_when_it_refuses():
     with backend(Reply(500, None)):
         at = page("leagues")
-    assert [e.value for e in at.error] == ["The backend had a problem (500)"]
+    assert [e.value for e in at.error] == [r"The backend had a problem \(500\)"]
 
 
 # ---- the create form
@@ -228,7 +228,7 @@ def test_adding_shows_the_name_clears_the_box_and_sends_once_even_after_another_
 def test_the_backends_refusal_is_shown_verbatim_and_the_box_keeps_the_text():
     err = "An entrant with that name already exists in this league"
     one = {"id": "1", "name": "Bag Ladies"}
-    with routed({"GET /api/leagues/abc123": [Reply(200, TUES)], "GET /api/leagues/abc123/entrants": [Reply(200, [one])],
+    with routed({"GET /api/leagues/abc123": [Reply(200, TUES)], "GET /api/leagues/abc123/entrants": [Reply(200, [one])], "GET /api/leagues/abc123/games": [Reply(200, [])],
                  "POST /api/leagues/abc123/entrants": [Reply(409, {"error": err})]}) as b:
         at = page("league", {"league_id": "abc123"})
         at.text_input[0].input(" bag ladies ")
@@ -241,7 +241,7 @@ def test_the_backends_refusal_is_shown_verbatim_and_the_box_keeps_the_text():
 
 
 def test_a_blank_name_is_sent_for_the_backend_to_refuse():
-    with routed({"GET /api/leagues/abc123": [Reply(200, TUES)], "GET /api/leagues/abc123/entrants": [Reply(200, [])],
+    with routed({"GET /api/leagues/abc123": [Reply(200, TUES)], "GET /api/leagues/abc123/entrants": [Reply(200, [])], "GET /api/leagues/abc123/games": [Reply(200, [])],
                  "POST /api/leagues/abc123/entrants": [Reply(400, {"error": "Name is required"})]}) as b:
         at = page("league", {"league_id": "abc123"})
         at.button(key="add_entrant").click().run()

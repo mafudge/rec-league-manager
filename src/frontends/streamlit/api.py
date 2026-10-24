@@ -131,6 +131,26 @@ def add_entrant(session: MutableMapping, league_id: str, name: str) -> dict:
     return request(session, "POST", f"/api/leagues/{quote(league_id, safe='')}/entrants", {"name": name}, auth=True)
 
 
+def generate_schedule(session: MutableMapping, league_id: str) -> dict:
+    """POST with no body: the Firebase rule for routes that take none."""
+    return request(session, "POST", f"/api/leagues/{quote(league_id, safe='')}/schedule", auth=True)
+
+
+def list_games(session: MutableMapping, league_id: str) -> list:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/games", auth=True)
+
+
+def clear_scores(session: MutableMapping, league_id: str) -> dict:
+    """DELETE with no body."""
+    return request(session, "DELETE", f"/api/leagues/{quote(league_id, safe='')}/scores", auth=True)
+
+
+def save_score(session: MutableMapping, game_id: str, home_score, away_score) -> dict:
+    """A blank box goes as "" (so the backend's whole-number message shows); only Clear sends None (null)."""
+    return request(session, "PUT", f"/api/games/{quote(game_id, safe='')}/score",
+                   {"home_score": home_score, "away_score": away_score}, auth=True)
+
+
 def backend_name(api_url: str = API_URL) -> str:
     """Ask the backend which one it is."""
     r = requests.get(f"{api_url.rstrip('/')}/api/backend", timeout=3)
