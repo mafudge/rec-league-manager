@@ -8,6 +8,20 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 ## Stories
 
+### US13 · Organizer signs up
+
+**Story.** As a new organizer, I want to create my own account with an email and a password so that I can start running my league without anyone setting it up for me.
+
+**Acceptance criteria**
+- Given I am on the sign-up page, when I enter an email that isn't registered and a password of at least 8 characters, then my account is created, I am signed in, and I land on my league list, which says "No leagues yet — create one."
+- Given the email is already registered, when I sign up with it, then no account is created and I see "An account with that email already exists". *(negative)*
+- Given a password shorter than 8 characters, when I submit, then no account is created and I see "Password must be at least 8 characters". *(negative)*
+- Given an email without an "@", when I submit, then no account is created and I see "Enter a valid email address". *(negative)*
+- Given two organizers who each created a league, when either signs in, then their league list shows only their own leagues, and they cannot change the other's league. *(negative)*
+- Given I am on the sign-in page, then there is a link to sign up, and the sign-up page links back to sign in.
+
+**Evidence.** Gap found planning v0.2.0: US01 signs in an organizer, but nothing creates one. PRD §7: an organizer owns leagues; a league belongs to one organizer. Not a co-organizer feature: each organizer sees only their own leagues (PRD §3).
+
 ### US01 · Organizer signs in
 
 **Story.** As the organizer, I want to sign in with an email and password so that only I can change the league.
@@ -21,13 +35,14 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 ### US02 · Create a league
 
-**Story.** As the organizer, I want to create a league with a name, a location, a sport, a season label and a number of weeks so that everything for that season lives in one place.
+**Story.** As the organizer, I want to create a league with a name, a location, a sport, a season label, a number of weeks and whether games can end in a tie, so that everything for that season lives in one place.
 
 **Acceptance criteria**
 - Given I am signed in, when I submit name "Tuesday Cornhole", location "Joe's Tavern", sport "Cornhole", season "Fall 2026" and 8 weeks, then the league appears in my list with those values.
 - Given I leave the location blank, when I submit, then the league is not created and the form shows "Location is required". Location is free text (e.g. "Joe's Tavern", "Syracuse DPW"). *(negative)*
 - Given I leave the name blank, when I submit, then the league is not created and the form shows "Name is required". *(negative)*
 - Given I enter 0 or a negative number of weeks, when I submit, then the league is not created and the form shows "Weeks must be at least 1". *(negative)*
+- Given I am creating a league, then there is a "Games can end in a tie" setting, off unless I turn it on. Sport is free text, so the app can't know that darts never ties and soccer can; the organizer decides.
 
 **Evidence.** I1-#1 (one sheet per season, tabs for schedule/standings/paid); CB §4.
 
@@ -51,6 +66,8 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given a league with 5 entrants (odd), when I generate the schedule, then each week exactly one entrant has a bye, and no entrant has a bye twice before every entrant has had one. *(edge)*
 - Given a league with fewer than 2 entrants, when I try to generate, then no schedule is created and I see "Add at least 2 entrants first". *(negative)*
 - Given a schedule already exists and no scores have been entered, when I generate again, then the old schedule is replaced. Given any score has been entered, when I try to generate, then I am refused with "Scores already recorded — clear them first". *(negative)*
+- Given scores have been recorded, when I press "Clear all scores" on the schedule and confirm, then every game in the league is unplayed again, the schedule stays, and I can regenerate. Given I cancel the confirmation, then nothing changes. *(decided 2026-10-24: the refusal above pointed to a clear action that no story provided)*
+- Given a league set to 6 weeks with 7 entrants (a full round-robin needs 7), when I generate the schedule, then all 7 weeks are generated, the league's weeks become 7, and I see "This schedule needs 7 weeks, so the league now runs 7 weeks instead of 6." The same applies when the league was set to more weeks than the schedule needs: weeks drop to match, with the same message. *(edge)*
 
 **Evidence.** I1-#5 "two teams played each other twice"; I2-#8 "the thing I'd pay for is not having to build the pairings"; I2-#5/#11 (bye rotation).
 
@@ -62,6 +79,8 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given a scheduled game between A and B, when I enter 21–14, then the game shows as played with A 21, B 14.
 - Given I enter a negative or blank score for either side, when I submit, then the score is not saved and I see "Scores must be whole numbers 0 or greater". *(negative)*
 - Given a game already has a score, when I enter a different score, then the new score replaces the old one (mistakes get fixed on Sunday).
+- Given a league that allows ties, when I enter a tied score (15–15), then it is saved and the game shows as played.
+- Given a league that doesn't allow ties, when I enter a tied score, then it is not saved and I see "This league doesn't allow ties". *(negative)*
 
 **Evidence.** I1-#2 "Sunday I sit down and enter all of it"; I2-#2.
 
@@ -70,14 +89,16 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 **Story.** As the organizer, I want standings to update the moment a score is saved so that the formulas can't break.
 
 **Acceptance criteria**
-- Given played games, when I view standings, then each entrant shows W, L, PF (points for), PA (points against) and Diff (PF − PA), sorted by W descending, then Diff descending.
+- Given played games, when I view standings, then each entrant shows W, L, T (ties, only in leagues that allow them), PF (points for), PA (points against) and Diff (PF − PA), sorted by W descending, then Diff descending.
 - Given two entrants with equal W and equal Diff, when I view standings, then they are ordered by PF descending, and the tiebreak order is stated on the page.
 - Given no games have been played, when I view standings, then every entrant shows 0-0 and the page says "No games played yet". *(empty state)*
 - Given a game is unplayed (no score), when I view standings, then it contributes nothing to any row. *(negative)*
 
 **Evidence.** I1-#11 (columns W, L, PF, PA, diff; tiebreak by differential); I1-#1 "every season somebody breaks [the formulas]".
 
-**Open question (found building #14).** Can a game end tied? No AC says so. For now a tie counts toward PF and PA and toward neither W nor L, and entrants that are equal on W, Diff and PF are listed by name. Ask the organizer, then either add an AC here or have US05 refuse a tied score.
+- Given a league that allows ties and a game that ended tied (say 15–15), when I view standings, then each side gets a T, neither gets a W or an L, and the points count toward PF and PA. Ties don't change the sort order (W → Diff → PF); entrants equal on all three are listed by name.
+
+**Decided 2026-10-24 (found building #14):** whether games can end tied is a per-league setting (US02). Leagues that allow ties show a T column; leagues that don't, don't show it.
 
 ### US06-01 · Standings refuse games that don't match the entrants
 
@@ -153,6 +174,12 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given the date is in the past, when I submit, then I am warned before it saves. *(negative)*
 
 **Evidence.** I1-#10 — "That's just a group chat thing."
+
+### US14 · Organizer resets a forgotten password
+
+**Story.** As an organizer who has forgotten my password, I want to reset it from the sign-in page so that I'm not locked out of my league.
+
+**Not in v0.2.0.** Found planning US13: self sign-up with no email confirmation means a forgotten password locks the organizer out for good. A reset needs the app to send email, which PRD §3 rules out this semester (notifications), so it waits for a later release. Acceptance criteria to be written when it's scheduled. Until then, a developer can reset a password from the command line.
 
 ---
 
@@ -329,6 +356,22 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 ---
 
+## Releases and delivery
+
+Not features. These are how the project is shipped and shown.
+
+### REL-01 · Every release is deployed so students can watch the app evolve
+
+**Why.** This is a reference example. Students learn as much from seeing how the app changes between releases (v0.2.x, v0.3.x, …) as from the final version. Each release should stay viewable at its own address after the next one ships.
+
+**Open; to be designed later.** Questions to settle then:
+- Which backend and frontend pairing(s) get deployed: the reference pair only, or all 12?
+- Where to host it, and what it costs, given ADR 001 runs Supabase and Firebase self-hosted or in emulators.
+- One address per release (e.g. `v0-2.example.org`) kept side by side, or one address that moves forward plus tagged source.
+- Demo data and accounts: seeded per release so the pages aren't empty, and reset on a schedule.
+
+---
+
 ## Cut in the edit pass
 
 | Was | Why it's gone |
@@ -342,10 +385,11 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 | Must | Should | Could | Won't (and why) |
 |---|---|---|---|
-| US01 sign in | US08 track who paid | US11 prizes | **In-app payments / moving money.** Both organizers refused it (I1-#8). Holding other people's money adds processing fees, refunds and liability — for a volunteer's league. *Not this semester, and possibly never.* |
-| US02 create league | US09 playoff bracket | US12 events | **Player accounts.** Contradicted by every interview. Public read-only link is the whole design. |
-| US03 add entrants | US10 rotating pairings | | **Notifications (email/SMS).** Nobody asked; the group chat already does this and does it fine. |
-| US04 round-robin schedule | | | **Multi-organizer / co-admins.** Every league interviewed has exactly one organizer. |
+| US13 sign up | US08 track who paid | US11 prizes | **In-app payments / moving money.** Both organizers refused it (I1-#8). Holding other people's money adds processing fees, refunds and liability — for a volunteer's league. *Not this semester, and possibly never.* |
+| US01 sign in | US09 playoff bracket | US12 events | **Player accounts.** Contradicted by every interview. Public read-only link is the whole design. |
+| US02 create league | US10 rotating pairings | | **Notifications (email/SMS).** Nobody asked; the group chat already does this and does it fine. |
+| US03 add entrants | | | **Multi-organizer / co-admins.** Every league interviewed has exactly one organizer. |
+| US04 round-robin schedule | | | |
 | US05 record score | | | |
 | US06 standings | | | |
 | US07 public link | | | |
@@ -354,9 +398,9 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 ## MVP slice
 
-**US01 → US02 → US03 → US04 → US05 → US06 → US07.** Same as the Must column this time, and that's the ceiling — if Week 11 runs long, US03's phone-layout AC and US04's "regenerate" AC are the first things to drop, not a whole story.
+**US13 → US01 → US02 → US03 → US04 → US05 → US06 → US07.** Same as the Must column this time, and that's the ceiling — if Week 11 runs long, US03's phone-layout AC and US04's "regenerate" AC are the first things to drop, not a whole story.
 
-The demo: sign in, create "Tuesday Cornhole", add 6 teams, generate the schedule, enter week 1 scores, open the public link on a phone and see standings. Nothing in that recording requires "imagine it saves."
+The demo: sign up, sign in, create "Tuesday Cornhole", add 6 teams, generate the schedule, enter week 1 scores, open the public link on a phone and see standings. Nothing in that recording requires "imagine it saves."
 
 ## Break-test results (Lab 3 §5)
 

@@ -59,12 +59,13 @@ Requirements are the stories in [`backlog.md`](backlog.md); this section does no
 
 | Story | Requirement | Why this order |
 |---|---|---|
+| US13 | Organizer signs up | Nothing else works until an organizer account exists. |
 | US01 | Organizer signs in | Everything else writes data; writes need a gate. Lab 5 builds this first anyway. |
 | US02 | Create a league (name, sport, season, weeks) | The container for everything. |
 | US03 | Add entrants — a team or an individual — from a phone | Must exist before scheduling. Phone layout AC is the first thing to drop if time runs out. |
 | US04 | Generate a round-robin schedule with rotating byes | **The core of the product.** G1 lives here. |
 | US05 | Record a score; re-entering replaces | Input to standings. |
-| US06 | Standings computed from scores: W, L, PF, PA, Diff; tiebreak W → Diff → PF, printed on the page | G2 lives here. |
+| US06 | Standings computed from scores: W, L, T, PF, PA, Diff; tiebreak W → Diff → PF, printed on the page | G2 lives here. |
 | US07 | Public read-only link, phone-first, no sign-in | G3 lives here. The only screen players see. |
 
 **Should — after the slice is demonstrable end to end, in this order:** US08 (track who paid), US09 (playoff bracket), US10 (rotating-partner doubles).
@@ -95,6 +96,7 @@ Deliberately *not* constrained here: which language, framework, database or host
 
 *Decides: what does the person actually do, in what order, and what do they see?*
 
+0. **Sign up** (first time only). Email + password of at least 8 characters; lands on an empty league list. *(US13)*
 1. **Sign in.** Email + password. Wrong password → same page, one message, nothing leaked. *(US01)*
 2. **League list.** Empty state: "No leagues yet — create one." One button. *(US02)*
 3. **Create league.** Five fields: name, location (free text — "Joe's Tavern", "Syracuse DPW"), sport (free text — we don't gate on a sport list), season label, weeks. Validation errors inline. *(US02)*
@@ -102,7 +104,7 @@ Deliberately *not* constrained here: which language, framework, database or host
 5. **Entrants.** Add by name. Duplicate name in this league → refused with the exact message in US03. Works on a phone in a parking lot. *(US03)*
 6. **Schedule.** One button: *Generate schedule*. Fewer than 2 entrants → refused. Existing schedule with no scores → replaced. Any score recorded → refused; the organizer must clear scores first. Result: week-by-week list, byes shown explicitly ("Bag Ladies — bye"). *(US04)*
 7. **Enter scores.** Per game, two whole-number fields, Save. Re-save replaces. *(US05)*
-8. **Standings.** Table: Entrant · W · L · PF · PA · Diff, sorted W desc, Diff desc, PF desc; the tiebreak order printed under the table. Empty state before any game. *(US06)*
+8. **Standings.** Table: Entrant · W · L · T · PF · PA · Diff, sorted W desc, Diff desc, PF desc; the tiebreak order printed under the table. Empty state before any game. *(US06)*
 9. **Public page** (no sign-in): this week's games first, then the full schedule, then standings. On a phone, this week's games are above the fold. Unknown league → "League not found." *(US07)*
 
 Wireframes for 4, 6, 8 and 9 land in `docs/design/wireframes/` by Lab 6.
@@ -112,7 +114,7 @@ Wireframes for 4, 6, 8 and 9 land in `docs/design/wireframes/` by Lab 6.
 *Decides: what are the things, and how do they relate?* (Shape only — the storage technology is a `CP-M3` decision.)
 
 - **Organizer** — email, password (hashed, never stored plain). Owns leagues.
-- **League** — name, location (free text), sport, season label, number of weeks, a public identifier that is safe to put in a URL. Belongs to one organizer.
+- **League** — name, location (free text), sport, season label, number of weeks, whether games can end in a tie, a public identifier that is safe to put in a URL. Belongs to one organizer.
 - **Entrant** — name; belongs to one league; name unique within the league. A "team" and an "individual" are the same thing to the product — an entrant. (Decided: no separate Player model in the MVP. Rotating-partner doubles, US10, is the first thing that would need one, and it's a Should.)
 - **Game** — league, week number, home entrant, away entrant, home score, away score (both empty until played). A bye is a game with no away entrant, or is simply the absence of a game for that entrant that week — the architecture doc picks one.
 - **Standings** — *not stored.* Computed from Games.
@@ -126,7 +128,7 @@ Later stories add: Entrant.paid (US08), Bracket (US09), Pairing (US10), Prize (U
 | Question | Why it matters | Resolve by |
 |---|---|---|
 | Does "sport" need to be a controlled list (for future per-sport scoring rules) or is free text fine? | Free text is the MVP answer; a list would be needed only if scoring rules ever differ by sport. | `CP-M3` — decide free text unless architecture finds a reason. |
-| When the schedule is longer than the league's `weeks` (7 entrants → 7 rounds, league set to 6 weeks), truncate, extend, or refuse? | Affects US04's AC. Current lean: generate the full round-robin and *set weeks to match*, warning the organizer. | Before Lab 5. Add an AC to US04 either way. |
+| ~~When the schedule is longer than the league's `weeks` (7 entrants → 7 rounds, league set to 6 weeks), truncate, extend, or refuse?~~ | **Decided 2026-10-24:** generate the full round-robin, set weeks to match (up or down), and tell the organizer. AC added to US04. | Done |
 | Does the public identifier need to be unguessable? | Standings are not secret, but an organizer might not want *every* league on the site enumerable. | `CP-M3`. Lean: short random slug, not an integer. |
 | Doubles pairings (US10): is this a second scheduling algorithm or a variant of the first? | Determines whether US10 is a week of work or a day. | Not before `CP-M4`. It's a Should. |
 
@@ -134,7 +136,7 @@ Later stories add: Entrant.paid (US08), Bracket (US09), Pairing (US10), Prize (U
 
 *Decides: what is being handed in, when?*
 
-- **`CP-M4` (Sun Nov 22).** The seven MVP stories work end to end from a fresh clone, every MVP acceptance criterion has a test or a written reason it doesn't, the suite has been shown to go red when a covered path is broken, and `docs/test-plan.md` says which is which.
+- **`CP-M4` (Sun Nov 22).** The eight MVP stories work end to end from a fresh clone, every MVP acceptance criterion has a test or a written reason it doesn't, the suite has been shown to go red when a covered path is broken, and `docs/test-plan.md` says which is which.
 - **`CP` + `DD` (Fri Dec 11).** The same, deployed at a live URL, with a 5–8 minute recording that walks §6 start to finish on the live site, and a written defense that names what was cut (§3) and why.
 
 Shoulds and Coulds shipped by Dec 11 are a bonus. A Should that half-works costs more than one that was never started.
@@ -146,4 +148,5 @@ Shoulds and Coulds shipped by Dec 11 are a bonus. A Should that half-works costs
 | Date | Change | Why |
 |---|---|---|
 | 2026-09-27 | v1.0 — first complete draft after Workshop 2 peer review | `CP-M2` |
+| 2026-10-24 | v1.2 — US13 organizer sign-up added to the MVP slice, ahead of US01. | US01 signed in an organizer but nothing created one. |
 | 2026-10-01 | v1.1 — a league has a required free-text location, shown on the league list, league header and public page. Designs in `docs/design/` updated to match. | Leagues play at a venue (a tavern, a public-works field); players need to know where to show up. |
