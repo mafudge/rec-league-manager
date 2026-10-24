@@ -11,7 +11,7 @@ const cleanEmail = (v) => (typeof v === "string" ? v.trim().toLowerCase() : "");
 
 /**
  * deps.fetch: injectable for tests. deps.host(): "host:port" of the Auth emulator.
- * deps.verifyIdToken(token): resolves to the decoded token (uid, email) or rejects.
+ * deps.verifyIdToken(token, checkRevoked): resolves to the decoded token (uid, email) or rejects.
  */
 function createAuth(deps) {
   const base = () => `http://${deps.host()}`;
@@ -83,7 +83,7 @@ function createAuth(deps) {
     const token = rest.join(" ").trim();
     if (scheme.toLowerCase() !== "bearer" || !token) return fail(401, SIGN_IN);
     try {
-      const decoded = await deps.verifyIdToken(token);
+      const decoded = await deps.verifyIdToken(token, true);
       if (!decoded?.uid) throw new Error("not a user token");
       return { id: decoded.uid, email: cleanEmail(decoded.email), token };
     } catch (e) {

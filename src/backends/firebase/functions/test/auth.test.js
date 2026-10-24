@@ -79,3 +79,10 @@ test("routes: bodies, 201 on signup, open routes ignore Authorization, /me needs
   assert.deepEqual(await post("/api/auth/login", '{"email":"a@b.c","password":"password1"}', { authorization: "garbage" }), [200, { token: "T", refresh_token: "R" }]);
   assert.deepEqual(await dispatch({ method: "GET", path: "/api/auth/me", headers: {} }, routes), [401, { error: "Sign in required" }]);
 });
+
+test("organizerFrom asks for the revocation and user-exists check (checkRevoked = true)", async () => {
+  const seen = [];
+  const { auth } = make({ verify: async (...args) => { seen.push(args); return { uid: "u1", email: "a@b.com" }; } });
+  await auth.organizerFrom({ headers: { authorization: "Bearer tok" } });
+  assert.deepEqual(seen, [["tok", true]]);
+});

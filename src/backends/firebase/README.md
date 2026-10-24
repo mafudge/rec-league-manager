@@ -12,7 +12,7 @@ npm install            # also installs functions/
 
 ## Run
 ```bash
-npm run emulators      # Hosting :5000, Functions :5001, Firestore :8080, Auth :9099, UI :4100 (all on 0.0.0.0, so a phone on the LAN can reach them)
+npm run emulators      # Hosting :5000, Functions :5001, Firestore :8080, Auth :9099, UI :4100 (only Hosting :5000, the API, is reachable from the LAN; the rest are 127.0.0.1 only)
 ```
 
 **Our REST API** (ADR 003): `API_URL=http://localhost:5000`. It is the Cloud Function `api` in `functions/index.js`; Hosting forwards `/api/**` to it (`firebase.json`), and the emulator reloads it when you save.
@@ -30,7 +30,9 @@ Accounts (US01) use the Auth emulator through its REST API; `functions/auth.js` 
 ../../contract-test.sh http://localhost:5000   # all routes: prints "contract ok"
 ```
 
-Known limit: the Functions runtime parses JSON bodies before our code, so a malformed body sent with `Content-Type: application/json` gets the runtime's HTML 400 instead of `{"error": "Invalid request"}` (backlog POL-01).
+Known limit: the Functions runtime parses JSON bodies before our code, so a malformed body sent with `Content-Type: application/json` gets the runtime's HTML 400 instead of `{"error": "Invalid request"}` (backlog POL-01). The same goes for any body sent as `application/json` that is not a JSON object (`5`, `"x"`, `null`, `true`), and that 400 has no CORS headers. Clients therefore send no body and no `Content-Type` on routes that take none, and a JSON object otherwise.
+
+**Development only, not a security boundary.** The emulators keep passwords in plaintext (Auth) and serve every document (Firestore), and under the Auth emulator the Admin SDK accepts unsigned tokens. Only Hosting (port 5000, the API) listens on all interfaces, so a phone on the LAN can reach the API. Auth 9099, Functions 5001, Firestore 8080, the Emulator UI 4100, the hub 4400 and logging 4500 are bound to `127.0.0.1`. `emulator-data/` also holds the plaintext passwords on disk (git-ignored). Sign-in checks the token is not revoked and the user still exists, so a deleted account is refused with 401 `Sign in required`.
 
 ## TODO
 - [x] Email + password sign-in against the Auth emulator (US01); no email links
