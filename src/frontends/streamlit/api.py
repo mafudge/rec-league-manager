@@ -95,11 +95,15 @@ def request(session: MutableMapping, method: str, path: str, body=None, auth: bo
 
 
 def sign_up(session: MutableMapping, email: str, password: str) -> None:
-    save_session(session, request(session, "POST", "/api/auth/signup", {"email": email, "password": password}))
+    tokens = request(session, "POST", "/api/auth/signup", {"email": email, "password": password})
+    session.pop("email", None)  # a new session must not show the last one's email
+    save_session(session, tokens)
 
 
 def sign_in(session: MutableMapping, email: str, password: str) -> None:
-    save_session(session, request(session, "POST", "/api/auth/login", {"email": email, "password": password}))
+    tokens = request(session, "POST", "/api/auth/login", {"email": email, "password": password})
+    session.pop("email", None)  # a new session must not show the last one's email
+    save_session(session, tokens)
 
 
 def me(session: MutableMapping) -> dict:

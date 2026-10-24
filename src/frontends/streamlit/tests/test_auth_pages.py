@@ -131,3 +131,12 @@ def test_the_home_page_still_says_hello_and_offers_sign_up_and_in():
         at = page("home")
     assert at.markdown[0].value == "Hello from fastapi"
     assert [l.proto.label for l in at.get("page_link")] == ["Sign up", "Sign in"]
+
+
+def test_signing_in_as_someone_else_shows_the_new_email_not_the_cached_one():
+    state = {"token": "tA", "refresh_token": "rA", "email": "a@example.com"}
+    with backend(Reply(200, TOKENS), Reply(200, {"email": "b@example.com"})) as b:
+        at = submit(page("signin", state), "b@example.com", "password1")
+    assert (b.calls[1][0], b.calls[1][1]) == ("GET", f"{BASE}/api/auth/me")
+    assert b.calls[1][2]["headers"] == {"Authorization": "Bearer t1"}
+    assert at.markdown[0].value == "b@example.com"

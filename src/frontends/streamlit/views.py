@@ -2,7 +2,7 @@
 import streamlit as st
 
 import api
-from api import API_URL, BackendRefused, backend_name, hello
+from api import backend_name, hello
 
 # Filled in by app.py once the st.Page objects exist, so pages can send people to each other.
 PAGES: dict = {}
@@ -25,18 +25,16 @@ def require_sign_in() -> None:
 def greeting() -> str:
     try:
         return f"Hello from {backend_name()}"
-    except Exception:
-        return f"Can't reach the backend at {API_URL}"
+    except Exception as e:
+        return api.message_for(e)
 
 
 def say_hello(name: str) -> str:
     """The backend's greeting, its refusal, or where we looked. The name is sent as typed."""
     try:
         return hello(name)
-    except BackendRefused as e:
-        return str(e)
-    except Exception:
-        return f"Can't reach the backend at {API_URL}"
+    except Exception as e:
+        return api.message_for(e)
 
 
 def home() -> None:
