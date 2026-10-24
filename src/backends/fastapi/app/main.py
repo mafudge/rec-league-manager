@@ -1,8 +1,21 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Rec League Manager API")
+from .db import create_tables
+from .errors import register_handlers
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_tables()
+    yield
+
+
+app = FastAPI(title="Rec League Manager API", lifespan=lifespan)
+register_handlers(app)
 
 # Browser frontends (web, Flutter) run on another port, so allow any origin (ADR 003).
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

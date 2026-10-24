@@ -6,6 +6,7 @@
 API_URL=${1:?usage: $0 <API_URL>}
 API_URL=${API_URL%/}
 ORIGIN=http://localhost:3000
+command -v jq >/dev/null 2>&1 || { echo "contract-test.sh needs jq"; exit 1; }
 failures=0
 headers=$(mktemp)
 trap 'rm -f "$headers"' EXIT
@@ -18,6 +19,17 @@ get() { # get <path>: body to stdout, headers to $headers, status to $status
   body=$(curl -sS --max-time 10 -D "$headers" -H "Origin: $ORIGIN" "$API_URL$1")
   status=$(head -n 1 "$headers" | cut -d' ' -f2)
 }
+
+send() { # send <METHOD> <path> [json-body] [token]: body to stdout, status to $status
+  method=$1; path=$2; json=${3:-}; token=${4:-}
+  body=$(curl -sS --max-time 10 -D "$headers" -X "$method" -H "Origin: $ORIGIN" \
+    ${json:+-H "Content-Type: application/json" --data "$json"} \
+    ${token:+-H "Authorization: Bearer $token"} "$API_URL$path")
+  status=$(head -n 1 "$headers" | cut -d' ' -f2)
+}
+post() { send POST "$@"; }   # post <path> [json-body] [token]
+put() { send PUT "$@"; }     # put <path> [json-body] [token]
+delete() { send DELETE "$1" "" "${2:-}"; } # delete <path> [token]
 
 get /api/health
 [ "$status" = "200" ]; check "GET /api/health returns 200 (got ${status:-no answer})" $?
