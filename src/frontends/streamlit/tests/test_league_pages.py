@@ -51,7 +51,7 @@ def page(name, state=None):
 
 
 def texts(at):
-    return [m.value for m in at.markdown] + [c.value for c in at.caption]
+    return [m.value for m in at.markdown] + [c.value for c in at.caption] + [c.value for c in at.text]
 
 
 def posts(b):
@@ -195,7 +195,7 @@ def test_existing_entrants_are_listed_in_order():
     with home(Reply(200, [{"id": "1", "name": "Bag Ladies"}, {"id": "2", "name": "Corn Stars"}])) as b:
         at = page("league", {"league_id": "abc123"})
     assert (b.calls[1][0], b.calls[1][1]) == ("GET", f"{BASE}/api/leagues/abc123/entrants")
-    assert [m.value for m in at.markdown if m.value in ("Bag Ladies", "Corn Stars")] == ["Bag Ladies", "Corn Stars"]
+    assert [m.value for m in at.text if m.value in ("Bag Ladies", "Corn Stars")] == ["Bag Ladies", "Corn Stars"]
     assert "No entrants yet — add the first one." not in texts(at)
 
 
@@ -235,7 +235,7 @@ def test_the_backends_refusal_is_shown_verbatim_and_the_box_keeps_the_text():
         at.button(key="add_entrant").click().run()
         assert [e.value for e in at.error] == [err]
         assert at.text_input[0].value == " bag ladies "
-        assert [m.value for m in at.markdown].count("Bag Ladies") == 1
+        assert [m.value for m in at.text].count("Bag Ladies") == 1
         at.run()
     assert len(posts(b)) == 1
 
@@ -247,3 +247,43 @@ def test_a_blank_name_is_sent_for_the_backend_to_refuse():
         at.button(key="add_entrant").click().run()
     assert json.loads(posts(b)[0][2]["data"]) == {"name": ""}
     assert [e.value for e in at.error] == ["Name is required"]
+
+
+# ---- review fixes
+WEIRD = "*A* $1 $2 :tada:"
+
+
+def test_user_text_is_shown_literally():
+    league = dict(TUES, name=WEIRD, location="_L_ $3 :smile:", sport="*S*", season="$4 $5")
+    with routed({"GET /api/leagues/abc123": [Reply(200, league)],
+                 "GET /api/leagues/abc123/entrants": [Reply(200, [{"id": "1", "name": WEIRD}])]}):
+        at = page("league", {"league_id": "abc123"})
+    assert [t.value for t in at.text] == ["_L_ $3 :smile:", "*S* · $4 $5", WEIRD]
+    import views
+    assert at.title[0].value == views.literal(WEIRD) == r"\*A\* \$1 \$2 \:tada\:"
+    with routed({"GET /api/leagues": [Reply(200, [league])]}):
+        at = page("leagues")
+    assert at.button(key="open_abc123").label == views.literal(WEIRD)
+    assert "_L_ $3 :smile:" in texts(at)
+
+
+def test_the_public_url_is_shown_as_text_with_no_extra_caption():
+    with backend(Reply(200, TUES), Reply(200, [])):
+        at = page("league", {"league_id": "abc123"})
+    assert at.code[0].value == "http://localhost:8501/?league=k7m2pq"
+    assert not at.caption or all("Public link" not in c.value for c in at.caption)
+
+
+def test_the_home_with_no_league_selected_goes_back_to_the_list():
+    with backend(Reply(200, [])):
+        at = page("league")
+    assert at.title[0].value == "My leagues"
+
+
+def test_weeks_is_digits_only_else_sent_as_typed():
+    for typed, sent in [(" 10 ", 10), ("1_0", "1_0"), ("1.5", "1.5"), ("-2", "-2")]:
+        with backend(Reply(400, {"error": "Weeks must be at least 1"})) as b:
+            at = page("league_new")
+            fill(at, name="N", location="L", weeks=typed)
+            at.button(key="create_league").click().run()
+        assert json.loads(b.calls[0][2]["data"])["weeks"] == sent

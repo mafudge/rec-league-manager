@@ -1,5 +1,6 @@
 """The pages. Each takes nothing and reads/writes the one session (st.session_state)."""
 import os
+import re
 
 import streamlit as st
 
@@ -105,6 +106,11 @@ def _fail(e: Exception) -> None:
     st.error(api.message_for(e))
 
 
+def literal(text: str) -> str:
+    """User text for the few places Streamlit insists on markdown (titles, button labels): show it as typed."""
+    return re.sub(r"([\\`*_{}\[\]()#+\-.!~|<>$:&])", r"\\\1", text)
+
+
 def public_url(slug: str) -> str:
     """This app's own public page for a league: `?league=<slug>` on the app's base URL."""
     base = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8501").rstrip("/")
@@ -114,7 +120,7 @@ def public_url(slug: str) -> str:
 def leagues() -> None:
     require_sign_in()
     header()
-    st.title("Your leagues")
+    st.title("My leagues")
     try:
         rows = api.list_leagues(st.session_state)
     except Exception as e:
@@ -123,10 +129,10 @@ def leagues() -> None:
     if rows is not None and not rows:
         st.write("No leagues yet — create one.")
     for league in rows or []:
-        if st.button(league["name"], key=f"open_{league['id']}"):
+        if st.button(literal(league["name"]), key=f"open_{league['id']}"):
             st.session_state["league_id"] = league["id"]
             go("league")
-        st.caption(league["location"])
+        st.text(league["location"])
     st.page_link(PAGES["league_new"], label="Create a league")
 
 
@@ -149,10 +155,8 @@ def league_new() -> None:
     if weeks == "":
         weeks = None  # blank is sent as null for the backend to refuse
     else:
-        try:
-            weeks = int(weeks)
-        except ValueError:
-            pass  # not a whole number: sent as typed, the backend says so
+        if re.fullmatch(r"[0-9]+", weeks):
+            weeks = int(weeks)  # anything else is sent as typed; the backend says so
     try:
         league = api.create_league(st.session_state, dict(
             name=name, location=location, sport=sport, season=season, weeks=weeks, allow_ties=allow_ties))
@@ -166,7 +170,7 @@ def league_new() -> None:
 def league_home() -> None:
     require_sign_in()
     header()
-    league_id = st.session_state.get("league_id") or st.query_params.get("id")
+    league_id = st.session_state.get("league_id")
     if not league_id:
         go("leagues")
     try:
@@ -174,10 +178,9 @@ def league_home() -> None:
     except Exception as e:
         _fail(e)
         return
-    st.title(league["name"])
-    st.write(league["location"])
-    st.caption(" · ".join(x for x in (league["sport"], league["season"]) if x))
-    st.caption("Public link (share this with players)")
+    st.title(literal(league["name"]))
+    st.text(league["location"])
+    st.text(" · ".join(x for x in (league["sport"], league["season"]) if x))
     st.code(public_url(league["slug"]), language=None)
     entrants_tab, schedule_tab, standings_tab = st.tabs(["Entrants", "Schedule", "Standings"])
     with entrants_tab:
@@ -210,4 +213,4 @@ def entrants(league_id: str) -> None:
     if not rows:
         st.write("No entrants yet — add the first one.")
     for entrant in rows:
-        st.write(entrant["name"])
+        st.text(entrant["name"])
