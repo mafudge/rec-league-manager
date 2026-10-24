@@ -168,3 +168,18 @@ export const clearScores = (leagueId: string): Promise<{ cleared: number }> =>
   request("DELETE", `${leaguePath(leagueId)}/scores`, { auth: true });
 export const saveScore = (gameId: string, home_score: number | null, away_score: number | null): Promise<Game> =>
   request("PUT", `/api/games/${gameId}/score`, { auth: true, body: { home_score, away_score } });
+
+export type StandingsRow = {
+  entrant_id: string;
+  name: string;
+  w: number;
+  l: number;
+  t: number;
+  pf: number;
+  pa: number;
+  diff: number;
+};
+export type Standings = { rows: StandingsRow[]; played: number; tiebreak: string };
+
+export const getStandings = (leagueId: string): Promise<Standings> =>
+  request("GET", `${leaguePath(leagueId)}/standings`, { auth: true });

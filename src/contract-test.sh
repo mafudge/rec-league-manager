@@ -258,4 +258,15 @@ GAME_ID=$(echo "$body" | jq -r '[.[]|select(.week==1 and .away_id!=null)][0].id'
 put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
 [ "$status" = "200" ]; check "scoring a week-1 game 21-14 again returns 200 (left for the standings checks) (got ${status:-no answer} $body)" $?
 
+# --- US06 · standings compute themselves ---
+SORTED='Sorted by wins, then point difference, then points for.'
+send GET "/api/leagues/$LEAGUE_ID/standings" "" "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg t "$SORTED" '.played==1 and .tiebreak==$t and (.rows|length==6) and all(.rows[]; (keys|length)==8)' >/dev/null
+check "GET standings returns 200 with played 1, 6 rows of 8 keys and the tiebreak sentence (got ${status:-no answer} $body)" $?
+echo "$body" | jq -e '.rows[0]|.w==1 and .l==0 and .t==0 and .pf==21 and .pa==14 and .diff==7' >/dev/null
+check "the 21-scorer is first with w 1, l 0, pf 21, pa 14, diff 7 (got $body)" $?
+send GET "/api/leagues/$LEAGUE_ID/standings" "" "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "a second organizer reading my standings gets 404 (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

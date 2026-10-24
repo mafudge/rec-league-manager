@@ -11,6 +11,7 @@ from .routes import entrants as entrant_routes
 from .routes import leagues as league_routes
 from .routes import schedule as schedule_routes
 from .routes import scores as score_routes
+from .routes import standings as standings_routes
 
 
 @asynccontextmanager
@@ -26,6 +27,7 @@ app.include_router(league_routes.router)
 app.include_router(entrant_routes.router)
 app.include_router(schedule_routes.router)
 app.include_router(score_routes.router)
+app.include_router(standings_routes.router)
 
 # Browser frontends (web, Flutter) run on another port, so allow any origin (ADR 003).
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

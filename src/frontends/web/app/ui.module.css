@@ -186,3 +186,27 @@ a.button {
   background: #fff;
   color: var(--ink);
 }
+
+/* Standings: numbers right-aligned and compact so seven columns fit at 375 px; the wrapper scrolls if a name is long. */
+.tableScroll {
+  overflow-x: auto;
+}
+
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings th,
+.standings td {
+  padding: 0.5rem 0.35rem;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.standings th:first-child,
+.standings td:first-child {
+  text-align: left;
+  overflow-wrap: anywhere;
+}

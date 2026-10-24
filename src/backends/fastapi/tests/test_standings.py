@@ -1,6 +1,8 @@
+import pytest
+
 from app.standings import Entrant, Game, StandingsRow, compute_standings
 
-A, B, C, D = (Entrant(1, "Bag Ladies"), Entrant(2, "Corn Stars"), Entrant(3, "Hole Patrol"), Entrant(4, "Sack Attack"))
+A, B, C, D = (Entrant("1", "Bag Ladies"), Entrant("2", "Corn Stars"), Entrant("3", "Hole Patrol"), Entrant("4", "Sack Attack"))
 
 
 def table(rows: list[StandingsRow]) -> list[tuple]:
@@ -62,3 +64,17 @@ def test_a_bye_contributes_nothing():
 def test_a_tie_counts_points_but_neither_win_nor_loss():
     rows = compute_standings([A, B], [Game(1, A.id, B.id, 15, 15)])
     assert table(rows) == [("Bag Ladies", 0, 0, 15, 15, 0), ("Corn Stars", 0, 0, 15, 15, 0)]
+    assert [r.t for r in rows] == [1, 1]  # each side gets a T
+
+
+def test_us06_01_unknown_entrant_is_a_value_error_played_or_not():
+    with pytest.raises(ValueError, match="Week 3: entrant 99 is not in this league"):
+        compute_standings([A, B], [Game(3, A.id, "99", 10, 5)])
+    with pytest.raises(ValueError, match="Week 2: entrant 77 is not in this league"):
+        compute_standings([A, B], [Game(2, "77", B.id, None, None)])
+
+
+def test_us06_01_an_entrant_cannot_play_itself():
+    with pytest.raises(ValueError, match=r"Week 3: entrant 2 \(Corn Stars\) can't play itself"):
+        compute_standings([A, B], [Game(3, B.id, B.id, 10, 5)])
+
