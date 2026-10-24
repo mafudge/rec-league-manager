@@ -138,7 +138,6 @@ Deno.test({
   ignore: !live,
   fn: async () => {
     const a = await organizer('tx')
-    const b = await organizer('tx2')
     const made = await api('POST', '/api/leagues', a.token, { name: 'Tx', location: 'Bar', weeks: 9 })
     const id = made.body.id as string
     const ents: string[] = []
@@ -151,8 +150,8 @@ Deno.test({
     const before = (await api('GET', `/api/leagues/${id}/games`, a.token)).body
     assertEquals(before.length, 6)
 
-    // The first game is fine, the second names an entrant of another league: the delete and the first
-    // insert have already run when the foreign key fails, and all of it must roll back.
+    // The first game is fine, the second names an entrant of another league: the delete has already run
+    // when the foreign key fails on the insert, and all of it must roll back.
     const bad = [
       { week: 1, slot: 0, home_id: ents[0], away_id: ents[1] },
       { week: 1, slot: 1, home_id: ents[2], away_id: stranger },
@@ -186,5 +185,37 @@ Deno.test({
       { p_league: id, p_games: [], p_weeks: 1 })
     assertNotEquals(anon.status, 200, JSON.stringify(anon.body))
     assertEquals((await api('GET', `/api/leagues/${id}/games`, a.token)).body, before)
+  },
+})
+
+Deno.test({
+  name: 'standings are RLS-scoped (404 for another organizer) and the public page needs no token, ignores a bad one, and hides ids',
+  ignore: !live,
+  fn: async () => {
+    const a = await organizer('pub')
+    const b = await organizer('pub2')
+    const made = await api('POST', '/api/leagues', a.token, { name: 'Pub', location: 'Bar', weeks: 3 })
+    const id = made.body.id as string
+    for (const name of ['One', 'Two']) await api('POST', `/api/leagues/${id}/entrants`, a.token, { name })
+    await api('POST', `/api/leagues/${id}/schedule`, a.token)
+
+    const st = await api('GET', `/api/leagues/${id}/standings`, a.token)
+    assertEquals([st.status, st.body.rows.length, st.body.played], [200, 2, 0])
+    const other = await api('GET', `/api/leagues/${id}/standings`, b.token)
+    assertEquals([other.status, other.body], [404, { error: 'League not found' }])
+    assertEquals((await api('GET', `/api/leagues/${id}/standings`)).status, 401)
+
+    const slug = made.body.slug as string
+    for (const token of [undefined, 'nonsense', b.token]) {
+      const r = await call('GET', `${API}/api/public/${slug}`, token ? { Authorization: `Bearer ${token}` } : {})
+      assertEquals(r.status, 200, JSON.stringify(r.body))
+      assertEquals(Object.keys(r.body).sort(), ['current_week', 'games', 'league', 'standings'])
+      assertEquals(r.body.league.id, undefined)
+      assertEquals(r.body.league.organizer_id, undefined)
+      assertEquals(r.body.league.name, 'Pub')
+      assertEquals([r.body.current_week, r.body.games.length], [1, 1])
+    }
+    const missing = await api('GET', '/api/public/zzzzzz')
+    assertEquals([missing.status, missing.body], [404, { error: 'League not found' }])
   },
 })

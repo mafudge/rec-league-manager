@@ -48,7 +48,7 @@ Needs Docker with the Compose plugin; the first start downloads about 3 GB of im
 ../../contract-test.sh http://localhost:54321/functions/v1   # API_URL ends in /functions/v1
 cd docker && docker compose down                             # stop
 ```
-The API is the Edge Function in `docker/volumes/functions/api/index.ts`. After you edit it, run `docker restart supabase-edge-functions`.
+The API is the Edge Function in `docker/volumes/functions/api/index.ts`. After you edit it, run `docker restart supabase-edge-functions`. `start.sh` applies `migrations/*.sql` on every start (safe to re-run), and `./test.sh` / `LIVE_SUPABASE=1 ./test.sh` run the unit and row-level-security tests.
 
 ### firebase — `src/backends/firebase`
 Needs Node 18.18+ and Java 11+. No Google account: everything runs in the emulators.

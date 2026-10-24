@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **SB-PUB** Supabase · Standings and public page — #38.

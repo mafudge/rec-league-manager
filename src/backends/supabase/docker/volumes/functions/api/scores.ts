@@ -4,6 +4,7 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { fail, json, objectBody, type Route } from './http.ts'
 import { type Deps, ownedLeague, problem } from './leagues.ts'
 import { gameJson, type GameRecord, roundRobin, weeksMessage } from './schedule.ts'
+import { computeStandings, playedCount, standingsJson } from './standings.ts'
 
 const LIMIT = 2 ** 31 // int4, so every backend (Postgres included) agrees on what fits
 const GAME_COLUMNS = 'id, league_id, week, home_id, away_id, home_score, away_score'
@@ -72,6 +73,24 @@ export function scheduleRoutes({ organizerFrom, clientFor }: Deps): Route[] {
           .from('games').select(GAME_COLUMNS).eq('league_id', id).order('week').order('slot')
         if (error) return problem('game list', error)
         return json((data as GameRecord[]).map((g) => gameJson(g, names)))
+      },
+    },
+    {
+      method: 'GET',
+      path: '/api/leagues/:id/standings',
+      handler: async (req, _url, { id }) => {
+        const db = await signedIn(req)
+        await ownedLeague(db, id)
+        const { data: entrants, error } = await db
+          .from('entrants').select('id, name').eq('league_id', id).order('position')
+        if (error) return problem('entrant list', error)
+        const { data: games, error: gamesError } = await db
+          .from('games').select('week, home_id, away_id, home_score, away_score')
+          .eq('league_id', id).order('week').order('slot')
+        if (gamesError) return problem('game list', gamesError)
+        const played = games as Parameters<typeof computeStandings>[1]
+        // computed on every request; nothing stores standings (PRD section 5)
+        return json(standingsJson(computeStandings(entrants as { id: string; name: string }[], played), playedCount(played)))
       },
     },
     {
