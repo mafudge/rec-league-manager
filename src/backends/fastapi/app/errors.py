@@ -13,9 +13,21 @@ class ApiError(Exception):
         self.message = message
 
 
+TEXT_FIELDS = ("email", "password", "name", "location", "sport", "season")
+
+
+def has_bad_text(value: object) -> bool:
+    """True for a string holding U+0000 or an unpaired surrogate (Python reads a lone \\ud800 as a code point in U+D800-U+DFFF)."""
+    return isinstance(value, str) and any(ch == "\0" or "\ud800" <= ch <= "\udfff" for ch in value)
+
+
 def object_body(body: object) -> dict:
-    """The parsed JSON body, which must be an object; anything else is the contract's 400 Invalid request."""
-    if not isinstance(body, dict):
+    """The parsed JSON body, which must be an object; anything else is the contract's 400 Invalid request.
+
+    A text field holding U+0000 or an unpaired surrogate is refused the same way, here, so it comes before
+    field validation and before any lookup (no backend can store it, and a password can't be hashed).
+    """
+    if not isinstance(body, dict) or any(has_bad_text(body.get(f)) for f in TEXT_FIELDS):
         raise ApiError(400, "Invalid request")
     return body
 

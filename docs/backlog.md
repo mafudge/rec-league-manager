@@ -24,7 +24,7 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 ### US13-01 · Passwords are at most 72 characters
 
-**Found porting to Supabase.** Supabase's sign-in service refuses passwords over 72 characters, FastAPI's bcrypt silently uses only the first 72, and Django accepts any length, so the backends disagreed. **Decided 2026-10-24: cap it in v0.2.0, on every backend.**
+**Found porting to Supabase.** Supabase's sign-in service refuses passwords over 72 characters, FastAPI's bcrypt silently uses only the first 72, and Django accepts any length, so the backends disagreed. **Decided 2026-10-24: cap it in v0.2.0, on every backend.** **Done in v0.2.0 (#39):** signup refuses a password over 72 bytes on every backend.
 
 **Acceptance criteria**
 - Given a password longer than 72 bytes in UTF-8 (72 plain letters; accented letters and emoji count more, because bcrypt limits bytes), when I sign up, then no account is created and I see "Password must be 72 characters or fewer". *(negative)*
@@ -405,7 +405,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 ### POL-01 · Backend hardening (FastAPI)
 - Warn at startup when `JWT_SECRET` is unset (belongs with REL-01 deploys).
 - An email of just `@` passes the "has an @" rule.
-- bcrypt silently uses only the first 72 bytes of a password; document it or refuse longer ones.
+- Login still accepts a password over 72 bytes on FastAPI (bcrypt truncates it) and Supabase (GoTrue truncates it), while Django refuses it; refuse it with `401 Email or password is incorrect` on all three (the signup half is done, US13-01).
 - Login answers faster for an unknown email than a wrong password (bcrypt skipped), which reveals whether an account exists.
 - The entrant duplicate check isn't enforced by the database, so two simultaneous adds could both pass.
 - A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
@@ -413,9 +413,18 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - The public and standings routes repeat the same load-and-compute block.
 - FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
 - Supabase's sign-in service refuses some addresses that contain an `@` (such as `a@`), answering "Enter a valid email address" where FastAPI and Django accept them.
-- A JSON password holding a lone surrogate escape (`"\ud800"`) makes FastAPI and Django answer 500 (Python can't encode it); Supabase replaces it.
 - Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
 - Django answers an unknown URL outside `/api/` with its HTML 404 page.
+- The Supabase email check uses JavaScript `trim()`, FastAPI and Django use Python `strip()`; they differ on U+FEFF (JS trims it, Python does not) and on `\x1c`-`\x1f` (Python strips them, JS does not).
+- `src/backends/supabase/test.sh` puts `ANON_KEY` on the `docker run` command line, where `ps` and `docker inspect` show it; pass it through the environment or an env file.
+- The live Supabase tests (`live_test.ts`) leave their users, leagues and games behind in the local database.
+- The live tests' check that the anon key is refused asserts a loose status range, not the exact status.
+- GoTrue rate-limiting (429) on signup or login is answered as 500 "The backend had a problem"; it should be a 4xx the frontends can show.
+- Signup on a Supabase stack with email auto-confirm turned off answers 500, because GoTrue returns no session.
+- On Supabase, the 409 "scores are recorded" guard on schedule replace is checked in a separate request from the replace, so a score saved in between slips through; move the guard into `replace_schedule`.
+- Supabase reads that need two requests (a league, then its entrants or games) can see two different moments; fold them into one query or one function.
+- A deleted user's Supabase access token still works until it expires (up to an hour); decide whether that is acceptable or whether the function should check the user exists.
+- Supabase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
 
 ### POL-02 · Web screens
 - The weeks-change message on the Schedule tab uses the error colour although it is information.
@@ -427,6 +436,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - The stale-schedule notice hides a failed entrants fetch silently.
 - Save's accessible name ("Save A vs B") differs from its visible text.
 - When browser storage is blocked, signing in bounces back to `/signin` with no message.
+- The red message on the Schedule tab (for example a failed single-game save) stays on screen after a later single-game clear succeeds.
 
 ### POL-03 · Tests
 - No test that the league home redirects without a token; no web test of the T cell value with ties on; the public page's ties and blank sport/season branches are untested.

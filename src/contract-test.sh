@@ -112,6 +112,13 @@ for route in signup login refresh; do
   check "POST /api/auth/$route with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
 done
 
+# NUL (\u0000) and an unpaired surrogate (\ud800) can't be stored on any backend: 400 Invalid request. Raw JSON escapes, in single quotes so the shell leaves them alone.
+for bad in '\u0000' 'A\u0000B' '\ud800' 'x\udc00y'; do
+  post /api/auth/signup "{\"email\":\"nul-$email\",\"password\":\"cornhole$bad\"}"
+  [ "$status" = "400" ] && same '{"error":"Invalid request"}'
+  check "a signup password containing $bad returns 400 Invalid request (got ${status:-no answer} $body)" $?
+done
+
 # --- US01 · sign in, refresh, the sign-in gate ---
 post /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
 [ "$status" = "200" ]; check "POST /api/auth/login returns 200 (got ${status:-no answer})" $?
@@ -180,6 +187,11 @@ check "a blank location returns 400 (got ${status:-no answer} $body)" $?
 post /api/leagues '[]' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "POST /api/leagues with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+for bad in '\u0000' 'A\u0000B' '\ud800' 'x\udc00y'; do
+  post /api/leagues "{\"name\":\"League $bad\",\"location\":\"Tavern\",\"weeks\":3}" "$access"
+  [ "$status" = "400" ] && same '{"error":"Invalid request"}'
+  check "a league name containing $bad returns 400 Invalid request (got ${status:-no answer} $body)" $?
+done
 send GET /api/leagues/nope "" "$access"
 [ "$status" = "404" ] && same '{"error":"League not found"}'
 check "GET /api/leagues/nope returns 404 League not found (got ${status:-no answer} $body)" $?
@@ -243,6 +255,11 @@ done
 post "/api/leagues/$LEAGUE_ID/entrants" '[]' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "POST entrant with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+for bad in '\u0000' 'A\u0000B' '\ud800' 'x\udc00y'; do
+  post "/api/leagues/$LEAGUE_ID/entrants" "{\"name\":\"Team $bad\"}" "$access"
+  [ "$status" = "400" ] && same '{"error":"Invalid request"}'
+  check "an entrant name containing $bad returns 400 Invalid request (got ${status:-no answer} $body)" $?
+done
 post "/api/leagues/$LEAGUE_ID/entrants" "$(jq -cn --arg n "$(printf 'a%.0s' $(seq 101))" '{name:$n}')" "$access"
 [ "$status" = "400" ] && same '{"error":"Name must be 100 characters or fewer"}'
 check "a 101-character entrant name returns 400 (got ${status:-no answer} $body)" $?

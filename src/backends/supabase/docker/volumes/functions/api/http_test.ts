@@ -119,3 +119,22 @@ Deno.test('extra or missing segments are 404; a wrong method on a :param path is
   assertEquals(await callP(req('DELETE', '/api/leagues/abc')), [405, { error: 'Method Not Allowed' }])
   assertEquals(await callP(req('PUT', '/api/leagues/abc/entrants')), [405, { error: 'Method Not Allowed' }])
 })
+
+// The text rule (src/README.md): U+0000 or an unpaired surrogate in a text field is 400 Invalid request.
+const BAD_TEXT = ['\\u0000', 'A\\u0000B', '\\ud800', 'x\\udc00y', '\\ud83d', 'a\\ud83dz']
+const TEXT_FIELDS = ['email', 'password', 'name', 'location', 'sport', 'season']
+
+Deno.test('NUL or a lone surrogate in any text field is 400 Invalid request', async () => {
+  for (const field of TEXT_FIELDS) {
+    for (const bad of BAD_TEXT) {
+      const { res, body } = await call(req('POST', '/api/echo', `{"${field}": "${bad}", "other": "fine"}`))
+      assertEquals([res.status, body], [400, { error: 'Invalid request' }], `${field} ${bad}`)
+    }
+  }
+})
+
+Deno.test('ordinary text, emoji pairs and other keys pass the text rule', async () => {
+  const text = '{"name": "Caf\\u00e9 \\ud83d\\ude00", "note": "\\u0000 is fine in a field no route stores", "n": 5}'
+  const { res, body } = await call(req('POST', '/api/echo', text))
+  assertEquals([res.status, (body as { name: string }).name], [201, 'Café 😀'])
+})
