@@ -5,6 +5,9 @@ const admin = require("firebase-admin");
 const { handler } = require("./http");
 const { createAuth } = require("./auth");
 const { createRoutes } = require("./routes");
+const { createLeagues } = require("./leagues");
+const { createSlugs } = require("./slugs");
+const { createStore } = require("./firestore-store");
 
 admin.initializeApp(); // the emulator sets the env, so it accepts emulator tokens
 
@@ -14,5 +17,7 @@ const auth = createAuth({
   verifyIdToken: (token) => admin.auth().verifyIdToken(token),
 });
 
+const leagues = createLeagues({ store: createStore(admin.firestore()), newSlug: createSlugs().newSlug });
+
 // cors: true answers preflights and allows any origin; browser frontends run on another port.
-exports.api = onRequest({ cors: true }, handler(createRoutes(auth)));
+exports.api = onRequest({ cors: true }, handler(createRoutes(auth, leagues)));

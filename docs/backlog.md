@@ -413,6 +413,8 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - The public and standings routes repeat the same load-and-compute block.
 - FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
 - Supabase's sign-in service refuses some addresses that contain an `@` (such as `a@`), answering "Enter a valid email address" where FastAPI and Django accept them.
+- Firebase's Auth emulator, like Supabase's, refuses some addresses that contain an `@` (such as `a@b`).
+- Firebase: a deleted user's ID token keeps working for up to an hour (no revocation check).
 - Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
 - Django answers an unknown URL outside `/api/` with its HTML 404 page.
 - The Supabase email check uses JavaScript `trim()`, FastAPI and Django use Python `strip()`; they differ on U+FEFF (JS trims it, Python does not) and on `\x1c`-`\x1f` (Python strips them, JS does not).

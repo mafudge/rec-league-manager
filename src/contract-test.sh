@@ -156,6 +156,9 @@ send GET /api/health "" garbage
 send GET /api/auth/me "" garbage
 [ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "GET /api/auth/me with a garbage token returns 401 (got ${status:-no answer} $body)" $?
+send GET /api/auth/me "" "$refresh"
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
+check "GET /api/auth/me with a refresh token as the bearer returns 401 (got ${status:-no answer} $body)" $?
 
 stop_after accounts
 
