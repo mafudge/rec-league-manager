@@ -114,3 +114,32 @@ def test_duplicate_uses_lower_not_casefold(client):
     lid = league(client, h)
     assert add(client, h, lid, "Straße").status_code == 201
     assert add(client, h, lid, "STRASSE").status_code == 201
+
+
+def test_name_of_100_characters_is_kept_and_101_refused(client):
+    h = signed_in(client)
+    lid = league(client, h)
+    assert add(client, h, lid, "a" * 100).status_code == 201
+    r = add(client, h, lid, "b" * 101)
+    assert (r.status_code, r.json()) == (400, {"error": "Name must be 100 characters or fewer"})
+    assert add(client, h, lid, "  " + "c" * 100 + "  ").status_code == 201
+
+
+def test_53rd_entrant_is_refused_and_not_stored(client):
+    h = signed_in(client)
+    lid = league(client, h)
+    for i in range(52):
+        assert add(client, h, lid, f"Team {i}").status_code == 201
+    r = add(client, h, lid, "One too many")
+    assert (r.status_code, r.json()) == (400, {"error": "A league can have at most 52 entrants"})
+    assert len(client.get(f"/api/leagues/{lid}/entrants", headers=h).json()) == 52
+
+
+def test_full_league_still_reports_a_duplicate_as_409(client):
+    h = signed_in(client)
+    lid = league(client, h)
+    for i in range(52):
+        add(client, h, lid, f"Team {i}")
+    assert add(client, h, lid, "team 3").status_code == 409
+    assert add(client, h, lid, " ").json() == {"error": "Name is required"}
+    assert add(client, h, lid, "x" * 101).json() == {"error": "Name must be 100 characters or fewer"}

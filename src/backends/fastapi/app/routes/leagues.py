@@ -13,7 +13,8 @@ from ..slugs import new_slug
 
 router = APIRouter(prefix="/api/leagues")
 
-WEEKS_LIMIT = 2**31
+NAME_LIMIT = 100
+WEEKS_MAX = 52
 
 
 def league_json(l: League) -> dict[str, Any]:
@@ -62,11 +63,15 @@ def create_league(
     allow_ties = data.get("allow_ties", False)
     if not name:
         raise ApiError(400, "Name is required")
+    if len(name) > NAME_LIMIT:
+        raise ApiError(400, f"Name must be {NAME_LIMIT} characters or fewer")
     if not location:
         raise ApiError(400, "Location is required")
-    # bool is an int subclass, so check the exact type; the upper bound is int4 so every backend agrees on what fits.
-    if type(weeks) is not int or weeks < 1 or weeks >= WEEKS_LIMIT:
+    # bool is an int subclass, so check the exact type.
+    if type(weeks) is not int or weeks < 1:
         raise ApiError(400, "Weeks must be at least 1")
+    if weeks > WEEKS_MAX:
+        raise ApiError(400, f"Weeks must be between 1 and {WEEKS_MAX}")
     if not isinstance(allow_ties, bool):
         raise ApiError(400, "Invalid request")
     taken = lambda s: session.scalar(select(League.id).where(League.slug == s)) is not None  # noqa: E731

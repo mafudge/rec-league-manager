@@ -141,11 +141,19 @@ check "POST /api/leagues with a body that is not a JSON object returns 400 Inval
 send GET /api/leagues/nope "" "$access"
 [ "$status" = "404" ] && same '{"error":"League not found"}'
 check "GET /api/leagues/nope returns 404 League not found (got ${status:-no answer} $body)" $?
-for w in 0 -1 '"eight"' 2.5 null 3000000000; do
+for w in 0 -1 '"eight"' 2.5 null; do
   post /api/leagues "{\"name\":\"A\",\"location\":\"B\",\"weeks\":$w}" "$access"
   [ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
   check "weeks $w returns 400 (got ${status:-no answer} $body)" $?
 done
+for w in 53 3000000000; do
+  post /api/leagues "{\"name\":\"A\",\"location\":\"B\",\"weeks\":$w}" "$access"
+  [ "$status" = "400" ] && same '{"error":"Weeks must be between 1 and 52"}'
+  check "weeks $w returns 400 Weeks must be between 1 and 52 (got ${status:-no answer} $body)" $?
+done
+post /api/leagues "$(jq -cn --arg n "$(printf 'a%.0s' $(seq 101))" '{name:$n,location:"B",weeks:3}')" "$access"
+[ "$status" = "400" ] && same '{"error":"Name must be 100 characters or fewer"}'
+check "a 101-character league name returns 400 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":"yes"}' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "allow_ties \"yes\" returns 400 Invalid request (got ${status:-no answer} $body)" $?
@@ -190,6 +198,9 @@ done
 post "/api/leagues/$LEAGUE_ID/entrants" '[]' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "POST entrant with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+post "/api/leagues/$LEAGUE_ID/entrants" "$(jq -cn --arg n "$(printf 'a%.0s' $(seq 101))" '{name:$n}')" "$access"
+[ "$status" = "400" ] && same '{"error":"Name must be 100 characters or fewer"}'
+check "a 101-character entrant name returns 400 (got ${status:-no answer} $body)" $?
 for blank in '""' '"   "' null 5; do
   post "/api/leagues/$LEAGUE_ID/entrants" "{\"name\":$blank}" "$access"
   [ "$status" = "400" ] && same '{"error":"Name is required"}'
