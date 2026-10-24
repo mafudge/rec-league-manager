@@ -4,3 +4,4 @@
 
 ## MVP (v0.2.0)
 
+- **SB-FIX** Supabase port review fixes — #40.
