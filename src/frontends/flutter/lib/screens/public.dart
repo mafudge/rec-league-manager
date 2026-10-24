@@ -5,8 +5,9 @@ import 'standings.dart';
 
 String gameText(Game g) {
   if (g.isBye) return '${g.homeName} — bye';
-  if (g.played)
+  if (g.played) {
     return '${g.homeName} ${g.homeScore} – ${g.awayScore} ${g.awayName}';
+  }
   return '${g.homeName} vs ${g.awayName}';
 }
 
