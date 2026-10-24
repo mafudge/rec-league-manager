@@ -30,7 +30,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "signin" }) {
   }
 
   return (
-    <main className={`${styles.page}`}>
+    <main className={styles.page}>
       <div className={styles.narrow}>
         <h1>{signup ? "Create your account" : "Sign in"}</h1>
         <form onSubmit={submit} noValidate className={`${styles.form} ${styles.card}`}>

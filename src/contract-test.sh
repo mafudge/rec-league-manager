@@ -66,6 +66,10 @@ check "  body has token and refresh_token" $?
 post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
 [ "$status" = "409" ] && [ "$body" = '{"error":"An account with that email already exists"}' ]
 check "signing up the same email again returns 409 (got ${status:-no answer} $body)" $?
+upper=$(echo "$email" | tr 'a-z' 'A-Z')
+post /api/auth/signup "{\"email\":\"  $upper  \",\"password\":\"cornhole1\"}"
+[ "$status" = "409" ] && [ "$body" = '{"error":"An account with that email already exists"}' ]
+check "the same email upper-cased and padded with spaces returns 409 (got ${status:-no answer} $body)" $?
 post /api/auth/signup "{\"email\":\"short-$email\",\"password\":\"short\"}"
 [ "$status" = "400" ] && [ "$body" = '{"error":"Password must be at least 8 characters"}' ]
 check "a short password returns 400 (got ${status:-no answer} $body)" $?

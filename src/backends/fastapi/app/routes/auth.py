@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..auth import hash_password, issue_tokens
@@ -27,5 +28,10 @@ def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> di
         raise ApiError(409, "An account with that email already exists")
     organizer = Organizer(email=email, password_hash=hash_password(password))
     session.add(organizer)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        # Lost a race with a concurrent signup of the same email: the unique constraint decided.
+        session.rollback()
+        raise ApiError(409, "An account with that email already exists")
     return issue_tokens(organizer.id)

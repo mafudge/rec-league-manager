@@ -72,3 +72,21 @@ def test_tokens_round_trip_by_type():
     assert read_token(t["refresh_token"], "refresh") == "abc"
     assert read_token(t["token"], "refresh") is None
     assert read_token("garbage", "access") is None
+
+
+def test_signup_losing_a_race_on_the_unique_email_is_409_not_500(client, monkeypatch):
+    # Another request inserts the same email between our check and our commit.
+    from app.routes import auth as routes
+
+    real_hash = routes.hash_password
+
+    def hash_then_insert(pw):
+        with Session(client.engine) as s:
+            s.add(Organizer(email="dana@example.com", password_hash="x"))
+            s.commit()
+        return real_hash(pw)
+
+    monkeypatch.setattr(routes, "hash_password", hash_then_insert)
+    r = client.post("/api/auth/signup", json=GOOD)
+    assert r.status_code == 409
+    assert r.json() == {"error": "An account with that email already exists"}
