@@ -9,9 +9,10 @@ import styles from "../../ui.module.css";
 import { useSignedIn } from "../../use-signed-in";
 import Entrants from "./entrants";
 import Schedule from "./schedule";
+import Standings from "./standings";
 import { LeagueTabs, tabFrom } from "./tabs";
 
-// The league home. The Standings tab shows only the tab bar until its screen arrives.
+// The league home: a tab bar over Entrants, Schedule and Standings.
 export default function LeaguePage() {
   // useSearchParams needs a Suspense boundary for the static build.
   return (
@@ -66,6 +67,7 @@ function LeagueHome() {
             <LeagueTabs active={tab} />
             {tab === "entrants" && <Entrants leagueId={id} />}
             {tab === "schedule" && <Schedule leagueId={id} />}
+            {tab === "standings" && <Standings leagueId={id} allowTies={league.allow_ties} />}
           </>
         )}
       </div>
