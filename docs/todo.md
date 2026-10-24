@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **DJ-FIX** Django port review fixes — #34.
