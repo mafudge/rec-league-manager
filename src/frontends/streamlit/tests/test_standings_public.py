@@ -28,7 +28,7 @@ def league_routes(standings=STANDINGS, league=TUES):
 
 
 def table(at):
-    return at.dataframe[0].value
+    return at.table[0].value
 
 
 def test_columns_are_entrant_w_l_pf_pa_diff_without_ties():
@@ -70,10 +70,11 @@ def test_with_no_games_played_it_says_so_and_still_lists_every_entrant():
 
 
 def test_a_name_is_shown_as_typed_not_as_markdown():
-    s = dict(STANDINGS, rows=[row("**Bold** <b>x</b>", 0, 0, 0, 0, 0)])
+    s = dict(STANDINGS, rows=[row("**Bold** <b>x</b> $1 $2", 0, 0, 0, 0, 0)])
     with routed(league_routes(s)):
         at = page("league", {"league_id": "abc123"})
-    assert table(at)["Entrant"].tolist() == ["**Bold** <b>x</b>"]
+    # st.table cells are markdown, so the name is escaped the way every other shown name is
+    assert table(at)["Entrant"].tolist() == [views.literal("**Bold** <b>x</b> $1 $2")]
 
 
 def test_standings_are_fetched_again_on_every_run_so_a_new_score_shows():
@@ -134,7 +135,7 @@ def test_games_read_as_scores_matchups_and_byes_and_this_week_lists_only_its_gam
         assert t.count("Corn Stars vs Hole Patrol") == 2  # this week and the full schedule
         assert "Hole Patrol — bye" in t
         assert t.index("Corn Stars vs Hole Patrol") < t.index("Bag Ladies 21 – 14 Corn Stars")
-        assert len(at.dataframe) == 1
+        assert len(at.table) == 1
 
 
 def test_nothing_on_the_page_writes_and_there_is_no_sign_in_or_header():
@@ -152,7 +153,7 @@ def test_it_never_reads_the_session_and_sends_no_authorization_header():
     assert "Authorization" not in kw["headers"] and "data" not in kw
 
 
-def test_the_client_call_uses_no_token_even_if_the_session_has_one():
+def test_the_client_call_sends_no_token_and_no_body():
     b = Routes({f"GET /api/public/{SLUG}": [Reply(200, VIEW)]})
     with patch("requests.request", b):
         api.public_league(SLUG)
@@ -164,14 +165,14 @@ def test_no_schedule_says_so_and_still_shows_standings():
         assert "No games scheduled yet" in texts(at)
         assert not any("This week" in s.value for s in at.subheader)
         assert [s.value for s in at.subheader] == ["Standings"]
-        assert len(at.dataframe) == 1
+        assert len(at.table) == 1
 
 
 def test_an_unknown_league_says_league_not_found_and_shows_nothing_else():
     with public(Reply(404, {"error": "League not found"})) as (at, _):
         assert not at.exception
         assert at.title[0].value == "League not found"
-        assert len(at.dataframe) == 0 and len(at.button) == 0 and len(at.error) == 0 and len(at.subheader) == 0
+        assert len(at.table) == 0 and len(at.button) == 0 and len(at.error) == 0 and len(at.subheader) == 0
 
 
 def test_a_backend_that_cant_be_reached_says_so_rather_than_league_not_found():
@@ -193,4 +194,4 @@ def test_the_title_is_shown_as_typed():
 
 def test_ties_column_follows_the_leagues_allow_ties():
     with public(Reply(200, dict(VIEW, league=dict(PUB, allow_ties=True)))) as (at, _):
-        assert list(at.dataframe[0].value.columns) == ["Entrant", "W", "L", "T", "PF", "PA", "Diff"]
+        assert list(at.table[0].value.columns) == ["Entrant", "W", "L", "T", "PF", "PA", "Diff"]

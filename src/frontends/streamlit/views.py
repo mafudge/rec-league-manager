@@ -198,14 +198,14 @@ def _diff(n: int) -> str:
 
 def standings_table(data: dict, allow_ties: bool) -> None:
     """One standings table for the organizer's tab and the public page. The backend sorts the rows and words
-    the tiebreak. st.dataframe draws on a canvas, so names show as typed and the table scrolls inside itself."""
+    the tiebreak. st.table is static (no re-sorting against the tiebreak, no toolbar). Its cells are markdown, so names go through literal() to show as typed."""
     if data["played"] == 0:
         st.text("No games played yet")
     columns = [("Entrant", "name"), ("W", "w"), ("L", "l")] + ([("T", "t")] if allow_ties else []) + \
               [("PF", "pf"), ("PA", "pa"), ("Diff", "diff")]
-    frame = pd.DataFrame([{label: _diff(r[key]) if key == "diff" else r[key] for label, key in columns}
+    frame = pd.DataFrame([{label: _diff(r[key]) if key == "diff" else literal(r[key]) if key == "name" else r[key] for label, key in columns}
                           for r in data["rows"]], columns=[label for label, _ in columns])
-    st.dataframe(frame, hide_index=True, width="stretch")
+    st.table(frame.style.hide(axis="index"))  # static: no re-sorting, search or CSV
     st.text(data["tiebreak"])
 
 
