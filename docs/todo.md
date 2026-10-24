@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **FB-PUB** Firebase · Standings and public page — #44.
