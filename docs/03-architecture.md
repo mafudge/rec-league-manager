@@ -184,7 +184,7 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 | Question (PRD §8) | Proposed decision | Why |
 |---|---|---|
 | Is "sport" a controlled list or free text? | **Free text.** | Nothing in the architecture depends on the sport; no story has per-sport rules. |
-| Does the public identifier need to be unguessable? | **A short random slug** (e.g. 8 characters), never the database id. | Works the same in SQL and Firestore; stops casual enumeration of leagues. |
+| Does the public identifier need to be unguessable? | **A short random slug** (built: 6 characters from `abcdefghjkmnpqrstuvwxyz23456789`), never the database id. | Works the same in SQL and Firestore; stops casual enumeration of leagues. |
 | How is a bye stored? (PRD §7) | **A game with no away entrant.** | The schedule then lists byes explicitly ("Bag Ladies — bye"), and "no bye twice" is testable from the games alone. |
 | Where does data persist? (PRD §5) | Per backend, as in §5's table. | The point of the matrix. |
 
@@ -194,7 +194,7 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 
 | Question | Why it matters | Resolve by |
 |---|---|---|
-| How does the organizer's sign-in work across the contract? | Each backend issues tokens differently; the contract must say what a frontend sends back (ADR 003). | Before US01 is built. |
+| How does the organizer's sign-in work across the contract? | Each backend issues tokens differently; the contract must say what a frontend sends back (ADR 003). | **Decided (ADR 004):** one sign-in contract, built with US01. |
 | Which pairing is deployed for the live URL? | The final hand-in needs one live URL. The Firebase emulator is not a production host (ADR 001), so a deployed Firebase or Supabase would need a cloud account the course otherwise avoids. | Before `CP` (Dec 11). Lean: web on FastAPI or Django. |
 | Node 18 | Out of support since April 2025; it pins Next.js to 15 and `firebase-tools` to 13. | Before deployment. Move to Node 22. |
 | Shared logic (`src/core/`) | Four schedulers can drift. | Revisit after US04 exists in two backends. |

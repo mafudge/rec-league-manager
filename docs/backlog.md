@@ -440,12 +440,15 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - Save's accessible name ("Save A vs B") differs from its visible text.
 - When browser storage is blocked, signing in bounces back to `/signin` with no message.
 - The red message on the Schedule tab (for example a failed single-game save) stays on screen after a later single-game clear succeeds.
+- Flutter: the league home's public link (`SelectableText`) isn't exposed to screen readers; once, a 409 refusal under Generate was missing from the accessibility tree although visible.
+- Flutter: the game-line format ("A 21 – 14 B" / "A vs B" / "A — bye") is written twice (`public.dart` and `schedule.dart`).
 
 ### POL-03 · Tests
 - No test that the league home redirects without a token; no web test of the T cell value with ties on; the public page's ties and blank sport/season branches are untested.
 - A few weak assertions (the "no league content" check on sign-in, the one-row entrant layout check by class name).
 - The contract test leaves extra "Tiny" and "Odd" leagues behind on the target backend.
 - Firebase: the Firestore transactions (score and entrant writes) and the two-step slug lookup are only exercised live, not in unit tests (the in-memory store has no transactions); three FastAPI coverage cases have no JS counterpart, and the text rule is only tested through `name`.
+- Flutter tests: the 375 px width assertions in the standings and public tests can't fail (they check against the parent's width); assert the table's own width or the scroll extent instead.
 
 ## Releases and delivery
 

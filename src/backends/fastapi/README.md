@@ -1,4 +1,4 @@
-# FastAPI backend (stub)
+# FastAPI backend
 
 Python · FastAPI · SQLAlchemy · SQLite. The "build it yourself" baseline.
 
