@@ -106,3 +106,29 @@ Deno.test({
     }
   },
 })
+
+Deno.test({
+  name: 'a game\'s entrants must belong to the game\'s own league (composite foreign keys; FK checks bypass RLS)',
+  ignore: !live,
+  fn: async () => {
+    const a = await organizer('fk')
+    const league = async (name: string) => (await api('POST', '/api/leagues', a.token, { name, location: 'Bar', weeks: 3 })).body.id as string
+    const entrant = async (id: string, name: string) => (await api('POST', `/api/leagues/${id}/entrants`, a.token, { name })).body.id as string
+    const one = await league('One')
+    const two = await league('Two')
+    const [h, aw] = [await entrant(one, 'Home'), await entrant(one, 'Away')]
+    const stranger = await entrant(two, 'Elsewhere') // A's own, but in league Two
+    const game = (home_id: string, away_id: string | null, slot: number) =>
+      rest('POST', '/games', a.token, { league_id: one, week: 1, slot, home_id, away_id }, { Prefer: 'return=minimal' })
+
+    // Controls: both entrants from the league, and a bye, are accepted.
+    assertEquals((await game(h, aw, 0)).status, 201)
+    assertEquals((await game(h, null, 1)).status, 201)
+    // An entrant from another league, home or away, is refused by the foreign key (23503).
+    for (const [home, away] of [[h, stranger], [stranger, aw], [stranger, null]] as const) {
+      const r = await game(home, away, 2)
+      assertEquals([r.status, r.body?.code], [409, '23503'], JSON.stringify(r.body))
+    }
+    assertEquals((await rest('GET', `/games?league_id=eq.${one}&select=slot&order=slot`, a.token)).body, [{ slot: 0 }, { slot: 1 }])
+  },
+})

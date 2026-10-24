@@ -30,7 +30,9 @@ create table if not exists public.entrants (
   id text primary key default replace(gen_random_uuid()::text, '-', ''),
   league_id text not null references public.leagues (id) on delete cascade,
   name text not null,
-  position integer not null
+  position integer not null,
+  -- the target of games' composite foreign keys below
+  constraint entrants_league_id_id_key unique (league_id, id)
 );
 create index if not exists entrants_league_idx on public.entrants (league_id, position);
 
@@ -40,11 +42,36 @@ create table if not exists public.games (
   league_id text not null references public.leagues (id) on delete cascade,
   week integer not null,
   slot integer not null,
-  home_id text not null references public.entrants (id) on delete cascade,
-  away_id text references public.entrants (id) on delete cascade,
+  home_id text not null,
+  away_id text, -- null for a bye
   home_score integer,
-  away_score integer
+  away_score integer,
+  -- A game's entrants must belong to the game's own league. Foreign-key checks bypass RLS, so a
+  -- plain reference to entrants(id) would let a game point at an entrant of any league.
+  constraint games_home_entrant_fkey foreign key (league_id, home_id)
+    references public.entrants (league_id, id) on delete cascade,
+  constraint games_away_entrant_fkey foreign key (league_id, away_id)
+    references public.entrants (league_id, id) on delete cascade
 );
+
+-- Bring a database made by the first version of this file (single-column references) up to date.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'entrants_league_id_id_key') then
+    alter table public.entrants add constraint entrants_league_id_id_key unique (league_id, id);
+  end if;
+  alter table public.games drop constraint if exists games_home_id_fkey;
+  alter table public.games drop constraint if exists games_away_id_fkey;
+  if not exists (select 1 from pg_constraint where conname = 'games_home_entrant_fkey') then
+    alter table public.games add constraint games_home_entrant_fkey foreign key (league_id, home_id)
+      references public.entrants (league_id, id) on delete cascade;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'games_away_entrant_fkey') then
+    alter table public.games add constraint games_away_entrant_fkey foreign key (league_id, away_id)
+      references public.entrants (league_id, id) on delete cascade;
+  end if;
+end
+$$;
 create index if not exists games_league_idx on public.games (league_id, week, slot);
 
 alter table public.leagues enable row level security;

@@ -37,7 +37,8 @@ Deno.test('newLeague: weeks must be a JSON integer >= 1 (booleans and strings re
   for (const weeks of [0, -1, 'eight', '8', 2.5, true, false, null, undefined]) {
     throwsApi(() => newLeague({ ...base, weeks }), 400, 'Weeks must be at least 1')
   }
-  // JSON.parse('21.0') is 21, so an integral float is a whole number, as in FastAPI's tests of the contract
+  // JSON.parse('3.0') is 3, so JS can't tell them apart; the contract rules that an integral number counts
+  // (FastAPI and Django accept 3.0 too, as they do for scores)
   assertEquals(newLeague(JSON.parse('{"name":"A","location":"B","weeks":3.0}')).weeks, 3)
 })
 

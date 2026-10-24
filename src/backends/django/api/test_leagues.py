@@ -91,6 +91,19 @@ class CreateLeagueTests(LeagueTestCase):
     def test_weeks_52_is_kept(self):
         self.assertEqual(self.make(self.signed_in_as(), weeks=52).status_code, 201)
 
+    def test_integral_float_weeks_counts_as_whole(self):
+        # JS backends can't tell 3.0 from 3, so every backend takes it (as for scores)
+        r = self.make(self.signed_in_as(), weeks=3.0)
+        self.assertEqual(r.status_code, 201)
+        self.assertIs(type(r.json()["weeks"]), int)
+        self.assertEqual(r.json()["weeks"], 3)
+
+    def test_float_weeks_refusals(self):
+        h = self.signed_in_as()
+        for weeks in (2.5, True, 0.0):
+            self.check(self.make(h, weeks=weeks), 400, {"error": "Weeks must be at least 1"})
+        self.check(self.make(h, weeks=53.0), 400, {"error": "Weeks must be between 1 and 52"})
+
     def test_name_of_100_characters_is_kept_and_101_refused(self):
         h = self.signed_in_as()
         self.assertEqual(self.make(h, name="a" * 100).status_code, 201)

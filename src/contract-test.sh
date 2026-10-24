@@ -199,6 +199,9 @@ check "a 101-character league name returns 400 (got ${status:-no answer} $body)"
 post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":"yes"}' "$access"
 [ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "allow_ties \"yes\" returns 400 Invalid request (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"A","location":"B","weeks":3.0}' "$access"
+[ "$status" = "201" ] && echo "$body" | jq -e '.weeks==3' >/dev/null && echo "$body" | grep -q '"weeks": *3[,}]'
+check "weeks 3.0 (an integral number) returns 201 with \"weeks\":3 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"B","weeks":true}' "$access"
 [ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
 check "weeks true returns 400 (got ${status:-no answer} $body)" $?

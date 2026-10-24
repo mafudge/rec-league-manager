@@ -62,6 +62,9 @@ def leagues(request):
         raise ApiError(400, f"Name must be {NAME_LIMIT} characters or fewer")
     if not location:
         raise ApiError(400, "Location is required")
+    # An integral float such as 3.0 counts as 3: the JS backends can't tell them apart (as for scores).
+    if type(weeks) is float and weeks.is_integer():
+        weeks = int(weeks)
     # bool is an int subclass, so check the exact type.
     if type(weeks) is not int or weeks < 1:
         raise ApiError(400, "Weeks must be at least 1")
