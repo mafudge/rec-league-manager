@@ -155,6 +155,58 @@ void main() {
       expect(find.text('The backend had a problem (500)'), findsOneWidget);
     });
 
+    testWidgets("shows the backend's own error text verbatim", (tester) async {
+      final fake = Fake({
+        'GET /api/leagues': json(400, {'error': 'Something specific'}),
+      });
+      await show(tester, fake.api, '/leagues');
+      expect(find.text('Something specific'), findsOneWidget);
+    });
+
+    testWidgets('a signed-out visit goes to /signin and calls nothing', (
+      tester,
+    ) async {
+      for (final route in ['/leagues', '/leagues/abc123']) {
+        final fake = Fake({});
+        fake.api.signOut();
+        await show(tester, fake.api, route);
+        expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+        expect(fake.sent, isEmpty);
+      }
+    });
+
+    testWidgets('create a league, go Back, and the new league is listed', (
+      tester,
+    ) async {
+      final leagues = [];
+      final fake = Fake({
+        'GET /api/leagues': (http.Request r) => json(200, leagues),
+        'POST /api/leagues': (http.Request r) {
+          leagues.add(league());
+          return json(201, league());
+        },
+        'GET /api/leagues/abc123': json(200, league()),
+        'GET /api/leagues/abc123/entrants': json(200, []),
+      });
+      await show(tester, fake.api, '/leagues');
+      expect(find.text('No leagues yet — create one.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Create a league'));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Name'), 'Tuesday Cornhole');
+      await tester.enterText(field('Location'), "Joe's Tavern");
+      await tester.enterText(field('Weeks'), '8');
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Create league'),
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Create league'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('My leagues'), findsOneWidget);
+      expect(find.text('Tuesday Cornhole'), findsOneWidget);
+      expect(find.text('No leagues yet — create one.'), findsNothing);
+    });
+
     testWidgets('when sign-in cannot be restored it goes to /signin', (
       tester,
     ) async {
@@ -527,6 +579,20 @@ void main() {
         '/leagues/abc123',
       );
       expect(find.text('No entrants yet — add the first one.'), findsNothing);
+    });
+
+    testWidgets('a lost session on the first load goes to /signin', (
+      tester,
+    ) async {
+      final fake = Fake({
+        'GET /api/leagues/abc123': json(200, league()),
+        'GET /api/leagues/abc123/entrants': json(401, {
+          'error': 'Sign in required',
+        }),
+        'POST /api/auth/refresh': json(401, {'error': 'Sign in required'}),
+      });
+      await show(tester, fake.api, '/leagues/abc123');
+      expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
     });
 
     testWidgets('a lost session when adding goes to /signin', (tester) async {

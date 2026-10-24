@@ -26,15 +26,28 @@ class _LeaguesPageState extends State<LeaguesPage> {
   @override
   void initState() {
     super.initState();
-    widget.api
-        .listLeagues()
-        .then((l) {
-          if (mounted) setState(() => _leagues = l);
-        })
-        .catchError((Object e) {
-          if (!mounted || toSignInIfLost(context, e)) return;
-          setState(() => _message = widget.api.messageFor(e));
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final l = await widget.api.listLeagues();
+      if (mounted) {
+        setState(() {
+          _leagues = l;
+          _message = '';
         });
+      }
+    } catch (e) {
+      if (!mounted || toSignInIfLost(context, e)) return;
+      setState(() => _message = widget.api.messageFor(e));
+    }
+  }
+
+  /// Opens [route] over the list and reloads when it comes back, so a league created meanwhile shows.
+  Future<void> _open(String route) async {
+    await Navigator.pushNamed(context, route);
+    if (mounted) await _load();
   }
 
   @override
@@ -71,14 +84,14 @@ class _LeaguesPageState extends State<LeaguesPage> {
                 child: ListTile(
                   title: Text(l.name),
                   subtitle: Text(l.location),
-                  onTap: () => Navigator.pushNamed(context, '/leagues/${l.id}'),
+                  onTap: () => _open('/leagues/${l.id}'),
                 ),
               ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton(
-                onPressed: () => Navigator.pushNamed(context, '/leagues/new'),
+                onPressed: () => _open('/leagues/new'),
                 child: const Text('Create a league'),
               ),
             ),
