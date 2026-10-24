@@ -88,7 +88,8 @@ function refreshSession(apiUrl: string): Promise<boolean> {
 export async function request<T>(method: string, path: string, opts: Options = {}): Promise<T> {
   const apiUrl = opts.apiUrl ?? API_URL;
   const href = url(apiUrl, path);
-  let r = await send(method, href, opts, getToken());
+  // The session is read only for calls that sign in; the public page never touches it.
+  let r = await send(method, href, opts, opts.auth ? getToken() : null);
   if (opts.auth && r.status === 401) {
     if (!(await refreshSession(apiUrl))) {
       clearSession();
@@ -183,3 +184,10 @@ export type Standings = { rows: StandingsRow[]; played: number; tiebreak: string
 
 export const getStandings = (leagueId: string): Promise<Standings> =>
   request("GET", `${leaguePath(leagueId)}/standings`, { auth: true });
+
+export type PublicLeague = Omit<League, "id">;
+export type PublicView = { league: PublicLeague; current_week: number | null; games: Game[]; standings: Standings };
+
+/** The public page's one call: no token, no sign-in. 404 comes back as BackendRefused("League not found"). */
+export const getPublicLeague = (slug: string): Promise<PublicView> =>
+  request("GET", `/api/public/${encodeURIComponent(slug)}`);
