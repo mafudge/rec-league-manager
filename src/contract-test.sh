@@ -111,6 +111,7 @@ post /api/auth/refresh "{\"refresh_token\":\"$refresh\"}"
 [ "$status" = "200" ]; check "POST /api/auth/refresh returns 200 (got ${status:-no answer})" $?
 echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
 check "  body has a new token and refresh_token" $?
+refresh=$(echo "$body" | jq -r '.refresh_token') # a refresh token is single-use on some backends: from here on use only the newest one
 post /api/auth/refresh '{"refresh_token":"garbage"}'
 [ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "refreshing with garbage returns 401 (got ${status:-no answer} $body)" $?
@@ -128,6 +129,7 @@ send POST /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}" ga
 [ "$status" = "200" ]; check "POST /api/auth/login ignores a garbage Authorization header (got ${status:-no answer})" $?
 send POST /api/auth/refresh "{\"refresh_token\":\"$refresh\"}" garbage
 [ "$status" = "200" ]; check "POST /api/auth/refresh ignores a garbage Authorization header (got ${status:-no answer})" $?
+refresh=$(echo "$body" | jq -r '.refresh_token')
 send GET /api/health "" garbage
 [ "$status" = "200" ]; check "GET /api/health ignores a garbage Authorization header (got ${status:-no answer})" $?
 send GET /api/auth/me "" garbage

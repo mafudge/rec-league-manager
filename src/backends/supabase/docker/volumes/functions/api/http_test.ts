@@ -1,0 +1,89 @@
+import { assertEquals } from 'jsr:@std/assert@1'
+import { ApiError, fail, handle, json, objectBody, type Route } from './http.ts'
+
+const req = (method: string, path: string, body?: string, headers: HeadersInit = {}) =>
+  new Request(`http://x${path}`, { method, body, headers })
+
+const routes: Route[] = [
+  { method: 'GET', path: '/api/ping', handler: () => json({ pong: true }) },
+  { method: 'POST', path: '/api/echo', handler: async (r) => json(await objectBody(r), 201) },
+  { method: 'GET', path: '/api/refuse', handler: () => fail(409, 'Nope') },
+  { method: 'GET', path: '/api/boom', handler: () => { throw new Error('secret detail') } },
+]
+
+const call = async (r: Request) => {
+  const res = await handle(r, routes)
+  return { res, body: res.status === 204 ? null : await res.json() }
+}
+
+Deno.test('json carries the status and CORS', async () => {
+  const res = json({ a: 1 }, 201)
+  assertEquals(res.status, 201)
+  assertEquals(res.headers.get('access-control-allow-origin'), '*')
+  assertEquals(await res.json(), { a: 1 })
+})
+
+Deno.test('a known route answers; a trailing slash is accepted', async () => {
+  for (const p of ['/api/ping', '/api/ping/']) {
+    const { res, body } = await call(req('GET', p))
+    assertEquals([res.status, body], [200, { pong: true }])
+  }
+})
+
+Deno.test('unknown path is 404 Not Found, with CORS', async () => {
+  for (const p of ['/api/nope', '/api/', '/api', '/other']) {
+    const { res, body } = await call(req('GET', p))
+    assertEquals([res.status, body], [404, { error: 'Not Found' }])
+    assertEquals(res.headers.get('access-control-allow-origin'), '*')
+  }
+})
+
+Deno.test('wrong method on a known path is 405 Method Not Allowed, with CORS', async () => {
+  const { res, body } = await call(req('DELETE', '/api/ping'))
+  assertEquals([res.status, body], [405, { error: 'Method Not Allowed' }])
+  assertEquals(res.headers.get('access-control-allow-origin'), '*')
+})
+
+Deno.test('OPTIONS is a 204 preflight with CORS on any path', async () => {
+  for (const p of ['/api/ping', '/api/nope']) {
+    const res = await handle(req('OPTIONS', p), routes)
+    assertEquals(res.status, 204)
+    assertEquals(res.headers.get('access-control-allow-origin'), '*')
+    assertEquals(res.headers.get('access-control-allow-headers')?.includes('authorization'), true)
+  }
+})
+
+Deno.test('an ApiError becomes {error} with its status and CORS', async () => {
+  const { res, body } = await call(req('GET', '/api/refuse'))
+  assertEquals([res.status, body], [409, { error: 'Nope' }])
+  assertEquals(res.headers.get('access-control-allow-origin'), '*')
+})
+
+Deno.test('an unexpected exception is a generic 500 that leaks nothing', async () => {
+  const orig = console.error
+  console.error = () => {}
+  try {
+    const { res, body } = await call(req('GET', '/api/boom'))
+    assertEquals([res.status, body], [500, { error: 'The backend had a problem' }])
+    assertEquals(res.headers.get('access-control-allow-origin'), '*')
+  } finally {
+    console.error = orig
+  }
+})
+
+Deno.test('body rule: missing, broken or non-object bodies are 400 Invalid request', async () => {
+  for (const b of [undefined, '', '{', 'NaN', '[]', '"x"', '5', 'null', 'true']) {
+    const { res, body } = await call(req('POST', '/api/echo', b))
+    assertEquals([res.status, body], [400, { error: 'Invalid request' }], `body ${b}`)
+  }
+})
+
+Deno.test('body rule: an object passes through', async () => {
+  const { res, body } = await call(req('POST', '/api/echo', '{"a":1}'))
+  assertEquals([res.status, body], [201, { a: 1 }])
+})
+
+Deno.test('ApiError carries status and message', () => {
+  const e = new ApiError(401, 'x')
+  assertEquals([e.status, e.message], [401, 'x'])
+})

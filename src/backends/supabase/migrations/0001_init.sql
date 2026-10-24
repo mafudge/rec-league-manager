@@ -1,2 +1,5 @@
--- TODO: leagues, entrants, games, scores with row-level security
+-- Scaffolding: start.sh applies every file in this folder, in order, on each start,
+-- so a migration must be safe to run again (create ... if not exists, create or replace ...).
+-- Accounts need no tables of our own: Supabase Auth (GoTrue) owns auth.users.
+-- Task 2 adds leagues, entrants and games here, with row-level security
 -- (organizer writes; anonymous visitors read the public schedule and standings).
