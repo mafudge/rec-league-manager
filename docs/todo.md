@@ -4,5 +4,4 @@
 
 ## MVP (v0.2.0)
 
-- **DJ-SCH** Django · Schedule and scores — #32.
 - **DJ-PUB** Django · Standings and public page — #33.
