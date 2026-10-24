@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { API_URL, BackendRefused, signIn, signUp } from "./api";
+import { messageFor, signIn, signUp } from "./api";
 import styles from "./ui.module.css";
 
 // Sends what was typed; the backend's message is shown as-is (no validation of our own).
@@ -24,7 +24,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "signin" }) {
       await (signup ? signUp : signIn)(email, password);
       router.push("/leagues");
     } catch (err) {
-      setMessage(err instanceof BackendRefused ? err.message : `Can't reach the backend at ${API_URL}`);
+      setMessage(messageFor(err));
       setBusy(false);
     }
   }

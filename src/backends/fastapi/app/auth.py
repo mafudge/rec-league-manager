@@ -3,6 +3,12 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+from fastapi import Depends, Header
+from sqlalchemy.orm import Session
+
+from .db import get_session
+from .errors import ApiError
+from .models import Organizer
 
 ACCESS_LIFETIME = timedelta(hours=1)
 REFRESH_LIFETIME = timedelta(days=30)
@@ -45,3 +51,15 @@ def read_token(token: str, type: str) -> str | None:
     if claims.get("type") != type or not isinstance(sub, str):
         return None
     return sub
+
+
+def current_organizer(
+    authorization: str | None = Header(None), session: Session = Depends(get_session)
+) -> Organizer:
+    """The signed-in organizer for a 🔒 route; anything less is 401 "Sign in required"."""
+    scheme, _, token = (authorization or "").partition(" ")
+    organizer_id = read_token(token.strip(), "access") if scheme.lower() == "bearer" else None
+    organizer = session.get(Organizer, organizer_id) if organizer_id else None
+    if organizer is None:
+        raise ApiError(401, "Sign in required")
+    return organizer
