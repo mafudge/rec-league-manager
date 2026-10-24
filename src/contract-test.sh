@@ -284,9 +284,6 @@ check "a score too large to store returns 400 (got ${status:-no answer} $body)" 
 put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":null}' "$access"
 [ "$status" = "200" ] && echo "$body" | jq -e --arg id "$GAME_ID" '.id==$id and .home_score==null and .away_score==null and (keys|length==8)' >/dev/null
 check "PUT score null/null clears the game, returning 200 with both scores null (got ${status:-no answer} $body)" $?
-send GET "/api/leagues/$LEAGUE_ID/standings" "" "$access"
-echo "$body" | jq -e '.played==0' >/dev/null
-check "a cleared game no longer counts in standings (got $body)" $?
 put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":null}' "$access"
 [ "$status" = "200" ] && echo "$body" | jq -e '.home_score==null and .away_score==null' >/dev/null
 check "clearing an unplayed game returns 200 with both scores null (got ${status:-no answer} $body)" $?
@@ -339,6 +336,12 @@ check "the 21-scorer is first with w 1, l 0, pf 21, pa 14, diff 7 (got $body)" $
 send GET "/api/leagues/$LEAGUE_ID/standings" "" "$other_access"
 [ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer reading my standings gets 404 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":null,"away_score":null}' "$access"
+send GET "/api/leagues/$LEAGUE_ID/standings" "" "$access"
+echo "$body" | jq -e '.played==0' >/dev/null
+check "a cleared game no longer counts in standings (got $body)" $?
+put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
+[ "$status" = "200" ]; check "scoring the game 21-14 again (left for the public-page checks) (got ${status:-no answer} $body)" $?
 
 # --- US07 · public link: no token ---
 send GET "/api/public/$LEAGUE_SLUG" "" ""

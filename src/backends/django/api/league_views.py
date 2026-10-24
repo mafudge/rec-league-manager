@@ -7,8 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .errors import ApiError, object_body
-from .models import Entrant, League
+from .models import Entrant, Game, League
 from .slugs import new_slug
+from .standings import standings_for
 
 NAME_LIMIT = 100
 WEEKS_MAX = 52
@@ -114,3 +115,13 @@ def entrants(request, league_id):
     last = Entrant.objects.filter(league_id=league_id).aggregate(m=Max("position"))["m"]
     entrant = Entrant.objects.create(league_id=league_id, name=name, position=0 if last is None else last + 1)
     return Response(entrant_json(entrant), status=201)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def standings(request, league_id):
+    """Computed from the games on every request; nothing stores standings (PRD §5)."""
+    owned_league(request, league_id)
+    entrants = Entrant.objects.filter(league_id=league_id).order_by("position")
+    games = Game.objects.filter(league_id=league_id).order_by("week", "slot")
+    return Response(standings_for(list(entrants), list(games)))

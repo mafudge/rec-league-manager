@@ -114,9 +114,9 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 |---|---|---|---|---|
 | Language | Python 3.12 | Python 3.12 | TypeScript (Deno) for the API; SQL for data | JavaScript (Node 18) |
 | Framework | FastAPI 0.142, Uvicorn 0.54 | Django 5.2, DRF 3.18 | Supabase self-hosted: Edge Runtime 1.76, Postgres 17.6, GoTrue 2.196, PostgREST 14.17, Envoy gateway | Firebase Emulator Suite (firebase-tools 13.35): Functions (firebase-functions 6.6), Firestore, Auth, Hosting |
-| Where data will live | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins) |
+| Where data lives | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins) |
 | How it serves the contract | FastAPI routes | DRF views | One Edge Function, `api` | One Cloud Function, `api`, behind a Hosting rewrite of `/api/**` |
-| Sign-in (US01, planned) | Hashed password + token we write | Django's built-in auth | Supabase Auth (GoTrue) | Auth emulator |
+| Sign-in (US01) | Hashed password + token we write | Django's `User` model + simplejwt, behind the contract's `{token, refresh_token}` | Supabase Auth (GoTrue) | Auth emulator |
 | Port / `API_URL` | 8000 / `http://localhost:8000` | 8001 / `http://localhost:8001` | 54321 / `http://localhost:54321/functions/v1` | 5000 / `http://localhost:5000` |
 | Here to show | Building it yourself: every piece visible, most to get wrong | Batteries included: auth, migrations, admin for free, at the price of Django's way | A managed platform's shape on Postgres, run on your own machine | The same managed shape on a document store, and a different answer to "where are standings computed?" |
 
