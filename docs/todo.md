@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **v0.2.0 review fixes** Phase-1 review fixes before the ports — #25.
