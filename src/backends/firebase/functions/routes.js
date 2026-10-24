@@ -1,7 +1,7 @@
 // The contract's routes. Each handler returns [status, body]. Lock routes call organizerFrom first.
 const { objectBody } = require("./http");
 
-function createRoutes(auth, leagues) {
+function createRoutes(auth, leagues, schedule, scores) {
   return [
     { method: "GET", path: "/api/health", handler: () => [200, { status: "ok" }] },
     { method: "GET", path: "/api/backend", handler: () => [200, { backend: "firebase" }] },
@@ -27,6 +27,17 @@ function createRoutes(auth, leagues) {
       handler: async (req, p) => {
         const o = await auth.organizerFrom(req);
         return leagues.addEntrant(o, p.id, objectBody(req)); // the body's shape is checked before the league lookup
+      },
+    },
+    { method: "POST", path: "/api/leagues/:id/schedule", handler: async (req, p) => schedule.generate(await auth.organizerFrom(req), p.id) },
+    { method: "GET", path: "/api/leagues/:id/games", handler: async (req, p) => schedule.listGames(await auth.organizerFrom(req), p.id) },
+    { method: "DELETE", path: "/api/leagues/:id/scores", handler: async (req, p) => schedule.clearScores(await auth.organizerFrom(req), p.id) },
+    {
+      method: "PUT",
+      path: "/api/games/:id/score",
+      handler: async (req, p) => {
+        const o = await auth.organizerFrom(req);
+        return scores.record(o, p.id, objectBody(req)); // the body's shape is checked before the game lookup
       },
     },
   ];

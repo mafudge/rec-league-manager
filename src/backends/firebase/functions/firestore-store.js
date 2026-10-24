@@ -1,8 +1,10 @@
 // The leagues store on Firestore. Only ids the function generated (32 hex, checked by ownedLeague) reach a path.
 // leagues/{id} (organizerId, slug, name, location, sport, season, weeks, allowTies, createdAt)
 // leagues/{id}/entrants/{id} (name, position)   slugs/{slug} -> {leagueId}
+// leagues/{id}/schedule/current (generation, games: [{week, slot, homeId, awayId, homeScore, awayScore}])
 function createStore(db) {
   const leagueRef = (id) => db.collection("leagues").doc(id);
+  const scheduleRef = (id) => leagueRef(id).collection("schedule").doc("current");
   const withId = (doc) => ({ id: doc.id, ...doc.data() });
 
   return {
@@ -40,6 +42,37 @@ function createStore(db) {
         const { id, ...fields } = decide(existing);
         tx.set(entrants.doc(id), fields);
         return { id, ...fields };
+      });
+    },
+
+    async getSchedule(leagueId) {
+      const doc = await scheduleRef(leagueId).get();
+      return doc.exists ? doc.data() : null;
+    },
+
+    /**
+     * One transaction: read the league, entrants and schedule, call decide({league, entrants, schedule}),
+     * then write the schedule it returns and the league's weeks. decide throws to refuse; nothing is written then.
+     */
+    generateSchedule(leagueId, decide) {
+      return db.runTransaction(async (tx) => {
+        const [league, entrants, schedule] = await Promise.all([
+          tx.get(leagueRef(leagueId)), tx.get(leagueRef(leagueId).collection("entrants")), tx.get(scheduleRef(leagueId)),
+        ]);
+        const out = decide({ league: league.data(), entrants: entrants.docs.map(withId), schedule: schedule.exists ? schedule.data() : null });
+        tx.set(scheduleRef(leagueId), out.schedule);
+        tx.update(leagueRef(leagueId), { weeks: out.weeks });
+        return out;
+      });
+    },
+
+    /** One transaction on the schedule document: decide(schedule|null) returns {schedule, result}; a null schedule writes nothing. */
+    updateSchedule(leagueId, decide) {
+      return db.runTransaction(async (tx) => {
+        const doc = await tx.get(scheduleRef(leagueId));
+        const out = decide(doc.exists ? doc.data() : null);
+        if (out.schedule) tx.set(scheduleRef(leagueId), out.schedule);
+        return out.result;
       });
     },
   };

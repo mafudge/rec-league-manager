@@ -6,6 +6,8 @@ const { handler } = require("./http");
 const { createAuth } = require("./auth");
 const { createRoutes } = require("./routes");
 const { createLeagues } = require("./leagues");
+const { createSchedule } = require("./schedule");
+const { createScores } = require("./scores");
 const { createSlugs } = require("./slugs");
 const { createStore } = require("./firestore-store");
 
@@ -17,7 +19,10 @@ const auth = createAuth({
   verifyIdToken: (token) => admin.auth().verifyIdToken(token),
 });
 
-const leagues = createLeagues({ store: createStore(admin.firestore()), newSlug: createSlugs().newSlug });
+const store = createStore(admin.firestore());
+const leagues = createLeagues({ store, newSlug: createSlugs().newSlug });
+const schedule = createSchedule({ store, leagues });
+const scores = createScores({ store, leagues });
 
 // cors: true answers preflights and allows any origin; browser frontends run on another port.
-exports.api = onRequest({ cors: true }, handler(createRoutes(auth, leagues)));
+exports.api = onRequest({ cors: true }, handler(createRoutes(auth, leagues, schedule, scores)));
