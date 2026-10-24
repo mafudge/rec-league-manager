@@ -17,9 +17,9 @@ class ApiTestCase(APITestCase):
     def post(self, path, body=None, **extra):
         return self.client.post(path, body, format="json", **extra)
 
-    def raw_post(self, path, data=None):
+    def raw_post(self, path, data=None, **extra):
         kwargs = {"data": data} if data is not None else {}
-        return self.client.post(path, content_type="application/json", **kwargs)
+        return self.client.post(path, content_type="application/json", **kwargs, **extra)
 
     def signed_in(self):
         tokens = self.post("/api/auth/signup", GOOD).json()
