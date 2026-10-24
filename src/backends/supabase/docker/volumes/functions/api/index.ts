@@ -2,9 +2,10 @@
 // Reached at {SUPABASE_URL}/functions/v1/api/..., so API_URL = http://localhost:54321/functions/v1
 // The gateway strips /functions/v1, so this function sees paths like /api/health.
 import { auth } from './auth.ts'
-import { userClient } from './db.ts'
+import { serviceClient, userClient } from './db.ts'
 import { handle, json, objectBody, type Route } from './http.ts'
 import { leagueRoutes } from './leagues.ts'
+import { publicRoutes } from './public.ts'
 import { scheduleRoutes } from './scores.ts'
 
 const routes: Route[] = [
@@ -47,6 +48,8 @@ const routes: Route[] = [
   // Organizer routes query as the organizer (their own token), so row-level security filters by owner.
   ...leagueRoutes({ organizerFrom: auth.organizerFrom, clientFor: userClient }),
   ...scheduleRoutes({ organizerFrom: auth.organizerFrom, clientFor: userClient }),
+  // The public page needs no sign-in (any Authorization header is ignored) and is the only service-role reader.
+  ...publicRoutes({ clientFor: serviceClient }),
 ]
 
 export default {

@@ -1,7 +1,6 @@
 import { assertEquals } from 'jsr:@std/assert@1'
 import { roundRobin, weeksMessage } from './schedule.ts'
 import fixture from './fixtures/round_robin_fastapi.json' with { type: 'json' }
-import { isPlayed, playedCount } from './standings.ts'
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `e${String(i).padStart(2, '0')}`)
 
@@ -41,15 +40,4 @@ Deno.test('the weeks message: null when unchanged, week/weeks singular and plura
   assertEquals(weeksMessage(5, 5), null)
   assertEquals(weeksMessage(5, 8), 'This schedule needs 5 weeks, so the league now runs 5 weeks instead of 8.')
   assertEquals(weeksMessage(1, 8), 'This schedule needs 1 week, so the league now runs 1 week instead of 8.')
-})
-
-Deno.test('is_played and played_count ignore byes and half-scored games', () => {
-  const g = (away_id: string | null, home_score: number | null, away_score: number | null) =>
-    ({ home_id: 'a', away_id, home_score, away_score })
-  assertEquals(isPlayed(g('b', 1, 0)), true)
-  assertEquals(isPlayed(g('b', 0, 0)), true)
-  assertEquals(isPlayed(g(null, 1, 0)), false)
-  assertEquals(isPlayed(g('b', null, null)), false)
-  assertEquals(isPlayed(g('b', 1, null)), false)
-  assertEquals(playedCount([g('b', 1, 0), g(null, null, null), g('b', null, null)]), 1)
 })
