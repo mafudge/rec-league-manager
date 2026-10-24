@@ -46,7 +46,6 @@ def test_second_put_replaces_the_score(client):
         {"home_score": -1, "away_score": 14},
         {"home_score": None, "away_score": 14},
         {"away_score": 14},
-        {},
         {"home_score": 21.5, "away_score": 14},
         {"home_score": 21, "away_score": 14.5},
         {"home_score": "21", "away_score": 14},
@@ -100,8 +99,9 @@ def test_bye_has_no_score(client):
     bye = next(g for g in games(client, h, lid) if g["away_id"] is None)
     r = put(client, h, bye["id"], {"home_score": 21, "away_score": 14})
     assert r.status_code == 400 and r.json() == {"error": "A bye has no score"}
-    r = put(client, h, bye["id"], {"home_score": None, "away_score": None})
-    assert r.json() == {"error": "A bye has no score"}
+    for body in ({"home_score": None, "away_score": None}, {}):
+        r = put(client, h, bye["id"], body)
+        assert r.status_code == 400 and r.json() == {"error": "A bye has no score"}
 
 
 def test_other_organizers_game_and_unknown_game_are_404(client):
@@ -134,3 +134,40 @@ def test_unreadable_body_is_refused_before_the_game_is_looked_up(client):
     h, _ = setup(client)
     r = client.put("/api/games/nope/score", json=[1], headers=h)
     assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})
+
+
+def standings_played(client, h, lid):
+    return client.get(f"/api/leagues/{lid}/standings", headers=h).json()["played"]
+
+
+@pytest.mark.parametrize("body", [{"home_score": None, "away_score": None}, {}])
+def test_both_null_clears_a_played_game_and_leaves_the_others(client, body):
+    h, lid = setup(client)
+    first, second = [g for g in games(client, h, lid) if g["away_id"]][:2]
+    put(client, h, first["id"], {"home_score": 21, "away_score": 14})
+    put(client, h, second["id"], {"home_score": 3, "away_score": 1})
+    assert standings_played(client, h, lid) == 2
+    r = put(client, h, first["id"], body)
+    assert r.status_code == 200 and r.json() == {**first, "home_score": None, "away_score": None}
+    by_id = {g["id"]: g for g in games(client, h, lid)}
+    assert by_id[first["id"]]["home_score"] is None and by_id[first["id"]]["away_score"] is None
+    assert (by_id[second["id"]]["home_score"], by_id[second["id"]]["away_score"]) == (3, 1)
+    assert standings_played(client, h, lid) == 1
+
+
+def test_clearing_an_unplayed_game_is_a_no_op(client):
+    h, lid = setup(client)
+    g = played(client, h, lid)
+    r = put(client, h, g["id"], {"home_score": None, "away_score": None})
+    assert r.status_code == 200 and r.json() == g
+
+
+@pytest.mark.parametrize("body", [{"home_score": None, "away_score": 21}, {"away_score": 21}, {"home_score": 21, "away_score": None}])
+def test_one_null_and_one_number_is_refused_and_keeps_the_score(client, body):
+    h, lid = setup(client)
+    gid = played(client, h, lid)["id"]
+    put(client, h, gid, {"home_score": 5, "away_score": 2})
+    r = put(client, h, gid, body)
+    assert r.status_code == 400 and r.json() == WHOLE
+    after = next(g for g in games(client, h, lid) if g["id"] == gid)
+    assert (after["home_score"], after["away_score"]) == (5, 2)

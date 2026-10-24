@@ -27,6 +27,10 @@ def whole(v: object) -> int | None:
     return None
 
 
+def names_of(session: Session, league: League) -> dict[str, str]:
+    return {e.id: e.name for e in session.scalars(select(Entrant).where(Entrant.league_id == league.id))}
+
+
 @router.put("/{id}/score")
 def record_score(
     id: str,
@@ -42,6 +46,11 @@ def record_score(
         raise ApiError(404, "Game not found")
     if game.away_id is None:
         raise ApiError(400, "A bye has no score")
+    if data.get("home_score") is None and data.get("away_score") is None:
+        # Both null (or both absent) clears the game; one null beside a number falls through to the whole-numbers refusal.
+        game.home_score = game.away_score = None
+        session.commit()
+        return game_json(game, names_of(session, league))
     home, away = whole(data.get("home_score")), whole(data.get("away_score"))
     if home is None or away is None:
         raise ApiError(400, "Scores must be whole numbers 0 or greater")
@@ -49,5 +58,4 @@ def record_score(
         raise ApiError(400, "This league doesn't allow ties")
     game.home_score, game.away_score = home, away
     session.commit()
-    names = {e.id: e.name for e in session.scalars(select(Entrant).where(Entrant.league_id == league.id))}
-    return game_json(game, names)
+    return game_json(game, names_of(session, league))

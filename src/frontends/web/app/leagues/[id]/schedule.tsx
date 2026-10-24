@@ -13,7 +13,7 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const load = () =>
+  const load = (): Promise<void> =>
     listGames(leagueId)
       .then(setGames)
       .catch((e) => setMessage(onError(e) ?? ""));
@@ -68,7 +68,7 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
           <h2>Week {week}</h2>
           <ul className={styles.list}>
             {list.map((g) => (
-              <GameRow key={`${g.id}-${g.home_score}-${g.away_score}`} game={g} onSaved={(saved) => setGames((all) => all && all.map((x) => (x.id === saved.id ? saved : x)))} />
+              <GameRow key={`${g.id}-${g.home_score}-${g.away_score}`} game={g} onCleared={load} onSaved={(saved) => setGames((all) => all && all.map((x) => (x.id === saved.id ? saved : x)))} />
             ))}
           </ul>
         </div>
@@ -77,10 +77,11 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
   );
 }
 
-const toScore = (text: string) => (text.trim() === "" ? null : Number(text));
+// A blank field goes to the backend as "" (never null, which means Clear) so its whole-numbers message is what shows.
+const toScore = (text: string) => (text.trim() === "" ? "" : Number(text));
 
 // One game: who plays whom (or the score), plus two score fields that stay available so a score can be corrected.
-function GameRow({ game: g, onSaved }: { game: Game; onSaved: (g: Game) => void }) {
+function GameRow({ game: g, onSaved, onCleared }: { game: Game; onSaved: (g: Game) => void; onCleared: () => void }) {
   const { onError } = useSignedIn();
   const [home, setHome] = useState(g.home_score?.toString() ?? "");
   const [away, setAway] = useState(g.away_score?.toString() ?? "");
@@ -102,6 +103,20 @@ function GameRow({ game: g, onSaved }: { game: Game; onSaved: (g: Game) => void 
     }
   }
 
+  // Clear undoes one game's score (both null); no confirmation, it's one game. The schedule reloads so it reads unplayed.
+  async function clearOne() {
+    setSaving(true);
+    setError("");
+    try {
+      await saveScore(g.id, null, null);
+      await onCleared();
+    } catch (err) {
+      setError(onError(err) ?? "");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <li className={styles.card}>
       <div>{played ? `${g.home_name} ${g.home_score} – ${g.away_score} ${g.away_name}` : `${g.home_name} vs ${g.away_name}`}</div>
@@ -112,6 +127,13 @@ function GameRow({ game: g, onSaved }: { game: Game; onSaved: (g: Game) => void 
           Save
         </button>
       </div>
+      {played && (
+        <div className={styles.actions}>
+          <button type="button" className={styles.linkButton} onClick={clearOne} disabled={saving} aria-label={`Clear ${g.home_name} vs ${g.away_name}`}>
+            Clear
+          </button>
+        </div>
+      )}
       {error && <p className={styles.message} role="alert">{error}</p>}
     </li>
   );
