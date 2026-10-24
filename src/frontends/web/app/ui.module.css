@@ -146,3 +146,16 @@ a.button {
 .form .checkRow input {
   width: auto;
 }
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* One row: label, name field and Add button side by side, even at 375 px. */
+.form.addRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}

@@ -1,16 +1,28 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { League, getLeague } from "../../api";
 import OrganizerHeader from "../../organizer-header";
 import styles from "../../ui.module.css";
 import { useSignedIn } from "../../use-signed-in";
+import Entrants from "./entrants";
+import { LeagueTabs, tabFrom } from "./tabs";
 
-// The league home. Tabs (Entrants, Schedule, Scores, Standings) arrive with the screens they open.
+// The league home. The Schedule and Standings tabs show only the tab bar until their screens arrive.
 export default function LeaguePage() {
+  // useSearchParams needs a Suspense boundary for the static build.
+  return (
+    <Suspense>
+      <LeagueHome />
+    </Suspense>
+  );
+}
+
+function LeagueHome() {
   const { id } = useParams<{ id: string }>();
+  const tab = tabFrom(useSearchParams().get("tab"));
   const { onError } = useSignedIn();
   const [league, setLeague] = useState<League | null>(null);
   const [message, setMessage] = useState("");
@@ -50,6 +62,8 @@ export default function LeaguePage() {
               Copy public link
             </button>{" "}
             <span aria-live="polite">{copied}</span>
+            <LeagueTabs active={tab} />
+            {tab === "entrants" && <Entrants leagueId={id} />}
           </>
         )}
       </div>
