@@ -100,4 +100,46 @@ send GET /api/auth/me "" "$access"
 [ "$status" = "200" ] && [ "$body" = "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')" ]
 check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
 
+# --- US02 · create a league ---
+league='{"name":"Tuesday Cornhole","location":"Joe'"'"'s Tavern","sport":"Cornhole","season":"Fall 2026","weeks":8}'
+get /api/leagues
+[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+check "GET /api/leagues without a token returns 401 (got ${status:-no answer} $body)" $?
+post /api/leagues "$league" "$access"
+[ "$status" = "201" ]; check "POST /api/leagues returns 201 (got ${status:-no answer} $body)" $?
+echo "$body" | jq -e '.name=="Tuesday Cornhole" and .location=="Joe'"'"'s Tavern" and .sport=="Cornhole" and .season=="Fall 2026" and .weeks==8 and .allow_ties==false and (.id|type=="string") and (.slug|test("^[abcdefghjkmnpqrstuvwxyz23456789]{6}$"))' >/dev/null
+check "  body is a League with a string id, a 6-character slug and allow_ties false" $?
+LEAGUE_ID=$(echo "$body" | jq -r '.id'); LEAGUE_SLUG=$(echo "$body" | jq -r '.slug')
+send GET /api/leagues "" "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg id "$LEAGUE_ID" 'map(.id) == [$id]' >/dev/null
+check "GET /api/leagues lists only my league (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID" "" "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg id "$LEAGUE_ID" '.id==$id' >/dev/null
+check "GET /api/leagues/{id} returns 200 (got ${status:-no answer})" $?
+post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":true}' "$access"
+[ "$status" = "201" ] && echo "$body" | jq -e '.allow_ties==true and .sport=="" and .season==""' >/dev/null
+check "allow_ties true is kept and sport/season default to empty (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"  ","location":"B","weeks":3}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Name is required"}' ]
+check "a blank name returns 400 (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"A","location":"  ","weeks":3}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Location is required"}' ]
+check "a blank location returns 400 (got ${status:-no answer} $body)" $?
+for w in 0 -1 '"eight"' 2.5 null; do
+  post /api/leagues "{\"name\":\"A\",\"location\":\"B\",\"weeks\":$w}" "$access"
+  [ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+  check "weeks $w returns 400 (got ${status:-no answer} $body)" $?
+done
+post /api/leagues '{"name":"A","location":"B"}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+check "missing weeks returns 400 (got ${status:-no answer} $body)" $?
+other="other-$email"
+post /api/auth/signup "{\"email\":\"$other\",\"password\":\"cornhole1\"}"
+other_access=$(echo "$body" | jq -r '.token')
+send GET /api/leagues "" "$other_access"
+[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a second organizer's league list is empty (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID" "" "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "a second organizer opening my league gets 404 (got ${status:-no answer} $body)" $?
+
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
