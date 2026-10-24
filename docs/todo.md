@@ -4,3 +4,7 @@
 
 ## MVP (v0.2.0)
 
+- **FB-ACC** Firebase · Accounts — #41.
+- **FB-LEA** Firebase · Leagues and entrants — #42.
+- **FB-SCH** Firebase · Schedule and scores — #43.
+- **FB-PUB** Firebase · Standings and public page — #44.
