@@ -41,15 +41,18 @@ Deno.test('password length counts code points, not UTF-16 units', async () => {
   assertEquals(calls.length, 1)
 })
 
-Deno.test('passwords over 72 code points are refused before GoTrue is called; 72 pass', async () => {
+Deno.test('passwords over 72 UTF-8 bytes are refused before GoTrue is called; 72 bytes pass', async () => {
   const { calls, auth } = stub(200, session)
   const msg = 'Password must be 72 characters or fewer'
   await refuses(auth.signup('a@b.com', 'a'.repeat(73)), 400, msg)
-  await refuses(auth.signup('a@b.com', '😀'.repeat(73)), 400, msg)
+  await refuses(auth.signup('a@b.com', '😀'.repeat(18) + 'a'), 400, msg)
+  await refuses(auth.signup('a@b.com', 'é'.repeat(37)), 400, msg)
   await refuses(auth.signup('no-at-sign', 'a'.repeat(73)), 400, 'Enter a valid email address')
   assertEquals(calls.length, 0)
-  await auth.signup('a@b.com', '😀'.repeat(72))
-  assertEquals(calls.length, 1)
+  await auth.signup('a@b.com', 'a'.repeat(72))
+  await auth.signup('a@b.com', '😀'.repeat(18))
+  await auth.signup('a@b.com', 'é'.repeat(36))
+  assertEquals(calls.length, 3)
 })
 
 Deno.test('signup trims and lower-cases the email, sends the anon key, returns the pair', async () => {

@@ -94,7 +94,7 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 | `GET /api/backend` | `{"backend": "fastapi"}` — or `django`, `supabase`, `firebase` |
 | `GET /api/hello?name=Mike` | `{"message": "Hello Mike"}`; spaces around the name are trimmed |
 | `GET /api/hello` with no name, or a blank one | `400 {"error": "Name is required"}` |
-| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `400 Password must be 72 characters or fewer` (more than 72 Unicode code points), `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
+| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `400 Password must be 72 characters or fewer` (longer than 72 bytes in UTF-8: 72 plain letters; accented letters and emoji count more), `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
 | `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
 | `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required`. Use the newest `refresh_token`; an old one may stop working |
 | 🔒 `GET /api/auth/me` (US01) | `200 {"email"}`, the signed-in organizer's lower-cased email (the web header shows it) |

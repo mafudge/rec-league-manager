@@ -48,7 +48,7 @@ export function createAuth(deps: Deps) {
     const address = cleanEmail(email)
     if (!address.includes('@')) fail(400, 'Enter a valid email address')
     if (typeof password !== 'string' || codePoints(password) < 8) return fail(400, 'Password must be at least 8 characters')
-    if (codePoints(password) > 72) return fail(400, 'Password must be 72 characters or fewer')
+    if (new TextEncoder().encode(password).length > 72) return fail(400, 'Password must be 72 characters or fewer')
     const { status, reply } = await gotrue('/signup', { email: address, password })
     if (status === 200) return tokensFrom(status, reply)
     const msg = String(reply.msg ?? '')
