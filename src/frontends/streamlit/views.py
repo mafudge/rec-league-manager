@@ -2,6 +2,7 @@
 import os
 import re
 
+import pandas as pd
 import streamlit as st
 
 import api
@@ -187,7 +188,35 @@ def league_home() -> None:
         entrants(league_id)
     with schedule_tab:
         schedule(league_id)
-    # Standings stays empty until its task lands.
+    with standings_tab:
+        standings(league_id, league["allow_ties"])
+
+
+def _diff(n: int) -> str:
+    return f"+{n}" if n > 0 else str(n)
+
+
+def standings_table(data: dict, allow_ties: bool) -> None:
+    """One standings table for the organizer's tab and the public page. The backend sorts the rows and words
+    the tiebreak. st.dataframe draws on a canvas, so names show as typed and the table scrolls inside itself."""
+    if data["played"] == 0:
+        st.text("No games played yet")
+    columns = [("Entrant", "name"), ("W", "w"), ("L", "l")] + ([("T", "t")] if allow_ties else []) + \
+              [("PF", "pf"), ("PA", "pa"), ("Diff", "diff")]
+    frame = pd.DataFrame([{label: _diff(r[key]) if key == "diff" else r[key] for label, key in columns}
+                          for r in data["rows"]], columns=[label for label, _ in columns])
+    st.dataframe(frame, hide_index=True, width="stretch")
+    st.text(data["tiebreak"])
+
+
+def standings(league_id: str, allow_ties: bool) -> None:
+    """The Standings tab. Every run fetches, so a score saved on the Schedule tab shows here on the next run."""
+    try:
+        data = api.get_standings(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    standings_table(data, allow_ties)
 
 
 def entrants(league_id: str) -> None:
@@ -321,3 +350,47 @@ def _game(league_id: str, g: dict) -> None:
             _act(lambda: api.save_score(s, g["id"], None, None), error_key=f"game_error_{g['id']}")
         if s.get(f"game_error_{g['id']}"):
             st.error(literal(s[f"game_error_{g['id']}"]))
+
+
+def _public_game(g: dict) -> None:
+    if g["away_name"] is None:
+        st.text(f"{g['home_name']} — bye")
+    elif g["home_score"] is not None and g["away_score"] is not None:
+        st.text(f"{g['home_name']} {g['home_score']} – {g['away_score']} {g['away_name']}")
+    else:
+        st.text(f"{g['home_name']} vs {g['away_name']}")
+
+
+def public_page(slug: str) -> None:
+    """`?league=<slug>`: read-only, no sign-in, no header, this week first. It never touches the session
+    and has nothing that writes (no buttons, inputs or forms)."""
+    try:
+        view = api.public_league(slug)
+    except api.BackendRefused as e:
+        if str(e) == "League not found":
+            st.title("League not found")
+        else:
+            st.error(literal(str(e)))
+        return
+    except Exception as e:
+        st.error(literal(api.message_for(e)))
+        return
+    league, games = view["league"], view["games"]
+    st.title(literal(league["name"]))
+    st.text(league["location"])
+    st.text(" · ".join(x for x in (league["sport"], league["season"]) if x))
+    if not games:
+        st.text("No games scheduled yet")
+    else:
+        st.subheader(f"This week — Week {view['current_week']}")
+        for g in games:
+            if g["week"] == view["current_week"]:
+                _public_game(g)
+        st.subheader("Full schedule")
+        for week in sorted({g["week"] for g in games}):
+            st.markdown(f"**Week {week}**")
+            for g in games:
+                if g["week"] == week:
+                    _public_game(g)
+    st.subheader("Standings")
+    standings_table(view["standings"], league["allow_ties"])

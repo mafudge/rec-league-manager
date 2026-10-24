@@ -22,7 +22,10 @@ class Routes(Backend):
 
     def __call__(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
-        queue = self.routes[f"{method} {url.removeprefix(BASE)}"]
+        key = f"{method} {url.removeprefix(BASE)}"
+        if key not in self.routes and key.endswith("/standings"):  # tests that aren't about standings
+            return Reply(200, {"rows": [], "played": 0, "tiebreak": "Sorted by wins."})
+        queue = self.routes[key]
         r = queue.pop(0) if len(queue) > 1 else queue[0]
         if isinstance(r, Exception):
             raise r
@@ -258,7 +261,7 @@ def test_user_text_is_shown_literally():
     with routed({"GET /api/leagues/abc123": [Reply(200, league)],
                  "GET /api/leagues/abc123/entrants": [Reply(200, [{"id": "1", "name": WEIRD}])]}):
         at = page("league", {"league_id": "abc123"})
-    assert [t.value for t in at.text] == ["_L_ $3 :smile:", "*S* · $4 $5", WEIRD]
+    assert [t.value for t in at.text][:3] == ["_L_ $3 :smile:", "*S* · $4 $5", WEIRD]  # then the Standings tab
     import views
     assert at.title[0].value == views.literal(WEIRD) == r"\*A\* \$1 \$2 \:tada\:"
     with routed({"GET /api/leagues": [Reply(200, [league])]}):

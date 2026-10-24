@@ -140,7 +140,9 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 | `API_URL` is set by | `NEXT_PUBLIC_API_URL`, baked in at build/dev start | `API_URL` env var at start | `--dart-define=API_URL=…` at build |
 | Port | 3000 | 8501 | chosen by Flutter, or `--web-port` |
 | Tests | Vitest + Testing Library | Streamlit `AppTest` + pytest | `flutter test` (widget + unit) |
-| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page | One codebase that could also target phones and desktops; a different toolchain |
+| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page (see below) | One codebase that could also target phones and desktops; a different toolchain |
+
+The Streamlit app does every organizer story (sign in, leagues, entrants, schedule, scores, standings) and the public page, which it chooses from `?league=<slug>` before any sign-in check (no path routing). The public page calls `GET /api/public/{slug}` with no token and renders no button, input or form. On a phone it is honest but not native: Streamlit keeps its own chrome (a 60 px top bar with Deploy and a menu, and about 96 px of top padding), so the title starts at 96 px and "This week" games begin near 380 px of a 667 px screen, still above the fold with no sideways page scroll; the standings table is drawn on a canvas that scrolls inside its own box. The Streamlit server re-renders on every interaction, which is fine for the organizer and a weak fit for players who just want a fast, static page.
 
 Each frontend has one small API client (`app/api.ts`, `api.py`, `lib/api.dart`) and nothing backend-specific. All three currently show "Hello from <backend>" and a name box whose **Say hello** button calls `/api/hello`.
 
