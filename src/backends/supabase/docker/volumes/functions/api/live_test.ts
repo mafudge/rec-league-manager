@@ -132,3 +132,59 @@ Deno.test({
     assertEquals((await rest('GET', `/games?league_id=eq.${one}&select=slot&order=slot`, a.token)).body, [{ slot: 0 }, { slot: 1 }])
   },
 })
+
+Deno.test({
+  name: 'replace_schedule is one transaction: a failed insert leaves the old games and weeks untouched (Review Focus 4)',
+  ignore: !live,
+  fn: async () => {
+    const a = await organizer('tx')
+    const b = await organizer('tx2')
+    const made = await api('POST', '/api/leagues', a.token, { name: 'Tx', location: 'Bar', weeks: 9 })
+    const id = made.body.id as string
+    const ents: string[] = []
+    for (const name of ['One', 'Two', 'Three', 'Four']) {
+      ents.push((await api('POST', `/api/leagues/${id}/entrants`, a.token, { name })).body.id)
+    }
+    const other = (await api('POST', '/api/leagues', a.token, { name: 'Other', location: 'Bar', weeks: 3 })).body.id as string
+    const stranger = (await api('POST', `/api/leagues/${other}/entrants`, a.token, { name: 'Elsewhere' })).body.id as string
+    assertEquals((await api('POST', `/api/leagues/${id}/schedule`, a.token)).status, 201)
+    const before = (await api('GET', `/api/leagues/${id}/games`, a.token)).body
+    assertEquals(before.length, 6)
+
+    // The first game is fine, the second names an entrant of another league: the delete and the first
+    // insert have already run when the foreign key fails, and all of it must roll back.
+    const bad = [
+      { week: 1, slot: 0, home_id: ents[0], away_id: ents[1] },
+      { week: 1, slot: 1, home_id: ents[2], away_id: stranger },
+    ]
+    const r = await rest('POST', '/rpc/replace_schedule', a.token, { p_league: id, p_games: bad, p_weeks: 2 })
+    assertNotEquals(r.status, 200, JSON.stringify(r.body))
+    assertEquals((await api('GET', `/api/leagues/${id}/games`, a.token)).body, before)
+    assertEquals((await api('GET', `/api/leagues/${id}`, a.token)).body.weeks, 3) // the weeks the first generate set (4 entrants), not the failed call's 2
+  },
+})
+
+Deno.test({
+  name: 'replace_schedule runs as the caller: another organizer changes nothing, and anon cannot call it',
+  ignore: !live,
+  fn: async () => {
+    const a = await organizer('rs')
+    const b = await organizer('rs2')
+    const id = (await api('POST', '/api/leagues', a.token, { name: 'Mine', location: 'Bar', weeks: 9 })).body.id as string
+    const ents: string[] = []
+    for (const name of ['One', 'Two']) ents.push((await api('POST', `/api/leagues/${id}/entrants`, a.token, { name })).body.id)
+    await api('POST', `/api/leagues/${id}/schedule`, a.token)
+    const before = (await api('GET', `/api/leagues/${id}/games`, a.token)).body
+    // B calls the function on A's league: RLS leaves no rows to delete, and the insert is refused.
+    const hit = await rest('POST', '/rpc/replace_schedule', b.token, {
+      p_league: id, p_games: [{ week: 1, slot: 0, home_id: ents[0], away_id: ents[1] }], p_weeks: 1,
+    })
+    assertNotEquals(hit.status, 200, JSON.stringify(hit.body))
+    assertEquals((await api('GET', `/api/leagues/${id}/games`, a.token)).body, before)
+    assertEquals((await api('GET', `/api/leagues/${id}`, a.token)).body.weeks, 1)
+    const anon = await call('POST', `${REST}/rpc/replace_schedule`, { apikey: ANON, Authorization: `Bearer ${ANON}` },
+      { p_league: id, p_games: [], p_weeks: 1 })
+    assertNotEquals(anon.status, 200, JSON.stringify(anon.body))
+    assertEquals((await api('GET', `/api/leagues/${id}/games`, a.token)).body, before)
+  },
+})

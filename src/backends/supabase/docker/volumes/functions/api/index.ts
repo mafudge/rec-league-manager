@@ -5,6 +5,7 @@ import { auth } from './auth.ts'
 import { userClient } from './db.ts'
 import { handle, json, objectBody, type Route } from './http.ts'
 import { leagueRoutes } from './leagues.ts'
+import { scheduleRoutes } from './scores.ts'
 
 const routes: Route[] = [
   { method: 'GET', path: '/api/health', handler: () => json({ status: 'ok' }) },
@@ -45,6 +46,7 @@ const routes: Route[] = [
   },
   // Organizer routes query as the organizer (their own token), so row-level security filters by owner.
   ...leagueRoutes({ organizerFrom: auth.organizerFrom, clientFor: userClient }),
+  ...scheduleRoutes({ organizerFrom: auth.organizerFrom, clientFor: userClient }),
 ]
 
 export default {
