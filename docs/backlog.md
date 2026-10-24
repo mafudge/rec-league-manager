@@ -403,6 +403,8 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
 - `DATABASE_URL`'s default is relative to the working directory.
 - The public and standings routes repeat the same load-and-compute block.
+- FastAPI accepts the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); Django and the JS backends refuse them as `400 Invalid request`. FastAPI should refuse them too.
+- Django answers an unknown URL outside `/api/` with its HTML 404 page.
 
 ### POL-02 · Web screens
 - The weeks-change message on the Schedule tab uses the error colour although it is information.
