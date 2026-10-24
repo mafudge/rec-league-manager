@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import current_organizer
 from ..db import get_session
-from ..errors import ApiError
+from ..errors import ApiError, object_body
 from ..models import Entrant, Organizer
 from .leagues import owned_league
 
@@ -31,13 +31,14 @@ def add_entrant(
     organizer: Organizer = Depends(current_organizer),
     session: Session = Depends(get_session),
 ):
+    data = object_body(body)  # the body's shape is checked before the league lookup
     owned_league(id, organizer, session)
-    raw = body.get("name") if isinstance(body, dict) else None
+    raw = data.get("name")
     name = raw.strip() if isinstance(raw, str) else ""  # a non-string name counts as blank
     if not name:
         raise ApiError(400, "Name is required")
     existing = session.scalars(select(Entrant.name).where(Entrant.league_id == id)).all()
-    if name.casefold() in {n.strip().casefold() for n in existing}:
+    if name.lower() in {n.strip().lower() for n in existing}:
         raise ApiError(409, "An entrant with that name already exists in this league")
     last = session.scalar(select(func.max(Entrant.position)).where(Entrant.league_id == id))
     entrant = Entrant(league_id=id, name=name, position=0 if last is None else last + 1)

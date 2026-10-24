@@ -102,7 +102,7 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 | 🔒 `GET`/`POST /api/leagues`, 🔒 `GET /api/leagues/{id}` (US02) | `League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `slug` is the 6-character public identifier |
 | 🔒 `GET`/`POST /api/leagues/{id}/entrants` (US03) | `Entrant` = `{id, name}` |
 | 🔒 `POST /api/leagues/{id}/schedule`, `GET .../games`, `DELETE .../scores` (US04) | A round robin; `Game` = `{id, week, home_id, home_name, away_id, away_name, home_score, away_score}`, a bye has no away side |
-| 🔒 `PUT /api/games/{id}/score` (US05) | The updated `Game` |
+| 🔒 `PUT /api/games/{id}/score` (US05) | The updated `Game`; refusals in the order 404 `Game not found`, 400 `A bye has no score`, 400 whole numbers, 400 no ties (full text in `src/README.md`) |
 | 🔒 `GET /api/leagues/{id}/standings` (US06) | `Standings` = `{rows, played, tiebreak}`, computed on every request |
 | `GET /api/public/{slug}` (US07) | `200 {league, current_week, games, standings}` with **no token**: `league` is a `League` without `id`; `current_week` is the lowest week with an unplayed non-bye game, the last week once all are played, `null` with no schedule; `404 League not found` for an unknown slug. The only route the public page calls, and it has no write twin |
 

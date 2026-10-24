@@ -68,8 +68,11 @@ def test_not_whole_numbers_refused_and_nothing_stored(client, body):
 def test_non_object_body_is_400(client):
     h, lid = setup(client)
     gid = played(client, h, lid)["id"]
-    r = put(client, h, gid, [1, 2])
-    assert r.status_code == 400
+    for body in ([1, 2], "x", 5):
+        r = put(client, h, gid, body)
+        assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})
+    broken = client.put(f"/api/games/{gid}/score", content="nope", headers={**h, "Content-Type": "application/json"})
+    assert (broken.status_code, broken.json()) == (400, {"error": "Invalid request"})
 
 
 def test_tie_refused_when_league_has_no_ties(client):
@@ -125,3 +128,9 @@ def test_integral_floats_are_accepted_as_ints(client):
     assert r.status_code == 200
     assert r.json()["home_score"] == 21 and r.json()["away_score"] == 14
     assert type(r.json()["home_score"]) is int
+
+
+def test_unreadable_body_is_refused_before_the_game_is_looked_up(client):
+    h, _ = setup(client)
+    r = client.put("/api/games/nope/score", json=[1], headers=h)
+    assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})

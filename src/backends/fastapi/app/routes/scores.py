@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Request
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import current_organizer
 from ..db import get_session
-from ..errors import ApiError
+from ..errors import ApiError, object_body
 from ..models import Entrant, Game, League, Organizer
 from ..schedule import game_json
 
@@ -26,12 +28,13 @@ def whole(v: object) -> int | None:
 
 
 @router.put("/{id}/score")
-async def record_score(
+def record_score(
     id: str,
-    request: Request,
+    body: Any = Body(...),
     organizer: Organizer = Depends(current_organizer),
     session: Session = Depends(get_session),
 ):
+    data = object_body(body)  # the body's shape is checked before anything else, as on every route with a body
     # Ownership runs through the game's league, so another organizer's game id is simply "not found".
     game = session.get(Game, id)
     league = session.get(League, game.league_id) if game else None
@@ -39,13 +42,7 @@ async def record_score(
         raise ApiError(404, "Game not found")
     if game.away_id is None:
         raise ApiError(400, "A bye has no score")
-    try:
-        body = await request.json()
-    except ValueError:
-        raise ApiError(400, "Invalid request")
-    if not isinstance(body, dict):
-        raise ApiError(400, "Invalid request")
-    home, away = whole(body.get("home_score")), whole(body.get("away_score"))
+    home, away = whole(data.get("home_score")), whole(data.get("away_score"))
     if home is None or away is None:
         raise ApiError(400, "Scores must be whole numbers 0 or greater")
     if home == away and not league.allow_ties:

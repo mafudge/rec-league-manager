@@ -60,9 +60,11 @@ def test_blank_or_non_string_name(client, bad):
 def test_missing_name_and_non_object_body(client):
     h = signed_in(client)
     lid = league(client, h)
-    for body in ({}, [], "x"):
+    r = client.post(f"/api/leagues/{lid}/entrants", json={}, headers=h)
+    assert (r.status_code, r.json()) == (400, {"error": "Name is required"})
+    for body in ([], "x", 5, None):
         r = client.post(f"/api/leagues/{lid}/entrants", json=body, headers=h)
-        assert (r.status_code, r.json()) == (400, {"error": "Name is required"})
+        assert (r.status_code, r.json()) == (400, {"error": "Invalid request"})
 
 
 def test_same_name_in_another_league_is_fine(client):
@@ -97,3 +99,18 @@ def test_unknown_league_is_404_and_token_required(client):
     r = client.get("/api/leagues/nope/entrants")
     assert (r.status_code, r.json()) == (401, {"error": "Sign in required"})
     assert client.post("/api/leagues/nope/entrants", json={"name": "X"}).status_code == 401
+
+
+def test_duplicate_is_compared_trimmed_and_lower_cased(client):
+    h = signed_in(client)
+    lid = league(client, h)
+    assert add(client, h, lid, "Bag Ladies").status_code == 201
+    assert add(client, h, lid, " bag ladies ").status_code == 409
+
+
+def test_duplicate_uses_lower_not_casefold(client):
+    # JS toLowerCase() and Postgres lower() keep these apart, so every backend must.
+    h = signed_in(client)
+    lid = league(client, h)
+    assert add(client, h, lid, "Straße").status_code == 201
+    assert add(client, h, lid, "STRASSE").status_code == 201

@@ -7,11 +7,13 @@ from sqlalchemy.orm import Session
 
 from ..auth import current_organizer
 from ..db import get_session
-from ..errors import ApiError
+from ..errors import ApiError, object_body
 from ..models import League, Organizer
 from ..slugs import new_slug
 
 router = APIRouter(prefix="/api/leagues")
+
+WEEKS_LIMIT = 2**31
 
 
 def league_json(l: League) -> dict[str, Any]:
@@ -54,7 +56,7 @@ def create_league(
     session: Session = Depends(get_session),
 ):
     # Read loosely, validate by hand in the contract's order.
-    data = body if isinstance(body, dict) else {}
+    data = object_body(body)
     name, location = _text(data.get("name")), _text(data.get("location"))
     weeks = data.get("weeks")
     allow_ties = data.get("allow_ties", False)
@@ -62,7 +64,8 @@ def create_league(
         raise ApiError(400, "Name is required")
     if not location:
         raise ApiError(400, "Location is required")
-    if type(weeks) is not int or weeks < 1:  # bool is an int subclass, so check the exact type
+    # bool is an int subclass, so check the exact type; the upper bound is int4 so every backend agrees on what fits.
+    if type(weeks) is not int or weeks < 1 or weeks >= WEEKS_LIMIT:
         raise ApiError(400, "Weeks must be at least 1")
     if not isinstance(allow_ties, bool):
         raise ApiError(400, "Invalid request")

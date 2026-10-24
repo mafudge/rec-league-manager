@@ -15,6 +15,10 @@ check() { # check <description> <exit-code-of-the-condition>
   if [ "$2" -eq 0 ]; then echo "ok   $1"; else echo "FAIL $1"; failures=$((failures + 1)); fi
 }
 
+same() { # same <expected-json>: does $body equal it as JSON? Spacing, key order and \u escapes don't matter.
+  [ "$(printf '%s' "$body" | jq -S -c . 2>/dev/null)" = "$(printf '%s' "$1" | jq -S -c .)" ]
+}
+
 get() { # get <path>: body to stdout, headers to $headers, status to $status
   body=$(curl -sS --max-time 10 -D "$headers" -H "Origin: $ORIGIN" "$API_URL$1")
   status=$(head -n 1 "$headers" | cut -d' ' -f2)
@@ -47,7 +51,7 @@ case "$preflight" in 200|204) true ;; *) false ;; esac; check "  CORS preflight 
 
 hello() { # hello <query-string> <expected-status> <expected-body>
   get "/api/hello$1"
-  [ "$status" = "$2" ] && [ "$body" = "$3" ]
+  [ "$status" = "$2" ] && same "$3"
   check "GET /api/hello$1 returns $2 $3 (got ${status:-no answer} $body)" $?
 }
 hello "?name=Mike" 200 '{"message":"Hello Mike"}'
@@ -64,18 +68,24 @@ post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
 echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
 check "  body has token and refresh_token" $?
 post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
-[ "$status" = "409" ] && [ "$body" = '{"error":"An account with that email already exists"}' ]
+[ "$status" = "409" ] && same '{"error":"An account with that email already exists"}'
 check "signing up the same email again returns 409 (got ${status:-no answer} $body)" $?
 upper=$(echo "$email" | tr 'a-z' 'A-Z')
 post /api/auth/signup "{\"email\":\"  $upper  \",\"password\":\"cornhole1\"}"
-[ "$status" = "409" ] && [ "$body" = '{"error":"An account with that email already exists"}' ]
+[ "$status" = "409" ] && same '{"error":"An account with that email already exists"}'
 check "the same email upper-cased and padded with spaces returns 409 (got ${status:-no answer} $body)" $?
 post /api/auth/signup "{\"email\":\"short-$email\",\"password\":\"short\"}"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Password must be at least 8 characters"}' ]
+[ "$status" = "400" ] && same '{"error":"Password must be at least 8 characters"}'
 check "a short password returns 400 (got ${status:-no answer} $body)" $?
 post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
-[ "$status" = "400" ] && [ "$body" = '{"error":"Enter a valid email address"}' ]
+[ "$status" = "400" ] && same '{"error":"Enter a valid email address"}'
 check "an email without @ returns 400 (got ${status:-no answer} $body)" $?
+
+for path in signup login refresh; do
+  post "/api/auth/$path" '[]'
+  [ "$status" = "400" ] && same '{"error":"Invalid request"}'
+  check "POST /api/auth/$path with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+done
 
 # --- US01 · sign in, refresh, the sign-in gate ---
 post /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
@@ -84,26 +94,26 @@ echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|t
 check "  body has token and refresh_token" $?
 access=$(echo "$body" | jq -r '.token'); refresh=$(echo "$body" | jq -r '.refresh_token')
 post /api/auth/login "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
-[ "$status" = "401" ] && [ "$body" = '{"error":"Email or password is incorrect"}' ]
+[ "$status" = "401" ] && same '{"error":"Email or password is incorrect"}'
 check "a wrong password returns 401 (got ${status:-no answer} $body)" $?
 post /api/auth/refresh "{\"refresh_token\":\"$refresh\"}"
 [ "$status" = "200" ]; check "POST /api/auth/refresh returns 200 (got ${status:-no answer})" $?
 echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
 check "  body has a new token and refresh_token" $?
 post /api/auth/refresh '{"refresh_token":"garbage"}'
-[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "refreshing with garbage returns 401 (got ${status:-no answer} $body)" $?
 get /api/auth/me
-[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "GET /api/auth/me without a token returns 401 (got ${status:-no answer} $body)" $?
 send GET /api/auth/me "" "$access"
-[ "$status" = "200" ] && [ "$body" = "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')" ]
+[ "$status" = "200" ] && same "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')"
 check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
 
 # --- US02 · create a league ---
 league='{"name":"Tuesday Cornhole","location":"Joe'"'"'s Tavern","sport":"Cornhole","season":"Fall 2026","weeks":8}'
 get /api/leagues
-[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "GET /api/leagues without a token returns 401 (got ${status:-no answer} $body)" $?
 post /api/leagues "$league" "$access"
 [ "$status" = "201" ]; check "POST /api/leagues returns 201 (got ${status:-no answer} $body)" $?
@@ -120,41 +130,47 @@ post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":true}' "$ac
 [ "$status" = "201" ] && echo "$body" | jq -e '.allow_ties==true and .sport=="" and .season==""' >/dev/null
 check "allow_ties true is kept and sport/season default to empty (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"  ","location":"B","weeks":3}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Name is required"}' ]
+[ "$status" = "400" ] && same '{"error":"Name is required"}'
 check "a blank name returns 400 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"  ","weeks":3}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Location is required"}' ]
+[ "$status" = "400" ] && same '{"error":"Location is required"}'
 check "a blank location returns 400 (got ${status:-no answer} $body)" $?
-for w in 0 -1 '"eight"' 2.5 null; do
+post /api/leagues '[]' "$access"
+[ "$status" = "400" ] && same '{"error":"Invalid request"}'
+check "POST /api/leagues with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+send GET /api/leagues/nope "" "$access"
+[ "$status" = "404" ] && same '{"error":"League not found"}'
+check "GET /api/leagues/nope returns 404 League not found (got ${status:-no answer} $body)" $?
+for w in 0 -1 '"eight"' 2.5 null 3000000000; do
   post /api/leagues "{\"name\":\"A\",\"location\":\"B\",\"weeks\":$w}" "$access"
-  [ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+  [ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
   check "weeks $w returns 400 (got ${status:-no answer} $body)" $?
 done
 post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":"yes"}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Invalid request"}' ]
+[ "$status" = "400" ] && same '{"error":"Invalid request"}'
 check "allow_ties \"yes\" returns 400 Invalid request (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"B","weeks":true}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+[ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
 check "weeks true returns 400 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"B"}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+[ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
 check "missing weeks returns 400 (got ${status:-no answer} $body)" $?
 other="other-$email"
 post /api/auth/signup "{\"email\":\"$other\",\"password\":\"cornhole1\"}"
 [ "$status" = "201" ]; check "a second organizer signs up (got ${status:-no answer})" $?
 other_access=$(echo "$body" | jq -r '.token')
 send GET /api/leagues "" "$other_access"
-[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a second organizer's league list is empty (got ${status:-no answer} $body)" $?
+[ "$status" = "200" ] && same "[]"; check "a second organizer's league list is empty (got ${status:-no answer} $body)" $?
 send GET "/api/leagues/$LEAGUE_ID" "" "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer opening my league gets 404 (got ${status:-no answer} $body)" $?
 
 # --- US03 · add entrants ---
 get "/api/leagues/$LEAGUE_ID/entrants"
-[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
 check "GET entrants without a token returns 401 (got ${status:-no answer} $body)" $?
 send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
-[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a new league has no entrants (got ${status:-no answer} $body)" $?
+[ "$status" = "200" ] && same "[]"; check "a new league has no entrants (got ${status:-no answer} $body)" $?
 ENTRANT_NAMES="Bag Ladies|Corn Stars|Hole Patrol|Sack Attack|Board Certified|Toss Bosses"
 ENTRANT_IDS=""
 for n in "Bag Ladies" "Corn Stars" "Hole Patrol" "Sack Attack" "Board Certified" "Toss Bosses"; do
@@ -168,46 +184,49 @@ send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
 check "entrants are listed in the order added (got ${status:-no answer} $body)" $?
 for dup in "Bag Ladies" " bag ladies "; do
   post "/api/leagues/$LEAGUE_ID/entrants" "$(jq -cn --arg n "$dup" '{name:$n}')" "$access"
-  [ "$status" = "409" ] && [ "$body" = '{"error":"An entrant with that name already exists in this league"}' ]
+  [ "$status" = "409" ] && same '{"error":"An entrant with that name already exists in this league"}'
   check "adding \"$dup\" again returns 409 (got ${status:-no answer} $body)" $?
 done
+post "/api/leagues/$LEAGUE_ID/entrants" '[]' "$access"
+[ "$status" = "400" ] && same '{"error":"Invalid request"}'
+check "POST entrant with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
 for blank in '""' '"   "' null 5; do
   post "/api/leagues/$LEAGUE_ID/entrants" "{\"name\":$blank}" "$access"
-  [ "$status" = "400" ] && [ "$body" = '{"error":"Name is required"}' ]
+  [ "$status" = "400" ] && same '{"error":"Name is required"}'
   check "entrant name $blank returns 400 (got ${status:-no answer} $body)" $?
 done
 send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
 [ "$(echo "$body" | jq length)" = "6" ]; check "the refused names added nothing (got $(echo "$body" | jq length) entrants)" $?
 send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer listing my entrants gets 404 (got ${status:-no answer} $body)" $?
 post "/api/leagues/$LEAGUE_ID/entrants" '{"name":"Intruders"}' "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer adding an entrant to my league gets 404 (got ${status:-no answer} $body)" $?
 
 # --- US04 · generate a schedule, clear scores ---
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer generating my schedule gets 404 (got ${status:-no answer} $body)" $?
 send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
-[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a league with no schedule has no games (got ${status:-no answer} $body)" $?
+[ "$status" = "200" ] && same "[]"; check "a league with no schedule has no games (got ${status:-no answer} $body)" $?
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
-[ "$status" = "201" ] && [ "$body" = '{"weeks":5,"message":"This schedule needs 5 weeks, so the league now runs 5 weeks instead of 8."}' ]
+[ "$status" = "201" ] && same '{"weeks":5,"message":"This schedule needs 5 weeks, so the league now runs 5 weeks instead of 8."}'
 check "POST schedule on 6 entrants returns 201 weeks 5 and the weeks message (got ${status:-no answer} $body)" $?
 send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
 [ "$status" = "200" ] && echo "$body" | jq -e 'length==15 and (map(.week)|unique)==[1,2,3,4,5] and ([.[].week]==([.[].week]|sort)) and all(.[]; (keys|length==8) and (.id|type=="string") and .home_score==null and .away_score==null)' >/dev/null
 check "GET games lists 15 games across weeks 1-5 in week order (got ${status:-no answer})" $?
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
-[ "$status" = "201" ] && [ "$body" = '{"weeks":5,"message":null}' ]
+[ "$status" = "201" ] && same '{"weeks":5,"message":null}'
 check "generating again returns 201 with message null (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"Tiny","location":"B","weeks":3}' "$access"
 TINY_ID=$(echo "$body" | jq -r '.id')
 post "/api/leagues/$TINY_ID/entrants" '{"name":"Solo"}' "$access"
 post "/api/leagues/$TINY_ID/schedule" "" "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Add at least 2 entrants first"}' ]
+[ "$status" = "400" ] && same '{"error":"Add at least 2 entrants first"}'
 check "generating with 1 entrant returns 400 (got ${status:-no answer} $body)" $?
 delete "/api/leagues/$LEAGUE_ID/scores" "$access"
-[ "$status" = "200" ] && [ "$body" = '{"cleared":0}' ]; check "DELETE scores with none recorded returns 200 cleared 0 (got ${status:-no answer} $body)" $?
+[ "$status" = "200" ] && same '{"cleared":0}'; check "DELETE scores with none recorded returns 200 cleared 0 (got ${status:-no answer} $body)" $?
 
 # --- US05 · record a score ---
 send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
@@ -217,29 +236,32 @@ put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
 check "PUT score 21-14 returns 200 with both scores (got ${status:-no answer} $body)" $?
 for bad in '{"home_score":-1,"away_score":14}' '{"home_score":21.5,"away_score":14}' '{"home_score":"21","away_score":14}' '{"home_score":true,"away_score":14}' '{"home_score":null,"away_score":14}'; do
   put "/api/games/$GAME_ID/score" "$bad" "$access"
-  [ "$status" = "400" ] && [ "$body" = '{"error":"Scores must be whole numbers 0 or greater"}' ]
+  [ "$status" = "400" ] && same '{"error":"Scores must be whole numbers 0 or greater"}'
   check "score $bad returns 400 whole-numbers message (got ${status:-no answer} $body)" $?
 done
 put "/api/games/$GAME_ID/score" '{"home_score":15,"away_score":15}' "$access"
-[ "$status" = "400" ] && [ "$body" = "{\"error\":\"This league doesn't allow ties\"}" ]
+[ "$status" = "400" ] && same "{\"error\":\"This league doesn't allow ties\"}"
 check "a tie in a no-ties league returns 400 (got ${status:-no answer} $body)" $?
 put "/api/games/$GAME_ID/score" '{"home_score":21.0,"away_score":14.0}' "$access"
 [ "$status" = "200" ] && echo "$body" | jq -e '.home_score==21 and .away_score==14' >/dev/null
 check "a literal 21.0 and 14.0 is accepted as 21 and 14 (got ${status:-no answer} $body)" $?
 put "/api/games/$GAME_ID/score" '{"home_score":1000000000000000000000000000000,"away_score":14}' "$access"
-[ "$status" = "400" ] && [ "$body" = '{"error":"Scores must be whole numbers 0 or greater"}' ]
+[ "$status" = "400" ] && same '{"error":"Scores must be whole numbers 0 or greater"}'
 check "a score too large to store returns 400 (got ${status:-no answer} $body)" $?
+put "/api/games/$GAME_ID/score" '[]' "$access"
+[ "$status" = "400" ] && same '{"error":"Invalid request"}'
+check "PUT score with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
 put "/api/games/nope/score" '{"home_score":21,"away_score":14}' "$access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"Game not found"}' ]
+[ "$status" = "404" ] && same '{"error":"Game not found"}'
 check "an unknown game id returns 404 (got ${status:-no answer} $body)" $?
 put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"Game not found"}' ]
+[ "$status" = "404" ] && same '{"error":"Game not found"}'
 check "a second organizer scoring my game gets 404 (got ${status:-no answer} $body)" $?
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
-[ "$status" = "409" ] && [ "$body" = '{"error":"Scores already recorded — clear them first"}' ]
+[ "$status" = "409" ] && same '{"error":"Scores already recorded — clear them first"}'
 check "regenerating with a score returns 409 (got ${status:-no answer} $body)" $?
 delete "/api/leagues/$LEAGUE_ID/scores" "$access"
-[ "$status" = "200" ] && [ "$body" = '{"cleared":1}' ]; check "DELETE scores returns 200 cleared 1 (got ${status:-no answer} $body)" $?
+[ "$status" = "200" ] && same '{"cleared":1}'; check "DELETE scores returns 200 cleared 1 (got ${status:-no answer} $body)" $?
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
 [ "$status" = "201" ]; check "regenerating after clearing returns 201 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"Odd","location":"B","weeks":3}' "$access"
@@ -250,7 +272,7 @@ send GET "/api/leagues/$ODD_ID/games" "" "$access"
 BYE_ID=$(echo "$body" | jq -r '[.[]|select(.away_id==null)][0].id')
 for bye_body in '{"home_score":21,"away_score":14}' '{"home_score":null,"away_score":null}'; do
   put "/api/games/$BYE_ID/score" "$bye_body" "$access"
-  [ "$status" = "400" ] && [ "$body" = '{"error":"A bye has no score"}' ]
+  [ "$status" = "400" ] && same '{"error":"A bye has no score"}'
   check "scoring a bye with $bye_body returns 400 (got ${status:-no answer} $body)" $?
 done
 send GET "/api/leagues/$LEAGUE_ID/games" "" "$access"
@@ -266,7 +288,7 @@ check "GET standings returns 200 with played 1, 6 rows of 8 keys and the tiebrea
 echo "$body" | jq -e '.rows[0]|.w==1 and .l==0 and .t==0 and .pf==21 and .pa==14 and .diff==7' >/dev/null
 check "the 21-scorer is first with w 1, l 0, pf 21, pa 14, diff 7 (got $body)" $?
 send GET "/api/leagues/$LEAGUE_ID/standings" "" "$other_access"
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer reading my standings gets 404 (got ${status:-no answer} $body)" $?
 
 # --- US07 · public link: no token ---
@@ -274,7 +296,7 @@ send GET "/api/public/$LEAGUE_SLUG" "" ""
 [ "$status" = "200" ] && echo "$body" | jq -e '(.league|has("id")|not) and .league.name=="Tuesday Cornhole" and (.league.location|length>0) and (.games|length==15) and .current_week==1 and .standings.played==1 and (.standings.rows|length==6)' >/dev/null
 check "GET /public/{slug} with no token returns 200: league without id, 15 games, current_week 1, played 1 (got ${status:-no answer} $body)" $?
 send GET "/api/public/zzzzzz" "" ""
-[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+[ "$status" = "404" ] && same '{"error":"League not found"}'
 check "GET /public/zzzzzz returns 404 League not found (got ${status:-no answer} $body)" $?
 
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

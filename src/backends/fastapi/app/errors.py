@@ -13,6 +13,13 @@ class ApiError(Exception):
         self.message = message
 
 
+def object_body(body: object) -> dict:
+    """The parsed JSON body, which must be an object; anything else is the contract's 400 Invalid request."""
+    if not isinstance(body, dict):
+        raise ApiError(400, "Invalid request")
+    return body
+
+
 def register_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def api_error(_: Request, exc: ApiError) -> JSONResponse:
