@@ -1,7 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TODO: organizer writes, anyone reads the public schedule and standings.
+    // Deny everything: clients never touch Firestore directly. Every read and write goes through
+    // the Cloud Function `api`, whose Admin SDK bypasses these rules, so ownership
+    // (organizerId == the token's uid) is checked in code, not here.
     match /{document=**} {
       allow read, write: if false;
     }

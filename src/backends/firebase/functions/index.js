@@ -1,21 +1,18 @@
 // The Rec League Manager REST contract (ADR 003), served as one Cloud Function.
 // Hosting rewrites /api/** to it (firebase.json), so API_URL = http://localhost:5000
 const { onRequest } = require("firebase-functions/v2/https");
+const admin = require("firebase-admin");
+const { handler } = require("./http");
+const { createAuth } = require("./auth");
+const { createRoutes } = require("./routes");
 
-// Each route returns [status, body].
-const routes = {
-  "/api/health": () => [200, { status: "ok" }],
-  "/api/backend": () => [200, { backend: "firebase" }],
-  "/api/hello": (req) => {
-    const name = typeof req.query.name === "string" ? req.query.name.trim() : "";
-    return name ? [200, { message: `Hello ${name}` }] : [400, { error: "Name is required" }];
-  },
-};
+admin.initializeApp(); // the emulator sets the env, so it accepts emulator tokens
+
+const auth = createAuth({
+  fetch: (url, init) => fetch(url, init),
+  host: () => process.env.FIREBASE_AUTH_EMULATOR_HOST,
+  verifyIdToken: (token) => admin.auth().verifyIdToken(token),
+});
 
 // cors: true answers preflights and allows any origin; browser frontends run on another port.
-exports.api = onRequest({ cors: true }, (req, res) => {
-  const route = routes[req.path.replace(/\/+$/, "")];
-  if (req.method !== "GET" || !route) return res.status(404).json({ error: "Not found" });
-  const [status, body] = route(req);
-  res.status(status).json(body);
-});
+exports.api = onRequest({ cors: true }, handler(createRoutes(auth)));

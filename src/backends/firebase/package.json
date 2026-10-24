@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "postinstall": "npm --prefix functions install",
-    "emulators": "firebase emulators:start --project demo-rec-league"
+    "emulators": "mkdir -p emulator-data && firebase emulators:start --project demo-rec-league --import=./emulator-data --export-on-exit=./emulator-data"
   },
   "devDependencies": {
     "firebase-tools": "^13.35.1"

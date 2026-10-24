@@ -123,7 +123,7 @@ Try one in a browser: http://localhost:8000/api/hello?name=Mike (or any backend'
 | `backends/fastapi` | `.venv/bin/python -m pytest` | `../../contract-test.sh http://localhost:8000` |
 | `backends/django` | `.venv/bin/python manage.py test` | `../../contract-test.sh http://localhost:8001` |
 | `backends/supabase` | — | `./test.sh` (unit tests), `LIVE_SUPABASE=1 ./test.sh` (adds the row-level security proof), `./smoke.sh`, then `../../contract-test.sh http://localhost:54321/functions/v1` |
-| `backends/firebase` | — | `./smoke.sh`, then `../../contract-test.sh http://localhost:5000` |
+| `backends/firebase` | — | `npm test` in `functions/` (unit tests), `./smoke.sh`, then `../../contract-test.sh http://localhost:5000` |
 | `frontends/web` | `npm test` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> npm test` |
 | `frontends/streamlit` | `.venv/bin/python -m pytest` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> .venv/bin/python -m pytest` |
 | `frontends/flutter` | `flutter analyze && flutter test` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> flutter test` |
