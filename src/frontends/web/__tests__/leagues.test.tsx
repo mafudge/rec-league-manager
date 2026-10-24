@@ -130,6 +130,19 @@ test("a blank Weeks box is sent as-is for the backend to refuse, not guessed", a
   expect(JSON.parse(calls(fetch, "POST /api/leagues")[0][1].body).weeks).toBeNull();
 });
 
+test("a too-long name is not blocked by the input; the backend's 400 message is shown", async () => {
+  backend({ "POST /api/leagues": reply(400, { error: "Name must be 100 characters or fewer" }) });
+  render(<NewLeaguePage />);
+  fill();
+  const name = screen.getByLabelText("Name") as HTMLInputElement;
+  expect(name.maxLength).toBe(-1);
+  fireEvent.change(name, { target: { value: "x".repeat(101) } });
+  expect(name.value).toHaveLength(101);
+  fireEvent.click(screen.getByRole("button", { name: "Create league" }));
+  expect(await screen.findByText("Name must be 100 characters or fewer")).toBeTruthy();
+  expect(push).not.toHaveBeenCalled();
+});
+
 test("a 400 shows the backend's message and stays on the form", async () => {
   backend({ "POST /api/leagues": reply(400, { error: "Location is required" }) });
   render(<NewLeaguePage />);

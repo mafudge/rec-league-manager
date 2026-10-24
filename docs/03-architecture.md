@@ -99,8 +99,8 @@ Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.m
 
 | Route | Returns |
 |---|---|
-| 🔒 `GET`/`POST /api/leagues`, 🔒 `GET /api/leagues/{id}` (US02) | `League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `slug` is the 6-character public identifier |
-| 🔒 `GET`/`POST /api/leagues/{id}/entrants` (US03) | `Entrant` = `{id, name}` |
+| 🔒 `GET`/`POST /api/leagues`, 🔒 `GET /api/leagues/{id}` (US02) | `League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `slug` is the 6-character public identifier; a name is at most 100 characters and `weeks` is 1–52 |
+| 🔒 `GET`/`POST /api/leagues/{id}/entrants` (US03) | `Entrant` = `{id, name}`; a league has at most 52 entrants |
 | 🔒 `POST /api/leagues/{id}/schedule`, `GET .../games`, `DELETE .../scores` (US04) | A round robin; `Game` = `{id, week, home_id, home_name, away_id, away_name, home_score, away_score}`, a bye has no away side |
 | 🔒 `PUT /api/games/{id}/score` (US05) | The updated `Game`; refusals in the order 404 `Game not found`, 400 `A bye has no score`, 400 whole numbers, 400 no ties (full text in `src/README.md`) |
 | 🔒 `GET /api/leagues/{id}/standings` (US06) | `Standings` = `{rows, played, tiebreak}`, computed on every request |

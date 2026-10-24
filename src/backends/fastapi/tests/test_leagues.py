@@ -83,14 +83,34 @@ def test_bad_weeks(client, weeks):
     assert (r.status_code, r.json()) == (400, {"error": "Weeks must be at least 1"})
 
 
-@pytest.mark.parametrize("weeks", [2**31, 3_000_000_000, 10**20])
-def test_weeks_too_large_to_store_is_refused_not_500(client, weeks):
+@pytest.mark.parametrize("weeks", [53, 2**31, 3_000_000_000, 10**20])
+def test_weeks_above_52_is_refused(client, weeks):
     r = make(client, signed_in(client), weeks=weeks)
-    assert (r.status_code, r.json()) == (400, {"error": "Weeks must be at least 1"})
+    assert (r.status_code, r.json()) == (400, {"error": "Weeks must be between 1 and 52"})
 
 
-def test_weeks_just_under_the_limit_is_kept(client):
-    assert make(client, signed_in(client), weeks=2**31 - 1).status_code == 201
+def test_weeks_52_is_kept(client):
+    assert make(client, signed_in(client), weeks=52).status_code == 201
+
+
+def test_name_of_100_characters_is_kept_and_101_refused(client):
+    h = signed_in(client)
+    assert make(client, h, name="a" * 100).status_code == 201
+    r = make(client, h, name="a" * 101)
+    assert (r.status_code, r.json()) == (400, {"error": "Name must be 100 characters or fewer"})
+
+
+def test_name_length_is_measured_after_trimming(client):
+    h = signed_in(client)
+    assert make(client, h, name="  " + "a" * 100 + "  ").status_code == 201
+
+
+def test_name_length_checked_before_location_and_weeks(client):
+    h = signed_in(client)
+    r = make(client, h, name="a" * 101, location="", weeks=0)
+    assert r.json() == {"error": "Name must be 100 characters or fewer"}
+    r = make(client, h, location="", weeks=99)
+    assert r.json() == {"error": "Location is required"}
 
 
 def test_missing_weeks(client):
