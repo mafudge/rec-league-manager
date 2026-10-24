@@ -9,6 +9,7 @@ from .errors import register_handlers
 from .routes import auth as auth_routes
 from .routes import entrants as entrant_routes
 from .routes import leagues as league_routes
+from .routes import schedule as schedule_routes
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ register_handlers(app)
 app.include_router(auth_routes.router)
 app.include_router(league_routes.router)
 app.include_router(entrant_routes.router)
+app.include_router(schedule_routes.router)
 
 # Browser frontends (web, Flutter) run on another port, so allow any origin (ADR 003).
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

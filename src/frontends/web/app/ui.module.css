@@ -159,3 +159,11 @@ a.button {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0 0.5rem;
+}

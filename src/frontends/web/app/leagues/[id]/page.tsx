@@ -8,9 +8,10 @@ import OrganizerHeader from "../../organizer-header";
 import styles from "../../ui.module.css";
 import { useSignedIn } from "../../use-signed-in";
 import Entrants from "./entrants";
+import Schedule from "./schedule";
 import { LeagueTabs, tabFrom } from "./tabs";
 
-// The league home. The Schedule and Standings tabs show only the tab bar until their screens arrive.
+// The league home. The Standings tab shows only the tab bar until its screen arrives.
 export default function LeaguePage() {
   // useSearchParams needs a Suspense boundary for the static build.
   return (
@@ -64,6 +65,7 @@ function LeagueHome() {
             <span aria-live="polite">{copied}</span>
             <LeagueTabs active={tab} />
             {tab === "entrants" && <Entrants leagueId={id} />}
+            {tab === "schedule" && <Schedule leagueId={id} />}
           </>
         )}
       </div>

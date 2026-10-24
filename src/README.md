@@ -102,6 +102,9 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 | 🔒 `GET /api/leagues/{id}` (US02) | `200 League`; `404 League not found` (unknown, or another organizer's) |
 | 🔒 `GET /api/leagues/{id}/entrants` (US03) | `200 [Entrant]` = `[{id, name}]`, in the order added; `404 League not found` |
 | 🔒 `POST /api/leagues/{id}/entrants` `{name}` (US03) | `201 Entrant`; `400 Name is required` (blank, or not a string), `409 An entrant with that name already exists in this league` (names are trimmed, compared ignoring case: `" bag ladies "` after `"Bag Ladies"` is a duplicate; the trimmed name is stored as typed), `404 League not found` |
+| 🔒 `POST /api/leagues/{id}/schedule` (US04) | `201 {weeks, message}`: a round robin (circle method; an odd count gives each entrant one bye) replaces any old games; `weeks` is the number of rounds and the league's `weeks` is set to it. `message` is `null` when the league's weeks already matched, else `This schedule needs {n} weeks, so the league now runs {n} weeks instead of {old}.`; `400 Add at least 2 entrants first`, `409 Scores already recorded — clear them first`, `404 League not found` |
+| 🔒 `GET /api/leagues/{id}/games` (US04) | `200 [Game]` = `[{id, week, home_id, home_name, away_id, away_name, home_score, away_score}]` by week then position in the week; a bye has `away_id`, `away_name` and both scores `null`; `[]` before a schedule; `404 League not found` |
+| 🔒 `DELETE /api/leagues/{id}/scores` (US04) | `200 {cleared: <number of games that had a score>}`; game ids and byes are untouched; `404 League not found` |
 
 A route marked with a lock needs `Authorization: Bearer <token>`; a missing, malformed or expired token gets `401 {"error": "Sign in required"}`. Malformed bodies are `400 {"error": "Invalid request"}`, never 422. Access tokens last 1 hour, refresh tokens 30 days.
 
