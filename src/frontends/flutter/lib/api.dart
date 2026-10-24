@@ -3,12 +3,30 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:8000');
+const apiUrl = String.fromEnvironment(
+  'API_URL',
+  defaultValue: 'http://localhost:8000',
+);
 
 /// The backend understood the request and said no, e.g. "Name is required".
 class BackendRefused implements Exception {
   BackendRefused(this.message);
   final String message;
+  @override
+  String toString() => message;
+}
+
+/// Signed in is required and could not be restored: send the organizer to /signin.
+class SignInRequired implements Exception {
+  @override
+  String toString() => 'Sign in required';
+}
+
+/// The backend answered, but with a failure it did not explain (5xx, or a 4xx with no `error`).
+class BackendProblem implements Exception {
+  BackendProblem(this.status);
+  final int status;
+  String get message => 'The backend had a problem ($status)';
   @override
   String toString() => message;
 }
@@ -19,20 +37,172 @@ Uri _uri(String baseUrl, String path, [Map<String, String>? query]) {
 }
 
 Future<Map<String, dynamic>> _get(Uri uri, http.Client? client) async {
-  final r = await (client ?? http.Client()).get(uri).timeout(const Duration(seconds: 3));
+  final r = await (client ?? http.Client())
+      .get(uri)
+      .timeout(const Duration(seconds: 3));
   if (r.statusCode != 200 && r.statusCode != 400) {
     throw http.ClientException('GET ${uri.path} returned ${r.statusCode}');
   }
   // JSON is always UTF-8; decode the bytes ourselves rather than rely on how http guesses the charset.
   final body = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
-  if (r.statusCode == 400) throw BackendRefused(body['error'] as String? ?? 'The backend refused the request');
+  if (r.statusCode == 400) {
+    throw BackendRefused(body['error'] as String? ?? 'The backend refused the request');
+  }
   return body;
 }
 
 /// Asks the backend which one it is. Throws if it can't be reached.
-Future<String> fetchBackendName({String baseUrl = apiUrl, http.Client? client}) async =>
+Future<String> fetchBackendName({
+  String baseUrl = apiUrl,
+  http.Client? client,
+}) async =>
     (await _get(_uri(baseUrl, '/api/backend'), client))['backend'] as String;
 
 /// Asks the backend to greet [name]. Throws [BackendRefused] if it refuses the name.
-Future<String> fetchHello(String name, {String baseUrl = apiUrl, http.Client? client}) async =>
-    (await _get(_uri(baseUrl, '/api/hello', {'name': name}), client))['message'] as String;
+Future<String> fetchHello(
+  String name, {
+  String baseUrl = apiUrl,
+  http.Client? client,
+}) async =>
+    (await _get(_uri(baseUrl, '/api/hello', {'name': name}), client))['message']
+        as String;
+
+/// The one client for every contract route. Holds the organizer's token pair in memory (spec §7: lost on
+/// reload, accepted). [client] and [baseUrl] are injectable for tests.
+class Api {
+  Api({http.Client? client, String? baseUrl})
+    : _client = client ?? http.Client(),
+      baseUrl = baseUrl ?? apiUrl;
+
+  final http.Client _client;
+  final String baseUrl;
+  String? _token;
+  String? _refreshToken;
+  Future<bool>? _refreshing;
+
+  bool get signedIn => _token != null;
+
+  /// Replaces the token pair (what sign up, sign in and refresh answer).
+  void setTokens(String token, String refreshToken) {
+    _token = token;
+    _refreshToken = refreshToken;
+  }
+
+  void _forget() {
+    _token = null;
+    _refreshToken = null;
+  }
+
+  /// Sign-out is client-side only: the tokens are forgotten, nothing is sent (spec §5).
+  void signOut() => _forget();
+
+  /// What to show for a failed call: the backend's own words, or where we looked if nothing answered.
+  String messageFor(Object? e) => e is BackendRefused
+      ? e.message
+      : e is BackendProblem
+      ? e.message
+      : "Can't reach the backend at $baseUrl";
+
+  Future<http.Response> _send(
+    String method,
+    Uri uri,
+    Object? body,
+    String? token,
+  ) {
+    final req = http.Request(method, uri);
+    if (token != null) req.headers['Authorization'] = 'Bearer $token';
+    // No body means no body and no Content-Type (Firebase breaks on `null` sent as JSON).
+    if (body != null) {
+      req.headers['Content-Type'] = 'application/json';
+      req.body = jsonEncode(body);
+    }
+    return _client.send(req).then(http.Response.fromStream);
+  }
+
+  /// One refresh at a time: calls that all hit 401 together share a single refresh request.
+  /// False when the backend refuses the refresh token; [BackendProblem] when it merely failed.
+  Future<bool> _refresh() => _refreshing ??= (() async {
+    final refreshToken = _refreshToken;
+    if (refreshToken == null) return false;
+    final r = await _send('POST', _uri(baseUrl, '/api/auth/refresh'), {
+      'refresh_token': refreshToken,
+    }, null);
+    // Only a refusal means the tokens are no good; a blip (5xx, 429) must not sign the organizer out.
+    if (r.statusCode == 400 || r.statusCode == 401 || r.statusCode == 403) {
+      return false;
+    }
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      throw BackendProblem(r.statusCode);
+    }
+    final pair = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
+    setTokens(pair['token'] as String, pair['refresh_token'] as String);
+    return true;
+  })().whenComplete(() => _refreshing = null);
+
+  /// One call for every contract route; returns the decoded JSON. A 4xx with an `error` body is
+  /// [BackendRefused]; any other non-2xx is [BackendProblem]. With [auth] the bearer token is attached; on
+  /// 401 the tokens are refreshed once and the call retried, and if that fails [SignInRequired] is thrown.
+  Future<dynamic> request(
+    String method,
+    String path, {
+    Object? body,
+    bool auth = false,
+  }) async {
+    final uri = _uri(baseUrl, path);
+    var r = await _send(method, uri, body, auth ? _token : null);
+    if (auth && r.statusCode == 401) {
+      if (!await _refresh()) {
+        _forget();
+        throw SignInRequired();
+      }
+      r = await _send(method, uri, body, _token);
+      if (r.statusCode == 401) {
+        _forget();
+        throw SignInRequired();
+      }
+    }
+    final text = utf8.decode(r.bodyBytes);
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      if (r.statusCode >= 400 && r.statusCode < 500) {
+        try {
+          final error = (jsonDecode(text) as Map<String, dynamic>)['error'];
+          if (error is String && error.isNotEmpty) throw BackendRefused(error);
+        } on FormatException {
+          // not JSON: fall through to BackendProblem
+        } on TypeError {
+          // JSON but not an object
+        }
+      }
+      throw BackendProblem(r.statusCode);
+    }
+    return jsonDecode(text);
+  }
+
+  Future<void> _saveTokens(Object? answer) {
+    final pair = answer as Map<String, dynamic>;
+    setTokens(pair['token'] as String, pair['refresh_token'] as String);
+    return Future.value();
+  }
+
+  Future<void> signUp(String email, String password) async => _saveTokens(
+    await request(
+      'POST',
+      '/api/auth/signup',
+      body: {'email': email, 'password': password},
+    ),
+  );
+
+  Future<void> signIn(String email, String password) async => _saveTokens(
+    await request(
+      'POST',
+      '/api/auth/login',
+      body: {'email': email, 'password': password},
+    ),
+  );
+
+  /// The signed-in organizer's email.
+  Future<String> fetchMe() async =>
+      ((await request('GET', '/api/auth/me', auth: true))
+              as Map<String, dynamic>)['email']
+          as String;
+}
