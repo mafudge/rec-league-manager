@@ -242,6 +242,67 @@ class Api {
             )
             as Map<String, dynamic>,
       );
+
+  /// Generates (or regenerates) the round robin; answers the backend's weeks `message`, or null.
+  Future<String?> generateSchedule(String leagueId) async =>
+      ((await request('POST', '/api/leagues/$leagueId/schedule', auth: true))
+              as Map<String, dynamic>)['message']
+          as String?;
+
+  Future<List<Game>> listGames(String leagueId) async => [
+    for (final g
+        in await request('GET', '/api/leagues/$leagueId/games', auth: true)
+            as List)
+      Game.fromJson(g as Map<String, dynamic>),
+  ];
+
+  /// DELETE with no body and no Content-Type (Firebase).
+  Future<void> clearScores(String leagueId) =>
+      request('DELETE', '/api/leagues/$leagueId/scores', auth: true);
+
+  /// Each score goes as given: a number, `""` for a blank field, text as typed, or `null` to clear.
+  Future<Game> saveScore(String gameId, Object? home, Object? away) async =>
+      Game.fromJson(
+        await request(
+              'PUT',
+              '/api/games/$gameId/score',
+              body: {'home_score': home, 'away_score': away},
+              auth: true,
+            )
+            as Map<String, dynamic>,
+      );
+}
+
+class Game {
+  Game({
+    required this.id,
+    required this.week,
+    required this.homeId,
+    required this.homeName,
+    this.awayId,
+    this.awayName,
+    this.homeScore,
+    this.awayScore,
+  });
+
+  factory Game.fromJson(Map<String, dynamic> j) => Game(
+    id: j['id'] as String,
+    week: j['week'] as int,
+    homeId: j['home_id'] as String,
+    homeName: j['home_name'] as String,
+    awayId: j['away_id'] as String?,
+    awayName: j['away_name'] as String?,
+    homeScore: j['home_score'] as int?,
+    awayScore: j['away_score'] as int?,
+  );
+
+  final String id, homeId, homeName;
+  final String? awayId, awayName;
+  final int week;
+  final int? homeScore, awayScore;
+
+  bool get isBye => awayName == null;
+  bool get played => homeScore != null && awayScore != null;
 }
 
 class League {

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../api.dart';
 import 'entrants.dart';
 import 'leagues.dart';
+import 'schedule.dart';
 
 /// This app's own origin; empty when the page has none (e.g. a test run).
 String pageOrigin() {
@@ -137,7 +138,7 @@ class _LeagueHomeState extends State<LeagueHome> {
               child: TabBarView(
                 children: [
                   EntrantsTab(api: widget.api, leagueId: widget.id),
-                  const SizedBox(),
+                  ScheduleTab(api: widget.api, leagueId: widget.id),
                   const SizedBox(),
                 ],
               ),
