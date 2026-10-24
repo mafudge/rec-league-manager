@@ -1,6 +1,6 @@
 # Architecture — `CP-M3`
 
-**Product.** Rec League Manager · **Author.** Michael Fudge · **Version.** 1.0 draft, 2026-10-08 · **Status.** Draft — stubs exist and talk to each other; no product stories are built yet.
+**Product.** Rec League Manager · **Author.** Michael Fudge · **Version.** 1.0 draft, 2026-10-08 · **Status.** Draft — the v0.2.0 stories (US01–US07, US13) are built on all four backends and all three frontends.
 
 **Inputs.** [`02-prd.md`](02-prd.md) (§5 constraints, §7 data shape, §8 open questions) · [`backlog.md`](backlog.md) · ADRs [001](decisions/001-self-hosted-supabase-and-firebase.md), [002](decisions/002-backends-and-frontends-structure.md), [003](decisions/003-one-rest-contract-for-every-backend.md) · [`src/README.md`](../src/README.md) (how to run every pairing).
 
@@ -83,9 +83,10 @@ The single rule that makes the matrix work: **a frontend knows only `API_URL`.**
 | `GET /api/backend` | `200 {"backend": "fastapi"}` — or `django`, `supabase`, `firebase` |
 | `GET /api/hello?name=Mike` | `200 {"message": "Hello Mike"}` (name trimmed) |
 | `GET /api/hello` with no or blank name | `400 {"error": "Name is required"}` |
-| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
+| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `400 Password must be 72 characters or fewer` (UTF-8 bytes), `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
 | `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
 | `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required` |
+| 🔒 `GET /api/auth/me` (US01) | `200 {"email"}`, the signed-in organizer's lower-cased email |
 
 Rules that apply to every route, present and future:
 
@@ -95,7 +96,7 @@ Rules that apply to every route, present and future:
 - **No trailing-slash surprises.** Django, whose convention is a trailing slash, accepts both forms without redirecting.
 - **`src/contract-test.sh <API_URL>` is the definition of "conforms".** A new route goes into the table above (kept in `src/README.md`), into all four backends, and into the contract test, in the same change.
 
-Product routes, all built in the v0.2.0 reference (FastAPI + web); `src/README.md` has every status code and error message, and `contract-test.sh` checks them. 🔒 = needs a token.
+Product routes, all served by all four backends and used by all three frontends in v0.2.0; `src/README.md` has every status code and error message, and `contract-test.sh` checks them. 🔒 = needs a token.
 
 | Route | Returns |
 |---|---|
@@ -156,7 +157,7 @@ Every cell in the 4 × 3 table in [`src/README.md`](../src/README.md) is a suppo
 
 1. **The backend conforms:** `src/contract-test.sh <API_URL>` passes against each running backend.
 2. **The client works against a live backend:** each frontend has an opt-in live test (`LIVE_API_URL=… LIVE_BACKEND=…`) that calls the real routes.
-3. **The screen works:** the web and Flutter apps have been driven in headless Chrome, and Streamlit's app run live, against every backend.
+3. **The screen works:** all three frontends have been driven in headless Chrome through the PRD demo (sign up, create a league, add six teams, generate, score week 1, open the public page at 375 × 667) against every backend: 12 of 12 passed in the v0.2.0 release check.
 
 All four backends can run at once, each on its own port.
 
@@ -166,10 +167,10 @@ All four backends can run at once, each on its own port.
 
 | PRD §5 constraint | How the architecture meets it | State |
 |---|---|---|
-| Phone-first, 375 px | Each frontend's job, in a phone's browser | Not built (no product screens yet) |
+| Phone-first, 375 px | Each frontend's job, in a phone's browser | In place on all three frontends: at 375 × 667 the public page shows this week's games above the fold with no sideways page scroll (v0.2.0 release check) |
 | Public means public | Public routes need no token; the public page exposes no write route | In place on all four backends (the Firebase route validates the slug before any Firestore call) |
-| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in a Postgres view or the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | In place on all four backends |
-| Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | Not built |
+| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | In place on all four backends |
+| Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | In place on all four backends |
 | Empty and error states | Errors are defined in the contract and shown as the backend sends them | In place for the current routes |
 | Runs from the repo | Every stub runs from its README; `src/README.md` covers all pairings | Done |
 | Data survives restarts | SQLite files (FastAPI, Django) and the Postgres volume (Supabase) persist. Firebase's `npm run emulators` starts with `--import=./emulator-data --export-on-exit`, so the Firestore and Auth emulators keep their data when stopped with Ctrl+C (SIGINT; a killed process loses the session). Round trip proved with a league, its schedule and a score | Done |
@@ -216,3 +217,4 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 | Date | Change | Why |
 |---|---|---|
 | 2026-10-08 | v1.0 draft — typical vs this project's structure; contract, backends, frontends, constraints, PRD hand-offs | `CP-M3` |
+| 2026-10-24 | Status, §4 (signup's 72-character rule, `GET /api/auth/me`), §7 and §8 brought up to what v0.2.0 built | v0.2.0 release check (#54) |
