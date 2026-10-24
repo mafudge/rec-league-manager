@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Game, clearScores, generateSchedule, listGames, saveScore } from "../../api";
+import { Entrant, Game, clearScores, generateSchedule, listEntrants, listGames, saveScore } from "../../api";
 import styles from "../../ui.module.css";
 import { useSignedIn } from "../../use-signed-in";
 
@@ -10,13 +10,20 @@ import { useSignedIn } from "../../use-signed-in";
 export default function Schedule({ leagueId }: { leagueId: string }) {
   const { onError } = useSignedIn();
   const [games, setGames] = useState<Game[] | null>(null);
+  const [entrants, setEntrants] = useState<Entrant[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Entrants only feed the stale-schedule notice, so a failed fetch just hides it; the games fetch owns the errors.
+  const loadEntrants = () => listEntrants(leagueId).then(setEntrants, () => setEntrants([]));
+
   const load = (): Promise<void> =>
-    listGames(leagueId)
-      .then(setGames)
-      .catch((e) => setMessage(onError(e) ?? ""));
+    Promise.all([
+      listGames(leagueId)
+        .then(setGames)
+        .catch((e) => setMessage(onError(e) ?? "")),
+      loadEntrants(),
+    ]).then(() => undefined);
 
   useEffect(() => {
     load();
@@ -28,7 +35,7 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
     setMessage("");
     try {
       const note = await action();
-      await listGames(leagueId).then(setGames);
+      await Promise.all([listGames(leagueId).then(setGames), loadEntrants()]);
       setMessage(note ?? "");
     } catch (err) {
       setMessage(onError(err) ?? "");
@@ -49,6 +56,10 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
   const weeks = new Map<number, Game[]>();
   for (const g of games ?? []) weeks.set(g.week, [...(weeks.get(g.week) ?? []), g]);
 
+  // Stale: a schedule exists but an entrant (added after generating) is in none of its games.
+  const inGames = new Set((games ?? []).flatMap((g) => [g.home_id, g.away_id]));
+  const stale = (games?.length ?? 0) > 0 && entrants.some((e) => !inGames.has(e.id));
+
   return (
     <section>
       <div className={styles.actions}>
@@ -62,6 +73,7 @@ export default function Schedule({ leagueId }: { leagueId: string }) {
       <p className={styles.message} aria-live="polite">
         {message}
       </p>
+      {stale && <p className={styles.muted}>Regenerate the schedule to include new entrants.</p>}
       {games?.length === 0 && <p className={styles.muted}>No schedule yet — add entrants, then generate.</p>}
       {[...weeks].map(([week, list]) => (
         <div key={week}>

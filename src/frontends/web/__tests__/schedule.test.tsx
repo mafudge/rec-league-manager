@@ -25,12 +25,14 @@ const generated = [
 ];
 
 /** Backend stub: GET /games returns `games` (starts as given), POST /schedule swaps in `generated`. */
-function backend(opts: { games?: unknown[]; post?: [number, unknown]; put?: [number, unknown] } = {}) {
+function backend(opts: { games?: unknown[]; entrants?: string[]; post?: [number, unknown]; put?: [number, unknown] } = {}) {
   let games = opts.games ?? [];
   const fetch = vi.fn(async (href: string, init?: { method?: string }) => {
     const path = new URL(href).pathname;
     const method = init?.method ?? "GET";
     if (path === "/api/leagues/abc123/games") return reply(200, games);
+    if (path === "/api/leagues/abc123/entrants")
+      return reply(200, (opts.entrants ?? ["Bag Ladies", "Corn Stars", "Hole Patrol"]).map((n) => ({ id: `h-${n}`, name: n })));
     if (path === "/api/leagues/abc123/schedule" && method === "POST") {
       const [status, body] = opts.post ?? [201, { weeks: 2, message: null }];
       if (status < 400) games = generated;
@@ -207,4 +209,36 @@ test("one blank input with Save sends \"\" for it and shows the backend's messag
   fireEvent.click(screen.getAllByRole("button", { name: /^Save/ })[0]);
   await screen.findByText("Scores must be whole numbers 0 or greater");
   expect(JSON.parse(calls(f, "PUT", "/score")[0][1].body)).toEqual({ home_score: 21, away_score: "" });
+});
+
+const STALE = "Regenerate the schedule to include new entrants.";
+
+test("an entrant with no games shows the regenerate warning above the weeks", async () => {
+  backend({ games: generated, entrants: ["Bag Ladies", "Corn Stars", "Hole Patrol", "Late Joiners"] });
+  render(<Schedule leagueId="abc123" />);
+  const warning = await screen.findByText(STALE);
+  const week1 = screen.getByRole("heading", { name: "Week 1" });
+  expect(warning.compareDocumentPosition(week1) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test("no warning when every entrant has a game", async () => {
+  backend({ games: generated });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("Bag Ladies vs Corn Stars");
+  expect(screen.queryByText(STALE)).toBeNull();
+});
+
+test("no warning when there is no schedule yet", async () => {
+  backend({ entrants: ["Bag Ladies", "Corn Stars"] });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText("No schedule yet — add entrants, then generate.");
+  expect(screen.queryByText(STALE)).toBeNull();
+});
+
+test("generating clears the warning", async () => {
+  backend({ games: [game("g9", 1, "Bag Ladies", "Corn Stars")], entrants: ["Bag Ladies", "Corn Stars", "Hole Patrol"] });
+  render(<Schedule leagueId="abc123" />);
+  await screen.findByText(STALE);
+  fireEvent.click(screen.getByRole("button", { name: "Generate schedule" }));
+  await waitFor(() => expect(screen.queryByText(STALE)).toBeNull());
 });
