@@ -429,6 +429,12 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - Firebase: any body sent as `application/json` that isn't a JSON object (malformed, or `5`, `"x"`, `null`, `true`) is refused by the Cloud Functions runtime's own body parser with an HTML 400 page without CORS headers before our code runs, so it is not `{"error": "Invalid request"}`; clients must send no body and no `Content-Type` on routes that take none. `contract-test.sh` sends only `[]` as non-object JSON, so it does not catch it. Needs a decision (a proxy in front, or accept and document).
 - Supabase and Firebase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
 
+- Supabase: anyone holding a self-hosted install's anon key can sign up straight through GoTrue (`/auth/v1/signup`) with a 6-character password, skipping the contract's 8-character rule; set `GOTRUE_PASSWORD_MIN_LENGTH=8`.
+- Supabase: the tables have no CHECK constraints, so an organizer's own token sent straight to PostgREST can write invalid rows (weeks 0, negative or half-entered scores, a game against itself); a self-play game makes that league's public page answer 500. Mirror the validation in `check` clauses.
+- The contract doesn't fix the order of the body rule and the 401 check for a request that is both malformed and unauthenticated; backends differ.
+- Supabase: Edge Function imports are unpinned (`npm:@supabase/supabase-js@2`, `jsr:@panva/jose@6`); pin exact versions.
+- Supabase: `scheduleRoutes` lives in `scores.ts` while `schedule.ts` holds only the pure functions; the `standings.ts` comment says "code point order" but the code compares UTF-16 code units.
+
 ### POL-02 · Web screens
 - The weeks-change message on the Schedule tab uses the error colour although it is information.
 - No feedback after "Clear all scores" succeeds.
