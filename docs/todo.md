@@ -4,7 +4,6 @@
 
 ## MVP (v0.2.0)
 
-- **FL-ACC** Flutter · Accounts — #50.
 - **FL-LEA** Flutter · Leagues and entrants — #51.
 - **FL-SCH** Flutter · Schedule and scores — #52.
 - **FL-PUB** Flutter · Standings and public page — #53.
