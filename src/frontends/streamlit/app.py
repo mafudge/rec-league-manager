@@ -2,7 +2,13 @@ import streamlit as st
 
 import views
 
-# One router for the whole app. The public page (`?league=<slug>`) is chosen here, before any sign-in check.
+# The public page is chosen first: `?league=<slug>` needs no sign-in and shows no header.
+_slug = st.query_params.get("league")
+if _slug:
+    views.public_page(_slug)
+    st.stop()
+
+# One router for the whole app. The public page is chosen above, before any sign-in check.
 views.PAGES.update(
     home=st.Page("screens/home.py", title="Home", url_path="home", default=True),
     signup=st.Page("screens/signup.py", title="Sign up", url_path="signup"),

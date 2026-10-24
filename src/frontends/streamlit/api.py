@@ -151,6 +151,16 @@ def save_score(session: MutableMapping, game_id: str, home_score, away_score) ->
                    {"home_score": home_score, "away_score": away_score}, auth=True)
 
 
+def get_standings(session: MutableMapping, league_id: str) -> dict:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/standings", auth=True)
+
+
+def public_league(slug: str) -> dict:
+    """The public page's one call: no session at all, so no token can be read or sent. An unknown slug is
+    BackendRefused("League not found")."""
+    return request({}, "GET", f"/api/public/{quote(slug, safe='')}")
+
+
 def backend_name(api_url: str = API_URL) -> str:
     """Ask the backend which one it is."""
     r = requests.get(f"{api_url.rstrip('/')}/api/backend", timeout=3)
