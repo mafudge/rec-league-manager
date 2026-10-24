@@ -4,33 +4,7 @@ const { createLeagues } = require("../leagues");
 const { createSlugs } = require("../slugs");
 const { dispatch, ApiError } = require("../http");
 const { createRoutes } = require("../routes");
-
-// An in-memory stand-in for the Firestore store: same interface as firestore-store.js.
-function memoryStore() {
-  const leagues = new Map();
-  const entrants = new Map();
-  const slugs = new Set();
-  const calls = [];
-  const rec = (name, fn) => (...a) => { calls.push(name); return fn(...a); };
-  return {
-    calls,
-    getLeague: rec("getLeague", async (id) => leagues.get(id) ?? null),
-    listLeagues: rec("listLeagues", async (uid) => [...leagues.values()].filter((l) => l.organizerId === uid)),
-    createLeague: rec("createLeague", async (league) => {
-      if (slugs.has(league.slug)) return false;
-      slugs.add(league.slug);
-      leagues.set(league.id, league);
-      return true;
-    }),
-    listEntrants: rec("listEntrants", async (id) => entrants.get(id) ?? []),
-    addEntrant: rec("addEntrant", async (id, decide) => {
-      const list = entrants.get(id) ?? [];
-      const e = decide(list);
-      entrants.set(id, [...list, e]);
-      return e;
-    }),
-  };
-}
+const { memoryStore } = require("./memory-store");
 
 function setup() {
   const store = memoryStore();
