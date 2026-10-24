@@ -164,7 +164,11 @@ class _ScheduleTabState extends State<ScheduleTab> {
 Object toScore(String text) {
   final t = text.trim();
   if (t.isEmpty) return '';
-  return int.tryParse(t) ?? double.tryParse(t) ?? text;
+  final i = int.tryParse(t);
+  if (i != null) return i;
+  // NaN and Infinity parse but cannot be encoded as JSON: send those as typed.
+  final d = double.tryParse(t);
+  return d != null && d.isFinite ? d : text;
 }
 
 /// One game: who plays whom (or the score), plus two plain text fields that stay available to correct it.
@@ -272,19 +276,16 @@ class _GameRowState extends State<GameRow> {
                   ),
               ],
             ),
-            if (_error.isNotEmpty)
-              Semantics(
-                liveRegion: true,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _error,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
+            Semantics(
+              liveRegion: true,
+              child: Padding(
+                padding: EdgeInsets.only(top: _error.isEmpty ? 0 : 8),
+                child: Text(
+                  _error,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
+            ),
           ],
         ),
       ),

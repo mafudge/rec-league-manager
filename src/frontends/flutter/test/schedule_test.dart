@@ -348,6 +348,34 @@ void main() {
     expect(text(stale), findsNothing);
   });
 
+  testWidgets('NaN and Infinity are sent as typed, not crash', (tester) async {
+    final fake = backend(games: generated(), put: (400, {'error': whole}));
+    await open(tester, fake);
+    await typeScore(tester, 'Bag Ladies', 'NaN');
+    await typeScore(tester, 'Corn Stars', '-Infinity');
+    await tapSave(tester);
+    expect(body(fake.calls('PUT /api/games/g1/score').single), {
+      'home_score': 'NaN',
+      'away_score': '-Infinity',
+    });
+    expect(text(whole), findsOneWidget);
+  });
+
+  testWidgets('a lost session during Save goes to sign in', (tester) async {
+    final fake = backend(games: generated());
+    fake.routes['PUT /api/games/g1/score'] = h.json(401, {
+      'error': 'Sign in required',
+    });
+    fake.routes['POST /api/auth/refresh'] = h.json(401, {
+      'error': 'Sign in required',
+    });
+    await open(tester, fake);
+    await typeScore(tester, 'Bag Ladies', '1');
+    await typeScore(tester, 'Corn Stars', '2');
+    await tapSave(tester);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+  });
+
   testWidgets('a lost session goes to sign in', (tester) async {
     final fake = h.Fake({
       'GET /api/leagues/abc123': h.json(200, h.league()),
