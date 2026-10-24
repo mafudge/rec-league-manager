@@ -35,7 +35,7 @@ Everything lives under `src/`; each folder's `README.md` is the full reference. 
 | `src/backends/fastapi` | `cd src/backends/fastapi && . .venv/bin/activate && pip install -r requirements.txt` | `.venv/bin/uvicorn app.main:app --reload` | `.venv/bin/python -m pytest` | 8000 (`/api/health`) |
 | `src/backends/django` | `pip install -r requirements.txt` in its `.venv`, then `.venv/bin/python manage.py migrate` | `.venv/bin/python manage.py runserver` | `.venv/bin/python manage.py test` | 8001 (`/api/health`) |
 | `src/backends/supabase` | Docker only | `./start.sh` (first run generates `docker/.env`) | `./test.sh` (Deno unit tests in Docker), `./smoke.sh` | 54321 (`API_URL` = `/functions/v1`) |
-| `src/backends/firebase` | `npm install` (also installs `functions/`) | `npm run emulators` | `./smoke.sh` | 5000 Hosting = `API_URL`, 5001 Functions, 8080 Firestore, 9099 Auth, 4100 UI |
+| `src/backends/firebase` | `npm install` (also installs `functions/`) | `npm run emulators` | `cd functions && npm test`, `./smoke.sh` | 5000 Hosting = `API_URL`, 5001 Functions, 8080 Firestore, 9099 Auth, 4100 UI |
 | `src/frontends/web` | `npm install`, `cp .env.example .env.local` | `npm run dev` | `npm test` | 3000 |
 | `src/frontends/streamlit` | `pip install -r requirements.txt` in its `.venv` | `API_URL=http://localhost:8000 .venv/bin/streamlit run app.py` | `.venv/bin/python -m pytest` | 8501 |
 | `src/frontends/flutter` | `flutter pub get` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` | `flutter analyze && flutter test` | chosen by Flutter |

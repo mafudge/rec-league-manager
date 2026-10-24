@@ -424,6 +424,7 @@ Minor findings from the per-story and whole-branch reviews of the FastAPI + web 
 - On Supabase, the 409 "scores are recorded" guard on schedule replace is checked in a separate request from the replace, so a score saved in between slips through; move the guard into `replace_schedule`.
 - Supabase reads that need two requests (a league, then its entrants or games) can see two different moments; fold them into one query or one function.
 - A deleted user's Supabase access token still works until it expires (up to an hour); decide whether that is acceptable or whether the function should check the user exists.
+- Firebase: a request with `Content-Type: application/json` and a malformed or non-object body (`{bad`, `5`, `"x"`) is refused by the Cloud Functions runtime's own body parser with an HTML 400 page before our code runs, so it is not `{"error": "Invalid request"}`; `contract-test.sh` sends these without that header and does not catch it. Needs a decision (a proxy in front, or accept and document).
 - Supabase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
 
 ### POL-02 · Web screens
