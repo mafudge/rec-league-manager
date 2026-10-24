@@ -8,6 +8,8 @@ const { createRoutes } = require("./routes");
 const { createLeagues } = require("./leagues");
 const { createSchedule } = require("./schedule");
 const { createScores } = require("./scores");
+const { createStandings } = require("./standings");
+const { createPublic } = require("./public");
 const { createSlugs } = require("./slugs");
 const { createStore } = require("./firestore-store");
 
@@ -23,6 +25,8 @@ const store = createStore(admin.firestore());
 const leagues = createLeagues({ store, newSlug: createSlugs().newSlug });
 const schedule = createSchedule({ store, leagues });
 const scores = createScores({ store, leagues });
+const standings = createStandings({ store, leagues });
+const pub = createPublic({ store });
 
 // cors: true answers preflights and allows any origin; browser frontends run on another port.
-exports.api = onRequest({ cors: true }, handler(createRoutes(auth, leagues, schedule, scores)));
+exports.api = onRequest({ cors: true }, handler(createRoutes(auth, leagues, schedule, scores, standings, pub)));

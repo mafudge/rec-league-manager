@@ -92,3 +92,34 @@ test("a regenerated schedule orphans the old game ids", async () => {
   await call("a", "POST", `/api/leagues/${id}/schedule`);
   assert.deepEqual(await put({ home_score: 1, away_score: 0 }), NOT_FOUND);
 });
+
+test("a 0-0 score saves in a league that allows ties", async () => {
+  const { put } = await ready(4, { allow_ties: true });
+  const [status, g] = await put({ home_score: 0, away_score: 0 });
+  assert.deepEqual([status, g.home_score, g.away_score], [200, 0, 0]);
+});
+
+test("one null beside a number is refused and the score already saved survives", async () => {
+  const { put, call, id, game } = await ready();
+  await put({ home_score: 21, away_score: 14 });
+  assert.deepEqual(await put({ home_score: null, away_score: 14 }), WHOLE);
+  assert.deepEqual(await put({ home_score: 21, away_score: null }), WHOLE);
+  assert.deepEqual(await put({ away_score: 3 }), WHOLE);
+  const listed = (await call("a", "GET", `/api/leagues/${id}/games`))[1].find((g) => g.id === game.id);
+  assert.deepEqual([listed.home_score, listed.away_score], [21, 14]);
+});
+
+test("signed out: 401 on the score route, whatever the game id", async () => {
+  const { put, game } = await ready();
+  assert.deepEqual(await put({ home_score: 1, away_score: 0 }, "nobody"), [401, { error: "Sign in required" }]);
+  assert.deepEqual(await put({ home_score: 1, away_score: 0 }, "nobody", "nonsense"), [401, { error: "Sign in required" }]);
+  assert.equal(game.home_score, null);
+});
+
+test("the index is canonical: a leading zero is not a game", async () => {
+  const { put, game, store } = await ready();
+  const [lg, gen] = game.id.split(".");
+  store.calls.length = 0;
+  for (const idx of ["01", "00", "0001"]) assert.deepEqual(await put({ home_score: 1, away_score: 0 }, "a", `${lg}.${gen}.${idx}`), NOT_FOUND, idx);
+  assert.deepEqual(store.calls, []);
+});

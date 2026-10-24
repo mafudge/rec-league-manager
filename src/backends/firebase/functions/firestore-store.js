@@ -13,6 +13,12 @@ function createStore(db) {
       return doc.exists ? withId(doc) : null;
     },
 
+    /** The league whose public slug this is (slugs/{slug} holds its id), or null. Only a slug-shaped string may be passed. */
+    async getLeagueBySlug(slug) {
+      const slugDoc = await db.collection("slugs").doc(slug).get();
+      return slugDoc.exists ? this.getLeague(slugDoc.data().leagueId) : null;
+    },
+
     async listLeagues(organizerId) {
       const snap = await db.collection("leagues").where("organizerId", "==", organizerId).get();
       return snap.docs.map(withId);

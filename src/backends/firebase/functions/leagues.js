@@ -89,4 +89,4 @@ function createLeagues(deps) {
   return { ownedLeague, list, create, get, listEntrants, addEntrant };
 }
 
-module.exports = { createLeagues, NAME_LIMIT, WEEKS_MAX, ENTRANT_LIMIT };
+module.exports = { createLeagues, leagueJson, NAME_LIMIT, WEEKS_MAX, ENTRANT_LIMIT };

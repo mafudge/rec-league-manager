@@ -17,6 +17,8 @@ npm run emulators      # Hosting :5000, Functions :5001, Firestore :8080, Auth :
 
 **Our REST API** (ADR 003): `API_URL=http://localhost:5000`. It is the Cloud Function `api` in `functions/index.js`; Hosting forwards `/api/**` to it (`firebase.json`), and the emulator reloads it when you save.
 
+The contract is complete: accounts, leagues and entrants, the schedule (one Firestore document per league, with generate and score as transactions on it), scores, standings (computed in the function on every request, `standings.js`) and the public page (`public.js`, found through `slugs/{slug}`).
+
 Accounts (US01) use the Auth emulator through its REST API; `functions/auth.js` maps its errors to the contract's, and the function verifies access tokens with the Admin SDK. `firestore.rules` denies everything: clients never touch Firestore, and the function's Admin SDK bypasses rules, so ownership is checked in code.
 
 **Data survives restarts.** `npm run emulators` imports `./emulator-data` on start and exports to it when you stop with Ctrl+C (SIGINT; a killed process loses the session). The folder is git-ignored and created on demand.
@@ -25,16 +27,17 @@ Accounts (US01) use the Auth emulator through its REST API; `functions/auth.js` 
 ```bash
 (cd functions && npm test)   # unit tests (node --test), no emulator needed
 ./smoke.sh             # with the emulators running: prints "firestore ok", "auth ok", "hosting ok", "api ok"
-../../contract-test.sh http://localhost:5000   # CONTRACT_UPTO=accounts for the routes built so far
+../../contract-test.sh http://localhost:5000   # all routes: prints "contract ok"
 ```
 
 Known limit: the Functions runtime parses JSON bodies before our code, so a malformed body sent with `Content-Type: application/json` gets the runtime's HTML 400 instead of `{"error": "Invalid request"}` (backlog POL-01).
 
 ## TODO
-- [ ] `firestore.rules`: organizer writes, anyone reads the public schedule and standings (currently deny-all)
 - [x] Email + password sign-in against the Auth emulator (US01); no email links
-- [ ] Data model: leagues, entrants, games, scores
-- [ ] Standings: a Firestore document store has no joins, so decide where they are computed (client or a function) (US06)
+- [x] Data model: leagues, entrants (subcollection), the schedule and scores (one document), public slugs
+- [x] Standings computed in the Cloud Function per request (US06)
+- [x] Public page by slug, no token (US07)
+- [x] `firestore.rules`: deny all; the function's Admin SDK is the only reader and writer, ownership is checked in code
 - [x] Persisted emulator state (`--import`/`--export-on-exit`)
-- [ ] Seed data
 - [x] Serve the shared REST contract from a Cloud Function (ADR 003); see [`src/README.md`](../../README.md)
+- [ ] Seed data (not scheduled)

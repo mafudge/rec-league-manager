@@ -115,3 +115,32 @@ test("clearing with no schedule is cleared 0", async () => {
   const id = await leagueWith(call, 3);
   assert.deepEqual(await call("a", "DELETE", `/api/leagues/${id}/scores`), [200, { cleared: 0 }]);
 });
+
+test("signed out: 401 on schedule, games and scores, whatever the league id", async () => {
+  const { call } = setup();
+  const id = await leagueWith(call, 3);
+  const unauthorized = [401, { error: "Sign in required" }];
+  for (const lid of [id, "x"]) {
+    for (const [m, p] of [["POST", "schedule"], ["GET", "games"], ["DELETE", "scores"]]) {
+      assert.deepEqual(await call("nobody", m, `/api/leagues/${lid}/${p}`), unauthorized, `${m} ${p}`);
+    }
+  }
+});
+
+test("clearing every score leaves the byes untouched", async () => {
+  const { call } = setup();
+  const id = await leagueWith(call, 3);
+  await call("a", "POST", `/api/leagues/${id}/schedule`);
+  const before = await gamesOf(call, id);
+  for (const g of before.filter((x) => x.away_id)) await call("a", "PUT", `/api/games/${g.id}/score`, { home_score: 2, away_score: 1 });
+  assert.deepEqual(await call("a", "DELETE", `/api/leagues/${id}/scores`), [200, { cleared: 3 }]);
+  assert.deepEqual(await gamesOf(call, id), before);
+  assert.ok((await gamesOf(call, id)).some((g) => g.away_id === null && g.home_score === null && g.away_score === null));
+});
+
+test("7 entrants in a 6-week league: 7 weeks and the message", async () => {
+  const { call } = setup();
+  const id = await leagueWith(call, 7, { weeks: 6 });
+  assert.deepEqual(await call("a", "POST", `/api/leagues/${id}/schedule`), [201, { weeks: 7, message: "This schedule needs 7 weeks, so the league now runs 7 weeks instead of 6." }]);
+  assert.equal((await call("a", "GET", `/api/leagues/${id}`))[1].weeks, 7);
+});
