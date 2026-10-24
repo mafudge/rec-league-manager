@@ -4,16 +4,22 @@ from rest_framework.response import Response
 
 
 @api_view(["GET"])
+@authentication_classes([])
+@permission_classes([])
 def health(request):
     return Response({"status": "ok"})
 
 
 @api_view(["GET"])
+@authentication_classes([])
+@permission_classes([])
 def backend(request):
     return Response({"backend": "django"})
 
 
 @api_view(["GET"])
+@authentication_classes([])
+@permission_classes([])
 def hello(request):
     name = request.query_params.get("name", "").strip()
     if not name:

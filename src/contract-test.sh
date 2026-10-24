@@ -36,10 +36,10 @@ get() { # get <path>: body to stdout, headers to $headers, status to $status
 }
 
 send() { # send <METHOD> <path> [json-body] [token]: body to stdout, status to $status
-  method=$1; path=$2; json=${3:-}; token=${4:-}
+  method=$1; req_path=$2; json=${3:-}; token=${4:-} # not $path: callers use that name for their own loops
   body=$(curl -sS --max-time 10 -D "$headers" -X "$method" -H "Origin: $ORIGIN" \
     ${json:+-H "Content-Type: application/json" --data "$json"} \
-    ${token:+-H "Authorization: Bearer $token"} "$API_URL$path")
+    ${token:+-H "Authorization: Bearer $token"} "$API_URL$req_path")
   status=$(head -n 1 "$headers" | cut -d' ' -f2)
 }
 post() { send POST "$@"; }   # post <path> [json-body] [token]
@@ -92,10 +92,10 @@ post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
 [ "$status" = "400" ] && same '{"error":"Enter a valid email address"}'
 check "an email without @ returns 400 (got ${status:-no answer} $body)" $?
 
-for path in signup login refresh; do
-  post "/api/auth/$path" '[]'
+for route in signup login refresh; do
+  post "/api/auth/$route" '[]'
   [ "$status" = "400" ] && same '{"error":"Invalid request"}'
-  check "POST /api/auth/$path with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
+  check "POST /api/auth/$route with a body that is not a JSON object returns 400 Invalid request (got ${status:-no answer} $body)" $?
 done
 
 # --- US01 · sign in, refresh, the sign-in gate ---
@@ -120,6 +120,19 @@ check "GET /api/auth/me without a token returns 401 (got ${status:-no answer} $b
 send GET /api/auth/me "" "$access"
 [ "$status" = "200" ] && same "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')"
 check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
+
+# A stale or garbage token on a route that needs no sign-in is ignored, never a 401 (a client may send its expired token along).
+send POST /api/auth/signup "{\"email\":\"stale-$email\",\"password\":\"cornhole1\"}" garbage
+[ "$status" = "201" ]; check "POST /api/auth/signup ignores a garbage Authorization header (got ${status:-no answer})" $?
+send POST /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}" garbage
+[ "$status" = "200" ]; check "POST /api/auth/login ignores a garbage Authorization header (got ${status:-no answer})" $?
+send POST /api/auth/refresh "{\"refresh_token\":\"$refresh\"}" garbage
+[ "$status" = "200" ]; check "POST /api/auth/refresh ignores a garbage Authorization header (got ${status:-no answer})" $?
+send GET /api/health "" garbage
+[ "$status" = "200" ]; check "GET /api/health ignores a garbage Authorization header (got ${status:-no answer})" $?
+send GET /api/auth/me "" garbage
+[ "$status" = "401" ] && same '{"error":"Sign in required"}'
+check "GET /api/auth/me with a garbage token returns 401 (got ${status:-no answer} $body)" $?
 
 stop_after accounts
 

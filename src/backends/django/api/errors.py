@@ -44,7 +44,7 @@ def exception_handler(exc, context):
     elif isinstance(exc, exceptions.NotFound):
         status_code, message = status.HTTP_404_NOT_FOUND, str(exc.detail)
     elif isinstance(exc, exceptions.MethodNotAllowed):
-        status_code, message = status.HTTP_405_METHOD_NOT_ALLOWED, "Method not allowed"
+        status_code, message = status.HTTP_405_METHOD_NOT_ALLOWED, "Method Not Allowed"
     elif isinstance(exc, exceptions.APIException):
         status_code, message = exc.status_code, str(exc.detail)
     else:

@@ -138,7 +138,7 @@ class LeagueOwnershipTests(LeagueTestCase):
 
     def test_other_methods_are_405_in_the_contract_shape(self):
         r = self.client.delete("/api/leagues", **self.signed_in_as())
-        self.check(r, 405, {"error": "Method not allowed"})
+        self.check(r, 405, {"error": "Method Not Allowed"})
 
 
 class SlugTests(LeagueTestCase):
