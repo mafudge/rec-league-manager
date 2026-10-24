@@ -14,10 +14,10 @@ class ContractTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"backend": "django"})
 
-    def test_answers_the_android_emulator(self):
-        # Inside the Android emulator the host machine is 10.0.2.2 (SCAF-11).
+    def test_refuses_the_android_emulator_host(self):
+        # Android was dropped in SCAF-15, so 10.0.2.2 is no longer an allowed host.
         response = self.client.get("/api/backend", HTTP_HOST="10.0.2.2:8001")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
 
     def test_hello_greets_by_name(self):
         response = self.client.get("/api/hello", {"name": "Mike"})

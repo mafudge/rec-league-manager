@@ -65,8 +65,8 @@ The concept brief guessed "Python + Flask + SQLite". That guess became this matr
  ┌──────────────────────────┐                  ┌──────────────────────────────────────┐
  │ web        Next.js       │                  │ fastapi   FastAPI ─────────► SQLite   │
  │ streamlit  Streamlit     │  GET {API_URL}   │ django    Django + DRF ────► SQLite   │
- │ flutter    Chrome or     │ ───/api/...────► │ supabase  Edge Function ───► Postgres │
- │            Android       │ ◄───── JSON ──── │ firebase  Cloud Function ──► Firestore│
+ │ flutter    Chrome        │ ───/api/...────► │ supabase  Edge Function ───► Postgres │
+ │                          │ ◄───── JSON ──── │ firebase  Cloud Function ──► Firestore│
  └──────────────────────────┘                  └──────────────────────────────────────┘
         knows only API_URL                       every one passes src/contract-test.sh
 ```
@@ -118,16 +118,14 @@ Product routes (leagues, entrants, schedule, scores, standings) will be added to
 | | **web** | **streamlit** | **flutter** |
 |---|---|---|---|
 | Stack | Next.js 15.5, React 19.1, TypeScript 5.9 | Streamlit 1.64, `requests` 2.34, Python 3.12 | Flutter 3.44 (Dart), `http` 1.6 |
-| Runs in | A browser | A Python server that renders to a browser | A browser (Chrome) or Android (emulator, API 36) |
-| Calls the backend from | The browser, so it needs CORS | The Streamlit server, so CORS doesn't apply | The browser or the phone |
+| Runs in | A browser | A Python server that renders to a browser | A browser (Chrome) |
+| Calls the backend from | The browser, so it needs CORS | The Streamlit server, so CORS doesn't apply | The browser, so it needs CORS |
 | `API_URL` is set by | `NEXT_PUBLIC_API_URL`, baked in at build/dev start | `API_URL` env var at start | `--dart-define=API_URL=…` at build |
 | Port | 3000 | 8501 | chosen by Flutter, or `--web-port` |
 | Tests | Vitest + Testing Library | Streamlit `AppTest` + pytest | `flutter test` (widget + unit) |
-| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page | One codebase for web and native; a different toolchain |
+| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page | One codebase that could also target phones and desktops; a different toolchain |
 
 Each frontend has one small API client (`app/api.ts`, `api.py`, `lib/api.dart`) and nothing backend-specific. All three currently show "Hello from <backend>" and a name box whose **Say hello** button calls `/api/hello`.
-
-**Android specifics.** Inside the emulator, `localhost` is the emulator itself; the host machine is `10.0.2.2`. Debug builds allow plain `http://` for local backends; release builds refuse it (a test guards this).
 
 ## 7 · Twelve pairings, and how we know they work
 
@@ -137,7 +135,7 @@ Every cell in the 4 × 3 table in [`src/README.md`](../src/README.md) is a suppo
 
 1. **The backend conforms:** `src/contract-test.sh <API_URL>` passes against each running backend.
 2. **The client works against a live backend:** each frontend has an opt-in live test (`LIVE_API_URL=… LIVE_BACKEND=…`) that calls the real routes.
-3. **The screen works:** the web and Flutter apps have been driven in headless Chrome and the Android emulator, and Streamlit's app run live, against every backend.
+3. **The screen works:** the web and Flutter apps have been driven in headless Chrome, and Streamlit's app run live, against every backend.
 
 All four backends can run at once, each on its own port.
 
@@ -147,7 +145,7 @@ All four backends can run at once, each on its own port.
 
 | PRD §5 constraint | How the architecture meets it | State |
 |---|---|---|
-| Phone-first, 375 px | Each frontend's job; Flutter also runs natively on Android | Not built (no product screens yet) |
+| Phone-first, 375 px | Each frontend's job, in a phone's browser | Not built (no product screens yet) |
 | Public means public | Public routes need no token; the public page exposes no write route | Not built |
 | Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in a Postgres view or the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | Not built; the rule is fixed here |
 | Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | Not built |
