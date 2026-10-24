@@ -8,5 +8,7 @@ views.PAGES.update(
     signup=st.Page("screens/signup.py", title="Sign up", url_path="signup"),
     signin=st.Page("screens/signin.py", title="Sign in", url_path="signin"),
     leagues=st.Page("screens/leagues.py", title="Your leagues", url_path="leagues"),
+    league_new=st.Page("screens/league_new.py", title="Create a league", url_path="leagues-new"),
+    league=st.Page("screens/league.py", title="League", url_path="league"),
 )
 st.navigation(list(views.PAGES.values()), position="hidden").run()

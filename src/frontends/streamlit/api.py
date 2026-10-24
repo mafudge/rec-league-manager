@@ -4,6 +4,7 @@ import os
 from collections.abc import MutableMapping
 
 import requests
+from urllib.parse import quote
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
@@ -108,6 +109,26 @@ def sign_in(session: MutableMapping, email: str, password: str) -> None:
 
 def me(session: MutableMapping) -> dict:
     return request(session, "GET", "/api/auth/me", auth=True)
+
+
+def list_leagues(session: MutableMapping) -> list:
+    return request(session, "GET", "/api/leagues", auth=True)
+
+
+def create_league(session: MutableMapping, league: dict) -> dict:
+    return request(session, "POST", "/api/leagues", league, auth=True)
+
+
+def get_league(session: MutableMapping, league_id: str) -> dict:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}", auth=True)
+
+
+def list_entrants(session: MutableMapping, league_id: str) -> list:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/entrants", auth=True)
+
+
+def add_entrant(session: MutableMapping, league_id: str, name: str) -> dict:
+    return request(session, "POST", f"/api/leagues/{quote(league_id, safe='')}/entrants", {"name": name}, auth=True)
 
 
 def backend_name(api_url: str = API_URL) -> str:

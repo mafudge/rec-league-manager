@@ -97,7 +97,7 @@ def test_the_two_pages_link_to_each_other():
 
 def test_the_leagues_page_shows_the_email_and_sign_out_forgets_the_tokens():
     state = {"token": "t1", "refresh_token": "r1"}
-    with backend(Reply(200, {"email": "dana@example.com"})) as b:
+    with backend(Reply(200, {"email": "dana@example.com"}), Reply(200, [])) as b:
         at = page("leagues", state)
         assert at.title[0].value == "Your leagues"
         assert at.markdown[0].value == "dana@example.com"
@@ -108,7 +108,7 @@ def test_the_leagues_page_shows_the_email_and_sign_out_forgets_the_tokens():
         assert not at.exception
     assert at.title[0].value == "Sign in"
     assert "token" not in at.session_state and "refresh_token" not in at.session_state
-    assert len(b.calls) == 1  # sign-out sends nothing to the backend
+    assert len(b.calls) == 2  # /me and the list; sign-out sends nothing to the backend
 
 
 def test_signed_out_visitors_are_sent_to_sign_in():

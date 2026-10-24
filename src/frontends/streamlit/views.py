@@ -1,4 +1,6 @@
 """The pages. Each takes nothing and reads/writes the one session (st.session_state)."""
+import os
+
 import streamlit as st
 
 import api
@@ -96,7 +98,116 @@ def sign_in() -> None:
     _auth_page(False)
 
 
+def _fail(e: Exception) -> None:
+    """A failed call: the backend's own words (or where we looked); a lost session goes to Sign in."""
+    if isinstance(e, api.SignInRequired):
+        go("signin")
+    st.error(api.message_for(e))
+
+
+def public_url(slug: str) -> str:
+    """This app's own public page for a league: `?league=<slug>` on the app's base URL."""
+    base = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8501").rstrip("/")
+    return f"{base}/?league={slug}"
+
+
 def leagues() -> None:
     require_sign_in()
     header()
     st.title("Your leagues")
+    try:
+        rows = api.list_leagues(st.session_state)
+    except Exception as e:
+        _fail(e)
+        rows = None
+    if rows is not None and not rows:
+        st.write("No leagues yet — create one.")
+    for league in rows or []:
+        if st.button(league["name"], key=f"open_{league['id']}"):
+            st.session_state["league_id"] = league["id"]
+            go("league")
+        st.caption(league["location"])
+    st.page_link(PAGES["league_new"], label="Create a league")
+
+
+def league_new() -> None:
+    require_sign_in()
+    header()
+    st.title("Create a league")
+    # Sends what was typed; the backend's message is shown as-is (no validation of our own).
+    with st.form("new_league"):
+        name = st.text_input("Name", key="league_name")
+        location = st.text_input("Location", key="league_location")
+        sport = st.text_input("Sport", key="league_sport")
+        season = st.text_input("Season", key="league_season")
+        weeks = st.text_input("Weeks", key="league_weeks")
+        allow_ties = st.checkbox("Games can end in a tie", key="league_ties")
+        submitted = st.form_submit_button("Create league", key="create_league")
+    if not submitted:
+        return
+    weeks = weeks.strip()
+    if weeks == "":
+        weeks = None  # blank is sent as null for the backend to refuse
+    else:
+        try:
+            weeks = int(weeks)
+        except ValueError:
+            pass  # not a whole number: sent as typed, the backend says so
+    try:
+        league = api.create_league(st.session_state, dict(
+            name=name, location=location, sport=sport, season=season, weeks=weeks, allow_ties=allow_ties))
+    except Exception as e:
+        _fail(e)
+    else:
+        st.session_state["league_id"] = league["id"]
+        go("league")
+
+
+def league_home() -> None:
+    require_sign_in()
+    header()
+    league_id = st.session_state.get("league_id") or st.query_params.get("id")
+    if not league_id:
+        go("leagues")
+    try:
+        league = api.get_league(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    st.title(league["name"])
+    st.write(league["location"])
+    st.caption(" · ".join(x for x in (league["sport"], league["season"]) if x))
+    st.caption("Public link (share this with players)")
+    st.code(public_url(league["slug"]), language=None)
+    entrants_tab, schedule_tab, standings_tab = st.tabs(["Entrants", "Schedule", "Standings"])
+    with entrants_tab:
+        entrants(league_id)
+    # Schedule and Standings stay empty until their tasks land.
+
+
+def entrants(league_id: str) -> None:
+    """The Entrants tab: a one-row add form, then who is in, in order. Validation is the backend's."""
+    # A successful add swaps in a fresh, empty box (new key); a refused one keeps the old box and its text.
+    # (clear_on_submit would also wipe the text on a refusal.)
+    box_key = f"entrant_name_{st.session_state.get('entrant_boxes', 0)}"
+    with st.form("add_entrant"):
+        box, add = st.columns([3, 1], vertical_alignment="bottom")
+        name = box.text_input("Name", key=box_key)
+        submitted = add.form_submit_button("Add", key="add_entrant")
+    if submitted:  # True only on the run the click caused, so a later rerun never re-sends it
+        try:
+            api.add_entrant(st.session_state, league_id, name)
+        except Exception as e:
+            _fail(e)
+        else:
+            st.session_state["entrant_boxes"] = st.session_state.get("entrant_boxes", 0) + 1
+            st.rerun()
+    try:
+        rows = api.list_entrants(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    if not rows:
+        st.write("No entrants yet — add the first one.")
+    for entrant in rows:
+        st.write(entrant["name"])
