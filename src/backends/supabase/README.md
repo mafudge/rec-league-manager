@@ -9,7 +9,9 @@ Docker with the Compose plugin, about 3 GB of images.
 
 ## Run
 ```bash
-./start.sh      # first run creates docker/.env, generates secrets, moves the gateway to port 54321
+./start.sh      # first run creates docker/.env, generates secrets, moves the gateway to port 54321;
+                # every run turns on email auto-confirm and applies migrations/*.sql
+./test.sh       # unit tests for the Edge Function (Deno in Docker; needs no running stack)
 ./smoke.sh      # prints "rest ok", "auth ok" and "api ok"
 ../../contract-test.sh http://localhost:54321/functions/v1
 ```
@@ -21,12 +23,15 @@ Docker with the Compose plugin, about 3 GB of images.
 `docker/.env` holds the generated secrets and is git-ignored. Never commit it.
 
 ## Test
-`./smoke.sh` and `../../contract-test.sh http://localhost:54321/functions/v1` against a running stack.
+`./test.sh` runs the function's Deno unit tests (`docker/volumes/functions/api/*_test.ts`) in the `denoland/deno:2.1.4` image, so nothing is installed on the host. `./smoke.sh` and `../../contract-test.sh http://localhost:54321/functions/v1` run against a running stack; `CONTRACT_UPTO=accounts` checks only the sections built so far.
+
+## Accounts
+Sign-up and sign-in go through Supabase Auth (GoTrue); the function maps its answers to the contract's statuses and messages and never passes its bodies through. `start.sh` sets `ENABLE_EMAIL_AUTOCONFIRM=true` in `docker/.env` (there is no mail server, so nobody could confirm a sign-up); leave `FUNCTIONS_VERIFY_JWT=false`, since the function checks tokens itself. GoTrue refresh tokens are single-use: always use the newest `refresh_token` (the web client does, and `contract-test.sh` does).
 
 ## TODO
 - [x] Serve the shared REST contract from an Edge Function (ADR 003); see [`src/README.md`](../../README.md)
 - [ ] `migrations/0001_init.sql`: leagues, entrants, games, scores with row-level security
-- [ ] Organizer sign-in with email + password (US01); the stack has no real mail server, so no magic links
+- [x] Organizer sign-in with email + password (US01); the stack has no real mail server, so no magic links
 - [ ] Standings computed on read, e.g. a Postgres view or function (US06)
 - [ ] Public read-only access for the anonymous role (US07)
 - [ ] Reachable from a phone on the LAN: set `SUPABASE_PUBLIC_URL` and `API_EXTERNAL_URL` in `docker/.env` to the machine's address

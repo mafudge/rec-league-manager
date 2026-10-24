@@ -12,7 +12,7 @@ Every backend serves the same three sign-in routes, and every frontend uses them
 | `POST /api/auth/login` | `{email, password}` | `200 {token, refresh_token}`, or `401 {"error": "Email or password is incorrect"}` |
 | `POST /api/auth/refresh` | `{refresh_token}` | `200 {token, refresh_token}`, or `401 {"error": "Sign in required"}` |
 
-Every route that changes data, and every organizer read, needs `Authorization: Bearer <token>`. A missing, malformed or expired token gets `401 {"error": "Sign in required"}`. On a 401, the frontend tries one refresh and retries the request; only when the refresh fails does it send the organizer to sign in. Signing out happens in the frontend only: it forgets both tokens.
+Every route that changes data, and every organizer read, needs `Authorization: Bearer <token>`. A missing, malformed or expired token gets `401 {"error": "Sign in required"}`. On a 401, the frontend tries one refresh and retries the request; only when the refresh fails does it send the organizer to sign in. Signing out happens in the frontend only: it forgets both tokens. Every refresh returns a new pair; always use the newest `refresh_token`, because an old one may stop working (Supabase refresh tokens are single-use).
 
 | Backend | Behind the contract |
 |---|---|

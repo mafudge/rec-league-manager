@@ -96,7 +96,7 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 | `GET /api/hello` with no name, or a blank one | `400 {"error": "Name is required"}` |
 | `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
 | `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
-| `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required` |
+| `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required`. Use the newest `refresh_token`; an old one may stop working |
 | 🔒 `GET /api/auth/me` (US01) | `200 {"email"}`, the signed-in organizer's lower-cased email (the web header shows it) |
 | 🔒 `GET /api/leagues` (US02) | `200 [League]`, oldest first, only the signed-in organizer's |
 | 🔒 `POST /api/leagues` `{name, location, sport, season, weeks, allow_ties}` (US02) | `201 League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `400 Name is required`, `400 Name must be 100 characters or fewer` (after trimming), `400 Location is required`, `400 Weeks must be at least 1` (missing, not a whole number, or < 1), `400 Weeks must be between 1 and 52` (a whole number above 52), checked in that order. Name, location, sport and season are trimmed; `sport` and `season` are optional and stored as `""`; `allow_ties` defaults to `false` and must be a JSON boolean (else `400 Invalid request`). `slug` is 6 characters from `abcdefghjkmnpqrstuvwxyz23456789` |
@@ -122,7 +122,7 @@ Try one in a browser: http://localhost:8000/api/hello?name=Mike (or any backend'
 |---|---|---|
 | `backends/fastapi` | `.venv/bin/python -m pytest` | `../../contract-test.sh http://localhost:8000` |
 | `backends/django` | `.venv/bin/python manage.py test` | `../../contract-test.sh http://localhost:8001` |
-| `backends/supabase` | — | `./smoke.sh`, then `../../contract-test.sh http://localhost:54321/functions/v1` |
+| `backends/supabase` | — | `./test.sh` (unit tests), `./smoke.sh`, then `../../contract-test.sh http://localhost:54321/functions/v1` |
 | `backends/firebase` | — | `./smoke.sh`, then `../../contract-test.sh http://localhost:5000` |
 | `frontends/web` | `npm test` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> npm test` |
 | `frontends/streamlit` | `.venv/bin/python -m pytest` | `LIVE_API_URL=<API_URL> LIVE_BACKEND=<name> .venv/bin/python -m pytest` |

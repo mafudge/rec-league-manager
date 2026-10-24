@@ -4,7 +4,6 @@
 
 ## MVP (v0.2.0)
 
-- **SB-ACC** Supabase · Accounts — #35.
 - **SB-LEA** Supabase · Leagues and entrants — #36.
 - **SB-SCH** Supabase · Schedule and scores — #37.
 - **SB-PUB** Supabase · Standings and public page — #38.

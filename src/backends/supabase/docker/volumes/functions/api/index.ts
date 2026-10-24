@@ -1,28 +1,48 @@
 // The Rec League Manager REST contract (ADR 003), served as one Edge Function.
 // Reached at {SUPABASE_URL}/functions/v1/api/..., so API_URL = http://localhost:54321/functions/v1
 // The gateway strips /functions/v1, so this function sees paths like /api/health.
+import { auth } from './auth.ts'
+import { handle, json, objectBody, type Route } from './http.ts'
 
-// Browser frontends (web, Flutter) run on another port, so allow any origin.
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
-}
-
-const json = (body: unknown, status = 200) => Response.json(body, { status, headers: CORS })
-
-export default {
-  fetch(req: Request): Response {
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
-
-    const url = new URL(req.url)
-    const path = url.pathname.replace(/\/+$/, '')
-    if (req.method === 'GET' && path === '/api/health') return json({ status: 'ok' })
-    if (req.method === 'GET' && path === '/api/backend') return json({ backend: 'supabase' })
-    if (req.method === 'GET' && path === '/api/hello') {
+const routes: Route[] = [
+  { method: 'GET', path: '/api/health', handler: () => json({ status: 'ok' }) },
+  { method: 'GET', path: '/api/backend', handler: () => json({ backend: 'supabase' }) },
+  {
+    method: 'GET',
+    path: '/api/hello',
+    handler: (_req, url) => {
       const name = (url.searchParams.get('name') ?? '').trim()
       return name ? json({ message: `Hello ${name}` }) : json({ error: 'Name is required' }, 400)
-    }
-    return json({ error: 'Not found' }, 404)
+    },
   },
+  {
+    method: 'POST',
+    path: '/api/auth/signup',
+    handler: async (req) => {
+      const body = await objectBody(req)
+      return json(await auth.signup(body.email, body.password), 201)
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/auth/login',
+    handler: async (req) => {
+      const body = await objectBody(req)
+      return json(await auth.login(body.email, body.password))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/auth/refresh',
+    handler: async (req) => json(await auth.refresh((await objectBody(req)).refresh_token)),
+  },
+  {
+    method: 'GET',
+    path: '/api/auth/me',
+    handler: async (req) => json({ email: (await auth.organizerFrom(req)).email }),
+  },
+]
+
+export default {
+  fetch: (req: Request): Promise<Response> => handle(req, routes),
 }
