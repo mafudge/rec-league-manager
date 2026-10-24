@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **DJ-PUB** Django · Standings and public page — #33.
