@@ -30,7 +30,9 @@ def generate(id: str, organizer: Organizer = Depends(current_organizer), session
             session.add(Game(league_id=id, week=week, slot=slot, home_id=home, away_id=away))
     message = None
     if league.weeks != len(rounds):
-        message = f"This schedule needs {len(rounds)} weeks, so the league now runs {len(rounds)} weeks instead of {league.weeks}."
+        n = len(rounds)
+        unit = "week" if n == 1 else "weeks"
+        message = f"This schedule needs {n} {unit}, so the league now runs {n} {unit} instead of {league.weeks}."
         league.weeks = len(rounds)
     session.commit()
     return {"weeks": len(rounds), "message": message}

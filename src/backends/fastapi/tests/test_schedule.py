@@ -135,3 +135,9 @@ def test_other_organizer_gets_404_and_signed_out_401(client):
         assert r.status_code == 404 and r.json() == {"error": "League not found"}
         r = getattr(client, method)(f"/api/leagues/{lid}/{path}")
         assert r.status_code == 401
+
+
+def test_one_week_schedule_says_week_not_weeks(client):
+    h = signed_in(client)
+    lid = make(client, h, 2, weeks=8)
+    assert generate(client, h, lid).json()["message"] == "This schedule needs 1 week, so the league now runs 1 week instead of 8."

@@ -122,7 +122,9 @@ test("the Schedule and Standings tabs show only the tab bar for now", async () =
     await screen.findByText("Tuesday Cornhole");
     expect(screen.queryByLabelText("Name")).toBeNull();
     expect(screen.queryByText("Bag Ladies")).toBeNull();
-    expect(f.mock.calls.some(([h]) => new URL(h).pathname.endsWith("/entrants"))).toBe(false);
+    // The Schedule tab reads entrants for its stale-schedule notice (US04-01); Standings still never does.
+    const asked = f.mock.calls.some(([h]) => new URL(h).pathname.endsWith("/entrants"));
+    expect(asked).toBe(tab === "schedule");
     unmount();
   }
 });
