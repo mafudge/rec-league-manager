@@ -4,3 +4,4 @@
 
 ## MVP (v0.2.0)
 
+- **FB-FIX** Firebase port review fixes — #45.
