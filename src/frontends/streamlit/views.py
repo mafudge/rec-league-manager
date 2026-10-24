@@ -278,6 +278,27 @@ def schedule(league_id: str) -> None:
                 _game(league_id, g)
 
 
+def _text(score) -> str:
+    return "" if score is None else str(score)
+
+
+def _score(text: str):
+    """What a box sends: "" when blank (never null, which means Clear), a number when it parses as one,
+    else the text as typed. The backend decides what is a valid score and says so."""
+    text = text.strip()
+    if text == "":
+        return ""
+    for kind in (int, float):
+        try:
+            value = kind(text)
+        except ValueError:
+            continue
+        if kind is float and value != value or value in (float("inf"), float("-inf")):
+            break  # nan / inf are not JSON numbers: send the text
+        return value
+    return text
+
+
 def _game(league_id: str, g: dict) -> None:
     """One game: who plays whom (or the score), two score boxes that stay open so a score can be corrected."""
     s = st.session_state
@@ -291,15 +312,11 @@ def _game(league_id: str, g: dict) -> None:
         # Keys carry the saved score, so a reload that changes it (Clear) brings fresh boxes.
         stamp = f"{g['id']}_{g['home_score']}_{g['away_score']}"
         with st.form(f"score_{g['id']}", border=False):
-            home = st.number_input(literal(g["home_name"]) + " score", min_value=0, step=1, value=g["home_score"],
-                                   key=f"home_{stamp}")
-            away = st.number_input(literal(g["away_name"]) + " score", min_value=0, step=1, value=g["away_score"],
-                                   key=f"away_{stamp}")
+            home = st.text_input(literal(g["home_name"]) + " score", value=_text(g["home_score"]), key=f"home_{stamp}")
+            away = st.text_input(literal(g["away_name"]) + " score", value=_text(g["away_score"]), key=f"away_{stamp}")
             saved = st.form_submit_button("Save", key=f"save_{g['id']}")
         if saved:
-            def blank(v):
-                return "" if v is None else int(v)
-            _act(lambda: api.save_score(s, g["id"], blank(home), blank(away)), error_key=f"game_error_{g['id']}")
+            _act(lambda: api.save_score(s, g["id"], _score(home), _score(away)), error_key=f"game_error_{g['id']}")
         if played and st.button("Clear", key=f"clear_{g['id']}"):
             _act(lambda: api.save_score(s, g["id"], None, None), error_key=f"game_error_{g['id']}")
         if s.get(f"game_error_{g['id']}"):

@@ -42,6 +42,10 @@ def calls(b, method, suffix):
     return [c for c in b.calls if c[0] == method and c[1].endswith(suffix)]
 
 
+def score_box(at, n):
+    return [t for t in at.text_input if t.label.endswith(" score")][n]
+
+
 def errors(at):
     return [e.value for e in at.error]
 
@@ -130,12 +134,11 @@ def test_clear_all_shows_the_backends_refusal():
         assert errors(at) == ["League not found"]
 
 
-def test_each_game_has_two_labelled_number_inputs_and_save_but_a_bye_has_none():
+def test_each_game_has_two_labelled_score_boxes_and_save_but_a_bye_has_none():
     with routed_page(routes(GENERATED)) as (at, _):
-        assert [(n.label, n.min, n.step) for n in at.number_input] == [
-            ("Bag Ladies score", 0, 1), ("Corn Stars score", 0, 1),
-            ("Corn Stars score", 0, 1), ("Hole Patrol score", 0, 1)]
-        assert all(n.value is None for n in at.number_input)
+        boxes = [t for t in at.text_input if t.label.endswith(" score")]
+        assert [t.label for t in boxes] == ["Bag Ladies score", "Corn Stars score", "Corn Stars score", "Hole Patrol score"]
+        assert all(t.value == "" for t in boxes)
         assert [b.label for b in at.button if b.key.startswith("save_")] == ["Save", "Save"]
 
 
@@ -144,12 +147,12 @@ def test_saving_sends_the_scores_once_and_the_game_shows_played_and_stays_editab
     r = routes(**{f"GET {L}/games": [Reply(200, GENERATED), Reply(200, GENERATED), Reply(200, played)],
                   "PUT /api/games/g1/score": [Reply(200, played[0])]})
     with routed_page(r) as (at, b):
-        at.number_input[0].set_value(21)
-        at.number_input[1].set_value(14)
+        score_box(at, 0).set_value("21")
+        score_box(at, 1).set_value("14")
         at.button(key="save_g1").click().run()
         assert not at.exception
         assert "Bag Ladies 21 – 14 Corn Stars" in texts(at)
-        assert [n.value for n in at.number_input[:2]] == [21, 14]
+        assert [n.value for n in at.text_input if n.label.endswith(" score")][:2] == ["21", "14"]
         at.run()
     (method, url, kw), = [c for c in b.calls if c[0] == "PUT"]
     assert url == f"{BASE}/api/games/g1/score"
@@ -172,7 +175,7 @@ def test_blank_inputs_are_sent_as_empty_strings_and_the_refusal_shows_with_that_
 def test_one_blank_input_sends_empty_string_for_it():
     r = routes(GENERATED, **{"PUT /api/games/g1/score": [Reply(400, {"error": "Scores must be whole numbers 0 or greater"})]})
     with routed_page(r) as (at, b):
-        at.number_input[0].set_value(21)
+        score_box(at, 0).set_value("21")
         at.button(key="save_g1").click().run()
     assert json.loads([c for c in b.calls if c[0] == "PUT"][0][2]["data"]) == {"home_score": 21, "away_score": ""}
 
@@ -180,8 +183,8 @@ def test_one_blank_input_sends_empty_string_for_it():
 def test_a_tie_refusal_is_shown_as_the_backend_worded_it():
     r = routes(GENERATED, **{"PUT /api/games/g1/score": [Reply(400, {"error": "This league doesn't allow ties"})]})
     with routed_page(r) as (at, _):
-        at.number_input[0].set_value(15)
-        at.number_input[1].set_value(15)
+        score_box(at, 0).set_value("15")
+        score_box(at, 1).set_value("15")
         at.button(key="save_g1").click().run()
         assert errors(at) == ["This league doesn't allow ties"]
 
@@ -197,7 +200,7 @@ def test_clear_is_only_on_played_games_sends_both_null_and_the_row_reads_unplaye
         at.button(key="clear_g1").click().run()
         assert not at.exception
         assert "Bag Ladies vs Corn Stars" in texts(at)
-        assert [n.value for n in at.number_input[:2]] == [None, None]
+        assert [n.value for n in at.text_input if n.label.endswith(" score")][:2] == ["", ""]
         assert not [x for x in at.button if x.key.startswith("clear_g")]
         at.run()
     (put,) = [c for c in b.calls if c[0] == "PUT"]
@@ -238,7 +241,7 @@ def test_entrant_names_and_backend_messages_are_shown_literally():
     r = routes(games, names=[weird, "B"], **{f"POST {L}/schedule": [Reply(400, {"error": "_bad_ *msg* $1"})]})
     with routed_page(r) as (at, _):
         assert f"{weird} vs B" in texts(at)
-        assert at.number_input[0].label == views.literal(weird) + " score"
+        assert score_box(at, 0).label == views.literal(weird) + " score"
         at.button(key="generate").click().run()
         assert errors(at) == [views.literal("_bad_ *msg* $1")]
 
@@ -248,3 +251,31 @@ def test_the_header_email_is_shown_literally():
     with backend():
         at = page("leagues", {"email": "a_b*c@example.com"})
     assert views.literal("a_b*c@example.com") in [m.value for m in at.markdown]
+
+
+def test_what_is_typed_is_sent_as_a_number_when_it_parses_else_as_typed_and_the_refusal_shows():
+    err = "Scores must be whole numbers 0 or greater"
+    for typed, sent in [("-3", -3), ("1.5", 1.5), ("abc", "abc"), ("", ""), (" 21 ", 21)]:
+        r = routes(GENERATED, **{"PUT /api/games/g1/score": [Reply(400, {"error": err})]})
+        with routed_page(r) as (at, b):
+            score_box(at, 0).set_value(typed)
+            score_box(at, 1).set_value("4")
+            at.button(key="save_g1").click().run()
+            assert errors(at) == [err]
+            assert score_box(at, 0).value == typed  # typed values survive a refusal
+            at.run()
+        puts = [c for c in b.calls if c[0] == "PUT"]
+        assert len(puts) == 1
+        body = json.loads(puts[0][2]["data"])
+        assert body == {"home_score": sent, "away_score": 4}
+        assert type(body["home_score"]) is type(sent)
+
+
+def test_generating_clears_the_stale_notice():
+    stale = [game("g9", 1, "Bag Ladies", "Corn Stars")]
+    r = routes(**{f"GET {L}/games": [Reply(200, stale), Reply(200, GENERATED)],
+                  f"POST {L}/schedule": [Reply(201, {"weeks": 2, "message": None})]})
+    with routed_page(r) as (at, _):
+        assert STALE in texts(at)
+        at.button(key="generate").click().run()
+        assert STALE not in texts(at)
