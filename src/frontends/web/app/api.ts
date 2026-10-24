@@ -139,3 +139,10 @@ export const createLeague = (input: NewLeague): Promise<League> =>
   request("POST", "/api/leagues", { auth: true, body: input });
 export const getLeague = (id: string): Promise<League> =>
   request("GET", `/api/leagues/${encodeURIComponent(id)}`, { auth: true });
+
+export type Entrant = { id: string; name: string };
+
+export const listEntrants = (leagueId: string): Promise<Entrant[]> =>
+  request("GET", `/api/leagues/${encodeURIComponent(leagueId)}/entrants`, { auth: true });
+export const addEntrant = (leagueId: string, name: string): Promise<Entrant> =>
+  request("POST", `/api/leagues/${encodeURIComponent(leagueId)}/entrants`, { auth: true, body: { name } });

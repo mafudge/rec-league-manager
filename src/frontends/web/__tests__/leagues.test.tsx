@@ -6,6 +6,7 @@ const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
   useParams: () => ({ id: "abc123" }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 import LeaguePage from "../app/leagues/[id]/page";

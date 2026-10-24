@@ -130,16 +130,59 @@ for w in 0 -1 '"eight"' 2.5 null; do
   [ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
   check "weeks $w returns 400 (got ${status:-no answer} $body)" $?
 done
+post /api/leagues '{"name":"A","location":"B","weeks":3,"allow_ties":"yes"}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Invalid request"}' ]
+check "allow_ties \"yes\" returns 400 Invalid request (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"A","location":"B","weeks":true}' "$access"
+[ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
+check "weeks true returns 400 (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"A","location":"B"}' "$access"
 [ "$status" = "400" ] && [ "$body" = '{"error":"Weeks must be at least 1"}' ]
 check "missing weeks returns 400 (got ${status:-no answer} $body)" $?
 other="other-$email"
 post /api/auth/signup "{\"email\":\"$other\",\"password\":\"cornhole1\"}"
+[ "$status" = "201" ]; check "a second organizer signs up (got ${status:-no answer})" $?
 other_access=$(echo "$body" | jq -r '.token')
 send GET /api/leagues "" "$other_access"
 [ "$status" = "200" ] && [ "$body" = "[]" ]; check "a second organizer's league list is empty (got ${status:-no answer} $body)" $?
 send GET "/api/leagues/$LEAGUE_ID" "" "$other_access"
 [ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
 check "a second organizer opening my league gets 404 (got ${status:-no answer} $body)" $?
+
+# --- US03 · add entrants ---
+get "/api/leagues/$LEAGUE_ID/entrants"
+[ "$status" = "401" ] && [ "$body" = '{"error":"Sign in required"}' ]
+check "GET entrants without a token returns 401 (got ${status:-no answer} $body)" $?
+send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
+[ "$status" = "200" ] && [ "$body" = "[]" ]; check "a new league has no entrants (got ${status:-no answer} $body)" $?
+ENTRANT_NAMES="Bag Ladies|Corn Stars|Hole Patrol|Sack Attack|Board Certified|Toss Bosses"
+ENTRANT_IDS=""
+for n in "Bag Ladies" "Corn Stars" "Hole Patrol" "Sack Attack" "Board Certified" "Toss Bosses"; do
+  post "/api/leagues/$LEAGUE_ID/entrants" "$(jq -cn --arg n "$n" '{name:$n}')" "$access"
+  [ "$status" = "201" ] && echo "$body" | jq -e --arg n "$n" '.name==$n and (.id|type=="string") and (keys|length==2)' >/dev/null
+  check "POST entrant $n returns 201 {id, name} (got ${status:-no answer} $body)" $?
+  ENTRANT_IDS="$ENTRANT_IDS $(echo "$body" | jq -r '.id')"
+done
+send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
+[ "$status" = "200" ] && echo "$body" | jq -e --arg names "$ENTRANT_NAMES" 'map(.name) == ($names | split("|"))' >/dev/null
+check "entrants are listed in the order added (got ${status:-no answer} $body)" $?
+for dup in "Bag Ladies" " bag ladies "; do
+  post "/api/leagues/$LEAGUE_ID/entrants" "$(jq -cn --arg n "$dup" '{name:$n}')" "$access"
+  [ "$status" = "409" ] && [ "$body" = '{"error":"An entrant with that name already exists in this league"}' ]
+  check "adding \"$dup\" again returns 409 (got ${status:-no answer} $body)" $?
+done
+for blank in '""' '"   "' null 5; do
+  post "/api/leagues/$LEAGUE_ID/entrants" "{\"name\":$blank}" "$access"
+  [ "$status" = "400" ] && [ "$body" = '{"error":"Name is required"}' ]
+  check "entrant name $blank returns 400 (got ${status:-no answer} $body)" $?
+done
+send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$access"
+[ "$(echo "$body" | jq length)" = "6" ]; check "the refused names added nothing (got $(echo "$body" | jq length) entrants)" $?
+send GET "/api/leagues/$LEAGUE_ID/entrants" "" "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "a second organizer listing my entrants gets 404 (got ${status:-no answer} $body)" $?
+post "/api/leagues/$LEAGUE_ID/entrants" '{"name":"Intruders"}' "$other_access"
+[ "$status" = "404" ] && [ "$body" = '{"error":"League not found"}' ]
+check "a second organizer adding an entrant to my league gets 404 (got ${status:-no answer} $body)" $?
 
 if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi

@@ -1,0 +1,46 @@
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..auth import current_organizer
+from ..db import get_session
+from ..errors import ApiError
+from ..models import Entrant, Organizer
+from .leagues import owned_league
+
+router = APIRouter(prefix="/api/leagues/{id}/entrants")
+
+
+def entrant_json(e: Entrant) -> dict[str, str]:
+    return {"id": e.id, "name": e.name}
+
+
+@router.get("")
+def list_entrants(id: str, organizer: Organizer = Depends(current_organizer), session: Session = Depends(get_session)):
+    owned_league(id, organizer, session)
+    rows = session.scalars(select(Entrant).where(Entrant.league_id == id).order_by(Entrant.position))
+    return [entrant_json(e) for e in rows]
+
+
+@router.post("", status_code=201)
+def add_entrant(
+    id: str,
+    body: Any = Body(...),
+    organizer: Organizer = Depends(current_organizer),
+    session: Session = Depends(get_session),
+):
+    owned_league(id, organizer, session)
+    raw = body.get("name") if isinstance(body, dict) else None
+    name = raw.strip() if isinstance(raw, str) else ""  # a non-string name counts as blank
+    if not name:
+        raise ApiError(400, "Name is required")
+    existing = session.scalars(select(Entrant.name).where(Entrant.league_id == id)).all()
+    if name.casefold() in {n.strip().casefold() for n in existing}:
+        raise ApiError(409, "An entrant with that name already exists in this league")
+    last = session.scalar(select(func.max(Entrant.position)).where(Entrant.league_id == id))
+    entrant = Entrant(league_id=id, name=name, position=0 if last is None else last + 1)
+    session.add(entrant)
+    session.commit()
+    return entrant_json(entrant)
