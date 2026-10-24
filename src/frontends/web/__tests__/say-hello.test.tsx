@@ -21,7 +21,7 @@ test("shows what the backend replies", async () => {
   vi.stubGlobal("fetch", fetch);
   sayHello("Mike");
   expect(await screen.findByText("Hello Mike")).toBeTruthy();
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8000/api/hello?name=Mike");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/hello?name=Mike");
 });
 
 test("a blank name is sent as typed, and the backend's refusal is shown", async () => {
@@ -29,13 +29,20 @@ test("a blank name is sent as typed, and the backend's refusal is shown", async 
   vi.stubGlobal("fetch", fetch);
   sayHello("");
   expect(await screen.findByText("Name is required")).toBeTruthy();
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8000/api/hello?name=");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/hello?name=");
 });
 
 test("says where it looked when the backend is unreachable", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
   sayHello("Mike");
   expect(await screen.findByText("Can't reach the backend at http://localhost:8000")).toBeTruthy();
+});
+
+test("says the backend had a problem when it answers with a server error", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply(500, {})));
+  sayHello("Mike");
+  expect(await screen.findByText("The backend had a problem (500)")).toBeTruthy();
+  expect(screen.queryByText(/Can't reach/)).toBeNull();
 });
 
 test("pressing Enter submits the form too", async () => {

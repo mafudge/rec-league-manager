@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-import { API_URL, BackendRefused, fetchHello } from "./api";
+import { fetchHello, messageFor } from "./api";
 
 // Sends the name as typed; the backend decides what's valid (SCAF-14).
 export default function SayHello() {
@@ -16,7 +16,7 @@ export default function SayHello() {
     try {
       setReply(await fetchHello(name));
     } catch (err) {
-      setReply(err instanceof BackendRefused ? err.message : `Can't reach the backend at ${API_URL}`);
+      setReply(messageFor(err));
     } finally {
       setAsking(false);
     }

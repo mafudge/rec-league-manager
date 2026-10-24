@@ -11,14 +11,14 @@ test("ignores a trailing slash on the API URL", async () => {
   const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ backend: "django" }) });
   vi.stubGlobal("fetch", fetch);
   expect(await fetchBackendName("http://localhost:8000/")).toBe("django");
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8000/api/backend");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/backend");
 });
 
 test("encodes the name and keeps the base path", async () => {
   const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ message: "Hello José Ada" }) });
   vi.stubGlobal("fetch", fetch);
   expect(await fetchHello("José Ada", "http://localhost:54321/functions/v1/")).toBe("Hello José Ada");
-  expect(fetch).toHaveBeenCalledWith("http://localhost:54321/functions/v1/api/hello?name=Jos%C3%A9+Ada");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:54321/functions/v1/api/hello?name=Jos%C3%A9+Ada");
 });
 
 test("a 400 carries the backend's own error message", async () => {

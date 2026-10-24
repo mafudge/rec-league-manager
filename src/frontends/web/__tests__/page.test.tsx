@@ -14,7 +14,7 @@ test("says hello from the backend that answered", async () => {
   render(<Home />);
   expect(screen.getByRole("heading", { name: "Rec League Manager" })).toBeTruthy();
   expect(await screen.findByText("Hello from supabase")).toBeTruthy();
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8000/api/backend");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/backend");
 });
 
 test("says where it looked when the backend is unreachable", async () => {
@@ -23,10 +23,11 @@ test("says where it looked when the backend is unreachable", async () => {
   expect(await screen.findByText("Can't reach the backend at http://localhost:8000")).toBeTruthy();
 });
 
-test("treats an error status as unreachable", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+test("says the backend had a problem when it answers with a server error", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }));
   render(<Home />);
-  expect(await screen.findByText("Can't reach the backend at http://localhost:8000")).toBeTruthy();
+  expect(await screen.findByText("The backend had a problem (500)")).toBeTruthy();
+  expect(screen.queryByText(/Can't reach/)).toBeNull();
 });
 
 test("links to sign up and sign in", () => {
