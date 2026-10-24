@@ -14,7 +14,7 @@ python manage.py migrate
 ```bash
 python manage.py runserver     # port 8001, so it can run alongside FastAPI on 8000
 curl localhost:8001/api/backend   # {"backend":"django"}; a trailing slash works too
-../../contract-test.sh http://localhost:8001
+../../contract-test.sh http://localhost:8001   # while the port is unfinished: CONTRACT_UPTO=accounts (then leagues, schedule, all)
 ```
 `ALLOWED_HOSTS` accepts only `localhost`. A phone on the LAN would need this machine's address added.
 
@@ -25,7 +25,7 @@ python manage.py test
 
 ## TODO
 - [ ] Models: league, entrant, game (migrations)
-- [ ] Organizer sign-in with Django auth (US01)
+- [x] Organizer sign-up and sign-in (US01, US13): Django's `User` (email is the username) with simplejwt behind the contract's `{token, refresh_token}`; every error is `{"error": …}` (`api/errors.py`). Only the 8-character password rule applies, not Django's validators. Set `JWT_SECRET` outside development (it falls back to `SECRET_KEY`)
 - [ ] League, entrant, schedule, score and standings endpoints (US02–US07)
 - [ ] Public read-only endpoints (US07)
 - [ ] Move `SECRET_KEY`/`DEBUG` to environment variables before any deployment

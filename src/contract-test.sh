@@ -3,10 +3,15 @@
 # Usage: ./contract-test.sh <API_URL>
 #   e.g. ./contract-test.sh http://localhost:8000
 #        ./contract-test.sh http://localhost:54321/functions/v1
+# A backend still being built can check just the sections it has: CONTRACT_UPTO=accounts|leagues|schedule|all (default all).
+#   accounts = health/backend/hello + signup/login/refresh/me    leagues = leagues + entrants
+#   schedule = schedule, games, scores, clear                    all = standings + public
 API_URL=${1:?usage: $0 <API_URL>}
 API_URL=${API_URL%/}
 ORIGIN=http://localhost:3000
 command -v jq >/dev/null 2>&1 || { echo "contract-test.sh needs jq"; exit 1; }
+UPTO=${CONTRACT_UPTO:-all}
+case "$UPTO" in accounts|leagues|schedule|all) ;; *) echo "CONTRACT_UPTO must be accounts, leagues, schedule or all (got $UPTO)"; exit 1 ;; esac
 failures=0
 headers=$(mktemp)
 trap 'rm -f "$headers"' EXIT
@@ -14,6 +19,12 @@ trap 'rm -f "$headers"' EXIT
 check() { # check <description> <exit-code-of-the-condition>
   if [ "$2" -eq 0 ]; then echo "ok   $1"; else echo "FAIL $1"; failures=$((failures + 1)); fi
 }
+
+finish() { # finish [suffix]: summarize and exit
+  if [ "$failures" -eq 0 ]; then echo "contract ok$1: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
+  exit 0
+}
+stop_after() { [ "$UPTO" = "$1" ] && finish " (up to $1)"; true; } # stop_after <section>
 
 same() { # same <expected-json>: does $body equal it as JSON? Spacing, key order and \u escapes don't matter.
   [ "$(printf '%s' "$body" | jq -S -c . 2>/dev/null)" = "$(printf '%s' "$1" | jq -S -c .)" ]
@@ -109,6 +120,8 @@ check "GET /api/auth/me without a token returns 401 (got ${status:-no answer} $b
 send GET /api/auth/me "" "$access"
 [ "$status" = "200" ] && same "$(jq -cn --arg e "$(echo "$email" | tr 'A-Z' 'a-z')" '{email:$e}')"
 check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
+
+stop_after accounts
 
 # --- US02 · create a league ---
 league='{"name":"Tuesday Cornhole","location":"Joe'"'"'s Tavern","sport":"Cornhole","season":"Fall 2026","weeks":8}'
@@ -215,6 +228,8 @@ post "/api/leagues/$LEAGUE_ID/entrants" '{"name":"Intruders"}' "$other_access"
 [ "$status" = "404" ] && same '{"error":"League not found"}'
 check "a second organizer adding an entrant to my league gets 404 (got ${status:-no answer} $body)" $?
 
+stop_after leagues
+
 # --- US04 · generate a schedule, clear scores ---
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$other_access"
 [ "$status" = "404" ] && same '{"error":"League not found"}'
@@ -312,6 +327,8 @@ GAME_ID=$(echo "$body" | jq -r '[.[]|select(.week==1 and .away_id!=null)][0].id'
 put "/api/games/$GAME_ID/score" '{"home_score":21,"away_score":14}' "$access"
 [ "$status" = "200" ]; check "scoring a week-1 game 21-14 again returns 200 (left for the standings checks) (got ${status:-no answer} $body)" $?
 
+stop_after schedule
+
 # --- US06 · standings compute themselves ---
 SORTED='Sorted by wins, then point difference, then points for.'
 send GET "/api/leagues/$LEAGUE_ID/standings" "" "$access"
@@ -331,4 +348,4 @@ send GET "/api/public/zzzzzz" "" ""
 [ "$status" = "404" ] && same '{"error":"League not found"}'
 check "GET /public/zzzzzz returns 404 League not found (got ${status:-no answer} $body)" $?
 
-if [ "$failures" -eq 0 ]; then echo "contract ok: $API_URL"; else echo "$failures check(s) failed: $API_URL"; exit 1; fi
+finish

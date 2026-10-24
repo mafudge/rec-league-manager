@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -89,20 +91,8 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+# Deliberately empty: signup enforces only the contract's 8-character minimum, the same on every backend.
+AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
@@ -129,3 +119,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Browser frontends (web, Flutter) run on another port, so allow any origin (ADR 003).
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Sign-in (US01/US13): simplejwt only, so no session auth and no CSRF on the API. Views are public unless
+# they ask for IsAuthenticated, so health/hello/public stay open.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
+    'EXCEPTION_HANDLER': 'api.errors.exception_handler',
+    'DEFAULT_PERMISSION_CLASSES': [],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'SIGNING_KEY': os.environ.get('JWT_SECRET', SECRET_KEY),
+}
