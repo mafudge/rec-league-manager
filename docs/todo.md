@@ -4,5 +4,4 @@
 
 ## MVP (v0.2.0)
 
-- **SB-SCH** Supabase · Schedule and scores — #37.
 - **SB-PUB** Supabase · Standings and public page — #38.

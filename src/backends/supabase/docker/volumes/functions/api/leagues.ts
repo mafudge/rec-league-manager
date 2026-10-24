@@ -29,7 +29,7 @@ const codePoints = (s: string) => [...s].length
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
 
 /** Something went wrong that isn't the caller's fault; PostgREST's body stays in the log. */
-const problem = (what: string, error: PgError): never => {
+export const problem = (what: string, error: PgError): never => {
   console.error(`${what} failed`, error?.code, error?.message)
   return fail(500, 'The backend had a problem')
 }
