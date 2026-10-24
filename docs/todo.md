@@ -4,7 +4,6 @@
 
 ## MVP (v0.2.0)
 
-- **ST-SCH** Streamlit · Schedule and scores — #48.
 - **ST-PUB** Streamlit · Standings and public page — #49.
 - **FL-ACC** Flutter · Accounts — #50.
 - **FL-LEA** Flutter · Leagues and entrants — #51.

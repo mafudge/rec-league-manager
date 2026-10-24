@@ -67,7 +67,7 @@ def header() -> None:
         except Exception:
             pass  # anything else just leaves the email blank
     who, out = st.columns([3, 1], vertical_alignment="center")
-    who.write(st.session_state.get("email", ""))
+    who.write(literal(st.session_state.get("email", "")))
     if out.button("Sign out", key="sign_out"):
         api.clear_session(st.session_state)
         go("signin")
@@ -84,7 +84,7 @@ def _auth_page(signup: bool) -> None:
         try:
             (api.sign_up if signup else api.sign_in)(st.session_state, email, password)
         except Exception as e:
-            st.error(api.message_for(e))
+            st.error(literal(api.message_for(e)))
         else:
             go("leagues")
     st.write("Already have an account?" if signup else "New here?")
@@ -103,7 +103,7 @@ def _fail(e: Exception) -> None:
     """A failed call: the backend's own words (or where we looked); a lost session goes to Sign in."""
     if isinstance(e, api.SignInRequired):
         go("signin")
-    st.error(api.message_for(e))
+    st.error(literal(api.message_for(e)))
 
 
 def literal(text: str) -> str:
@@ -185,7 +185,9 @@ def league_home() -> None:
     entrants_tab, schedule_tab, standings_tab = st.tabs(["Entrants", "Schedule", "Standings"])
     with entrants_tab:
         entrants(league_id)
-    # Schedule and Standings stay empty until their tasks land.
+    with schedule_tab:
+        schedule(league_id)
+    # Standings stays empty until its task lands.
 
 
 def entrants(league_id: str) -> None:
@@ -214,3 +216,108 @@ def entrants(league_id: str) -> None:
         st.write("No entrants yet — add the first one.")
     for entrant in rows:
         st.text(entrant["name"])
+
+
+def _act(action, note_of=lambda result: None, error_key: str = "schedule_error") -> None:
+    """Run one Schedule action, then rerun to reload the games. Its message (the backend's note or refusal)
+    waits in the session for that rerun. Only the run the click caused gets here, so a later rerun never re-sends it."""
+    for key in [k for k in st.session_state if k.startswith("game_error_")]:
+        del st.session_state[key]
+    st.session_state["schedule_note"] = st.session_state["schedule_error"] = ""
+    try:
+        st.session_state["schedule_note"] = note_of(action()) or ""
+    except api.SignInRequired:
+        go("signin")
+    except Exception as e:
+        st.session_state[error_key] = api.message_for(e)
+    st.rerun()
+
+
+def schedule(league_id: str) -> None:
+    """The Schedule tab: generate the round robin, read it week by week, enter and clear scores."""
+    s = st.session_state
+    if st.button("Generate schedule", key="generate"):
+        _act(lambda: api.generate_schedule(s, league_id), lambda r: r.get("message"))
+    if s.get("confirm_clear") != league_id:
+        if st.button("Clear all scores", key="clear_all"):
+            s["confirm_clear"], s["schedule_error"] = league_id, ""
+            st.rerun()
+    else:
+        st.write("Clear every score in this league?")
+        yes, no = st.columns(2)
+        if yes.button("Yes, clear every score", key="clear_all_yes"):
+            s["confirm_clear"] = None
+            _act(lambda: api.clear_scores(s, league_id))
+        if no.button("Cancel", key="clear_all_no"):
+            s["confirm_clear"], s["schedule_error"] = None, ""
+            st.rerun()
+    if s.get("schedule_note"):
+        st.text(s["schedule_note"])
+    if s.get("schedule_error"):
+        st.error(literal(s["schedule_error"]))
+    try:
+        games = api.list_games(s, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    try:  # entrants only feed the stale notice, so a failed fetch just hides it
+        people = api.list_entrants(s, league_id)
+    except api.SignInRequired:
+        go("signin")
+    except Exception:
+        people = []
+    in_games = {g["home_id"] for g in games} | {g["away_id"] for g in games}
+    if games and any(p["id"] not in in_games for p in people):
+        st.text("Regenerate the schedule to include new entrants.")
+    if not games:
+        st.text("No schedule yet — add entrants, then generate.")
+    for week in sorted({g["week"] for g in games}):
+        st.subheader(f"Week {week}")
+        for g in games:
+            if g["week"] == week:
+                _game(league_id, g)
+
+
+def _text(score) -> str:
+    return "" if score is None else str(score)
+
+
+def _score(text: str):
+    """What a box sends: "" when blank (never null, which means Clear), a number when it parses as one,
+    else the text as typed. The backend decides what is a valid score and says so."""
+    text = text.strip()
+    if text == "":
+        return ""
+    for kind in (int, float):
+        try:
+            value = kind(text)
+        except ValueError:
+            continue
+        if kind is float and value != value or value in (float("inf"), float("-inf")):
+            break  # nan / inf are not JSON numbers: send the text
+        return value
+    return text
+
+
+def _game(league_id: str, g: dict) -> None:
+    """One game: who plays whom (or the score), two score boxes that stay open so a score can be corrected."""
+    s = st.session_state
+    if g["away_name"] is None:
+        st.text(f"{g['home_name']} — bye")
+        return
+    played = g["home_score"] is not None and g["away_score"] is not None
+    with st.container(border=True):
+        st.text(f"{g['home_name']} {g['home_score']} – {g['away_score']} {g['away_name']}" if played
+                else f"{g['home_name']} vs {g['away_name']}")
+        # Keys carry the saved score, so a reload that changes it (Clear) brings fresh boxes.
+        stamp = f"{g['id']}_{g['home_score']}_{g['away_score']}"
+        with st.form(f"score_{g['id']}", border=False):
+            home = st.text_input(literal(g["home_name"]) + " score", value=_text(g["home_score"]), key=f"home_{stamp}")
+            away = st.text_input(literal(g["away_name"]) + " score", value=_text(g["away_score"]), key=f"away_{stamp}")
+            saved = st.form_submit_button("Save", key=f"save_{g['id']}")
+        if saved:
+            _act(lambda: api.save_score(s, g["id"], _score(home), _score(away)), error_key=f"game_error_{g['id']}")
+        if played and st.button("Clear", key=f"clear_{g['id']}"):
+            _act(lambda: api.save_score(s, g["id"], None, None), error_key=f"game_error_{g['id']}")
+        if s.get(f"game_error_{g['id']}"):
+            st.error(literal(s[f"game_error_{g['id']}"]))
