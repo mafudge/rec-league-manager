@@ -21,11 +21,11 @@ Rec League Manager — a tool for the volunteer who runs a recreational league (
 6. All GitHub issues should have acceptance criteria and definition of done sections, suitable for a product manager.
 7. Track the Github issue back to the backlog version number with labels ex: v1.10.0, US01, etc.
 8. Do not wander off task. If you encounter a bug, feature or enhancement idea while working, add it to the backlog and label it. 
-9. Always code in a `dev/branch` for the Github issue and when done, push to `main`. 
+9. Code in a `dev/<issue>-<slug>` branch cut from the current release branch (`release/vX.Y.Z`) and merge it back with `--no-ff`. The release branch merges to `main`, tagged, when every issue in it is closed.
 10. We test the code we write. Unit and integration tests.
 11. An issue is not done until tests pass, the server runs and the app runs without error.
 12. As you close Github issues review `docs/todo.md` and move completed items into `docs/xchangelog.md`
-13. start coding on `main` with a clean working directory before you start work on the next issue
+13. Start each issue from the release branch with a clean working directory.
 
 ## Running the stubs
 Everything lives under `src/`; each folder's `README.md` is the full reference. Run from the repo root. Default ports are chosen so a backend and a frontend can run together. Any frontend works with any backend (ADR 003): [`src/README.md`](src/README.md) has the 4 × 3 table of pairings and each backend's `API_URL`; `src/contract-test.sh <API_URL>` checks a running backend.

@@ -4,4 +4,11 @@
 
 ## MVP (v0.2.0)
 
-- **US06-01** Standings refuse games that don't match the entrants — #15.
+- **US13** Organizer signs up — #17.
+- **US01** Organizer signs in — #18.
+- **US02** Create a league — #19.
+- **US03** Add entrants — #20.
+- **US04** Generate a round-robin schedule — #21.
+- **US05** Record a score — #22.
+- **US06** Standings compute themselves — #23 (closes US06-01, #15).
+- **US07** Public link to schedule and standings — #24.
