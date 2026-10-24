@@ -256,6 +256,16 @@ class Api {
       Game.fromJson(g as Map<String, dynamic>),
   ];
 
+  Future<Standings> getStandings(String leagueId) async => Standings.fromJson(
+    await request('GET', '/api/leagues/$leagueId/standings', auth: true)
+        as Map<String, dynamic>,
+  );
+
+  /// The public page's data: no token is attached, whoever is signed in.
+  Future<PublicView> getPublic(String slug) async => PublicView.fromJson(
+    await request('GET', '/api/public/$slug') as Map<String, dynamic>,
+  );
+
   /// DELETE with no body and no Content-Type (Firebase).
   Future<void> clearScores(String leagueId) =>
       request('DELETE', '/api/leagues/$leagueId/scores', auth: true);
@@ -318,7 +328,7 @@ class League {
   });
 
   factory League.fromJson(Map<String, dynamic> j) => League(
-    id: j['id'] as String,
+    id: (j['id'] as String?) ?? '', // the public League has no id
     slug: j['slug'] as String,
     name: j['name'] as String,
     location: j['location'] as String,
@@ -338,4 +348,48 @@ class Entrant {
   factory Entrant.fromJson(Map<String, dynamic> j) =>
       Entrant(id: j['id'] as String, name: j['name'] as String);
   final String id, name;
+}
+
+class StandingsRow {
+  StandingsRow.fromJson(Map<String, dynamic> j)
+    : id = j['entrant_id'] as String,
+      name = j['name'] as String,
+      w = j['w'] as int,
+      l = j['l'] as int,
+      t = j['t'] as int,
+      pf = j['pf'] as int,
+      pa = j['pa'] as int,
+      diff = j['diff'] as int;
+  final String id, name;
+  final int w, l, t, pf, pa, diff;
+}
+
+/// What `GET /api/leagues/{id}/standings` answers; the backend sorts the rows and words the tiebreak.
+class Standings {
+  Standings.fromJson(Map<String, dynamic> j)
+    : rows = [
+        for (final r in j['rows'] as List)
+          StandingsRow.fromJson(r as Map<String, dynamic>),
+      ],
+      played = j['played'] as int,
+      tiebreak = j['tiebreak'] as String;
+  final List<StandingsRow> rows;
+  final int played;
+  final String tiebreak;
+}
+
+/// What `GET /api/public/{slug}` answers: the league (no id), this week, every game and the standings.
+class PublicView {
+  PublicView.fromJson(Map<String, dynamic> j)
+    : league = League.fromJson(j['league'] as Map<String, dynamic>),
+      currentWeek = j['current_week'] as int?,
+      games = [
+        for (final g in j['games'] as List)
+          Game.fromJson(g as Map<String, dynamic>),
+      ],
+      standings = Standings.fromJson(j['standings'] as Map<String, dynamic>);
+  final League league;
+  final int? currentWeek;
+  final List<Game> games;
+  final Standings standings;
 }

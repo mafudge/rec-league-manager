@@ -5,6 +5,7 @@ import '../api.dart';
 import 'entrants.dart';
 import 'leagues.dart';
 import 'schedule.dart';
+import 'standings.dart';
 
 /// This app's own origin; empty when the page has none (e.g. a test run).
 String pageOrigin() {
@@ -16,7 +17,7 @@ String pageOrigin() {
 }
 
 /// The league home: name, location, sport · season, the public link, and tabs over Entrants, Schedule and
-/// Standings (the last two are filled in by later tasks).
+/// Standings .
 class LeagueHome extends StatefulWidget {
   const LeagueHome({
     super.key,
@@ -139,7 +140,11 @@ class _LeagueHomeState extends State<LeagueHome> {
                 children: [
                   EntrantsTab(api: widget.api, leagueId: widget.id),
                   ScheduleTab(api: widget.api, leagueId: widget.id),
-                  const SizedBox(),
+                  StandingsTab(
+                    api: widget.api,
+                    leagueId: widget.id,
+                    allowTies: league.allowTies,
+                  ),
                 ],
               ),
             ),
