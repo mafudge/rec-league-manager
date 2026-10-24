@@ -4,3 +4,7 @@
 
 ## MVP (v0.2.0)
 
+- **DJ-ACC** Django · Accounts — #30.
+- **DJ-LEA** Django · Leagues and entrants — #31.
+- **DJ-SCH** Django · Schedule and scores — #32.
+- **DJ-PUB** Django · Standings and public page — #33.
