@@ -315,6 +315,18 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given the backend is unreachable, when I press Say hello, then the screen says "Can't reach the backend at <API_URL>". *(negative)*
 - Given either frontend and any of the four backends, when I do the above, then it works the same.
 
+### SCAF-15 · Flutter is web-only
+
+**Folder.** `src/frontends/flutter/`, `src/backends/django/`, `src/README.md`, `CLAUDE.md`, `docs/03-architecture.md`.
+
+**Scope.** Reverses SCAF-11. The Android emulator needs nested virtualization and several GB of RAM and disk, more than a student laptop or this VM can spare alongside the backends. Flutter's point here (one codebase, a different toolchain) is still made in Chrome. Delete the `android/` platform folder and `test/android_manifest_test.dart`; remove the emulator and `10.0.2.2` instructions from the docs; drop `10.0.2.2` from Django's `ALLOWED_HOSTS`, which was there only for the emulator. Android can come back later with `flutter create --platforms=android .`.
+
+**Acceptance criteria**
+- Given a clean clone, when I run `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` in `src/frontends/flutter`, then the app opens in Chrome and says "Hello from fastapi".
+- Given `src/frontends/flutter`, when I list it, then there is no `android/` folder, and `flutter analyze && flutter test` pass.
+- Given `src/README.md`, `CLAUDE.md`, the Flutter README and `docs/03-architecture.md`, when I read them, then none tells me to start an Android emulator or use `10.0.2.2`. *(negative)*
+- Given Django is running, when a request arrives with `Host: 10.0.2.2:8001`, then it is refused with 400. *(negative)*
+
 ---
 
 ## Cut in the edit pass
