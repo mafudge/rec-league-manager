@@ -230,6 +230,13 @@ check "GET games lists 15 games across weeks 1-5 in week order (got ${status:-no
 post "/api/leagues/$LEAGUE_ID/schedule" "" "$access"
 [ "$status" = "201" ] && same '{"weeks":5,"message":null}'
 check "generating again returns 201 with message null (got ${status:-no answer} $body)" $?
+post /api/leagues '{"name":"Pair","location":"B","weeks":8}' "$access"
+PAIR_ID=$(echo "$body" | jq -r '.id')
+post "/api/leagues/$PAIR_ID/entrants" '{"name":"One"}' "$access"
+post "/api/leagues/$PAIR_ID/entrants" '{"name":"Two"}' "$access"
+post "/api/leagues/$PAIR_ID/schedule" "" "$access"
+[ "$status" = "201" ] && same '{"weeks":1,"message":"This schedule needs 1 week, so the league now runs 1 week instead of 8."}'
+check "POST schedule on 2 entrants in an 8-week league says 1 week, not 1 weeks (got ${status:-no answer} $body)" $?
 post /api/leagues '{"name":"Tiny","location":"B","weeks":3}' "$access"
 TINY_ID=$(echo "$body" | jq -r '.id')
 post "/api/leagues/$TINY_ID/entrants" '{"name":"Solo"}' "$access"

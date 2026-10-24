@@ -35,3 +35,21 @@ def test_two_ids_make_one_game():
 
 def test_seven_ids_make_seven_weeks():
     assert len(round_robin(ids(7))) == 7
+
+
+def test_every_pair_once_and_home_away_balanced_for_2_to_52_entrants():
+    for n in range(2, 53):
+        everyone = ids(n)
+        home = dict.fromkeys(everyone, 0)
+        away = dict.fromkeys(everyone, 0)
+        seen = []
+        for week in round_robin(everyone):
+            for h, a in week:
+                if a is None:
+                    continue  # a bye is neither home nor away
+                home[h] += 1
+                away[a] += 1
+                seen.append(frozenset((h, a)))
+        assert len(seen) == n * (n - 1) // 2 and set(seen) == {frozenset(c) for c in combinations(everyone, 2)}, n
+        for e in everyone:
+            assert abs(home[e] - away[e]) <= 1, (n, e, home[e], away[e])
