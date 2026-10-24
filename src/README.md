@@ -97,6 +97,9 @@ Every backend serves these routes under its `API_URL`. Every response is JSON an
 | `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
 | `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required` |
 | 🔒 `GET /api/auth/me` (US01) | `200 {"email"}`, the signed-in organizer's lower-cased email (the web header shows it) |
+| 🔒 `GET /api/leagues` (US02) | `200 [League]`, oldest first, only the signed-in organizer's |
+| 🔒 `POST /api/leagues` `{name, location, sport, season, weeks, allow_ties}` (US02) | `201 League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `400 Name is required`, `400 Location is required`, `400 Weeks must be at least 1` (missing, not a whole number, or < 1), checked in that order. Name, location, sport and season are trimmed; `sport` and `season` are optional and stored as `""`; `allow_ties` defaults to `false` and must be a JSON boolean (else `400 Invalid request`). `slug` is 6 characters from `abcdefghjkmnpqrstuvwxyz23456789` |
+| 🔒 `GET /api/leagues/{id}` (US02) | `200 League`; `404 League not found` (unknown, or another organizer's) |
 
 A route marked with a lock needs `Authorization: Bearer <token>`; a missing, malformed or expired token gets `401 {"error": "Sign in required"}`. Malformed bodies are `400 {"error": "Invalid request"}`, never 422. Access tokens last 1 hour, refresh tokens 30 days.
 

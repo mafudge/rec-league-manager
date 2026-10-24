@@ -119,3 +119,23 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export const fetchMe = (): Promise<{ email: string }> => request("GET", "/api/auth/me", { auth: true });
+
+export type League = {
+  id: string;
+  slug: string;
+  name: string;
+  location: string;
+  sport: string;
+  season: string;
+  weeks: number;
+  allow_ties: boolean;
+};
+
+/** What the create form sends; `weeks` is null when the box was blank (the backend refuses it). */
+export type NewLeague = Omit<League, "id" | "slug" | "weeks"> & { weeks: number | null };
+
+export const listLeagues = (): Promise<League[]> => request("GET", "/api/leagues", { auth: true });
+export const createLeague = (input: NewLeague): Promise<League> =>
+  request("POST", "/api/leagues", { auth: true, body: input });
+export const getLeague = (id: string): Promise<League> =>
+  request("GET", `/api/leagues/${encodeURIComponent(id)}`, { auth: true });

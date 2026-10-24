@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -28,6 +29,8 @@ class League(Base):
     season: Mapped[str] = mapped_column(String(100), default="")
     weeks: Mapped[int] = mapped_column(Integer)
     allow_ties: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Lists are oldest first, so a league remembers when it was made.
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Entrant(Base):
