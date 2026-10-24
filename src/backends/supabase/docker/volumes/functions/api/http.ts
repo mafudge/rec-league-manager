@@ -33,8 +33,31 @@ export async function objectBody(req: Request): Promise<Record<string, unknown>>
   return body as Record<string, unknown>
 }
 
-export type Handler = (req: Request, url: URL) => Response | Promise<Response>
+export type Params = Record<string, string>
+export type Handler = (req: Request, url: URL, params: Params) => Response | Promise<Response>
+/** `path` may hold `:name` segments, each matching exactly one path segment (e.g. /api/leagues/:id). */
 export type Route = { method: string; path: string; handler: Handler }
+
+const decode = (segment: string) => {
+  try {
+    return decodeURIComponent(segment)
+  } catch {
+    return segment // a broken escape is just an id nothing has, so the route answers its own 404
+  }
+}
+
+/** The route's params if `path` fits its pattern, else null. */
+function match(pattern: string, path: string): Params | null {
+  const want = pattern.split('/')
+  const got = path.split('/')
+  if (want.length !== got.length) return null
+  const params: Params = {}
+  for (let i = 0; i < want.length; i++) {
+    if (want[i].startsWith(':') && got[i] !== '') params[want[i].slice(1)] = decode(got[i])
+    else if (want[i] !== got[i]) return null
+  }
+  return params
+}
 
 /** Map (method, path) to a handler. Never lets anything but our own {"error"} bodies out. */
 export async function handle(req: Request, routes: Route[]): Promise<Response> {
@@ -42,11 +65,14 @@ export async function handle(req: Request, routes: Route[]): Promise<Response> {
   try {
     const url = new URL(req.url)
     const path = url.pathname.replace(/\/+$/, '')
-    const known = routes.filter((r) => r.path === path)
+    const known = routes.flatMap((r) => {
+      const params = match(r.path, path)
+      return params ? [{ route: r, params }] : []
+    })
     if (known.length === 0) return fail(404, 'Not Found')
-    const route = known.find((r) => r.method === req.method)
-    if (!route) return fail(405, 'Method Not Allowed')
-    return await route.handler(req, url)
+    const hit = known.find((k) => k.route.method === req.method)
+    if (!hit) return fail(405, 'Method Not Allowed')
+    return await hit.route.handler(req, url, hit.params)
   } catch (e) {
     if (e instanceof ApiError) return json({ error: e.message }, e.status)
     console.error('unexpected error', e)

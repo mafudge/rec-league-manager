@@ -2,7 +2,9 @@
 // Reached at {SUPABASE_URL}/functions/v1/api/..., so API_URL = http://localhost:54321/functions/v1
 // The gateway strips /functions/v1, so this function sees paths like /api/health.
 import { auth } from './auth.ts'
+import { userClient } from './db.ts'
 import { handle, json, objectBody, type Route } from './http.ts'
+import { leagueRoutes } from './leagues.ts'
 
 const routes: Route[] = [
   { method: 'GET', path: '/api/health', handler: () => json({ status: 'ok' }) },
@@ -41,6 +43,8 @@ const routes: Route[] = [
     path: '/api/auth/me',
     handler: async (req) => json({ email: (await auth.organizerFrom(req)).email }),
   },
+  // Organizer routes query as the organizer (their own token), so row-level security filters by owner.
+  ...leagueRoutes({ organizerFrom: auth.organizerFrom, clientFor: userClient }),
 ]
 
 export default {
