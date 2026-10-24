@@ -4,4 +4,3 @@
 
 ## MVP (v0.2.0)
 
-- **SCAF-16** The hello demo reports server errors honestly — #29.
