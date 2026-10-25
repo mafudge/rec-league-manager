@@ -22,6 +22,14 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Evidence.** Gap found planning v0.2.0: US01 signs in an organizer, but nothing creates one. PRD §7: an organizer owns leagues; a league belongs to one organizer. Not a co-organizer feature: each organizer sees only their own leagues (PRD §3).
 
+### US13-01 · Passwords are at most 72 characters
+
+**Found porting to Supabase.** Supabase's sign-in service refuses passwords over 72 characters, FastAPI's bcrypt silently uses only the first 72, and Django accepts any length, so the backends disagreed. **Decided 2026-10-24: cap it in v0.2.0, on every backend.** **Done in v0.2.0 (#39):** signup refuses a password over 72 bytes on every backend.
+
+**Acceptance criteria**
+- Given a password longer than 72 bytes in UTF-8 (72 plain letters; accented letters and emoji count more, because bcrypt limits bytes), when I sign up, then no account is created and I see "Password must be 72 characters or fewer". *(negative)*
+- Given a password of exactly 72 bytes, when I sign up, then the account is created and I can sign in with it.
+
 ### US01 · Organizer signs in
 
 **Story.** As the organizer, I want to sign in with an email and password so that only I can change the league.
@@ -108,6 +116,40 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given a game whose home or away entrant is not in the entrant list, when standings are computed, then a `ValueError` is raised naming the week and the unknown entrant id. *(negative)*
 - Given a game where home and away are the same entrant, when standings are computed, then a `ValueError` is raised naming the week and that entrant. *(negative)*
 - Given a bye (`away_id` is `None`), when standings are computed, then no error is raised and it still contributes nothing.
+
+### US05-01 · Clear one game's score
+
+**Found in** the v0.2.0 review (#25 review, I4). A score saved on the wrong game could only be undone with "Clear all scores", which clears the whole season. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given a played game, when I press "Clear" on that game, then it shows as unplayed again, its score no longer counts in standings, and every other game keeps its score.
+- Given the API, when `PUT /api/games/{id}/score` is sent with both scores `null`, then the game is cleared (200, both scores `null`). One `null` and one number is still refused with "Scores must be whole numbers 0 or greater". *(negative)*
+- Given a bye, when both scores are `null`, then it is still refused with "A bye has no score". *(negative)*
+
+### US02-01 · Names and weeks have limits
+
+**Found in** the v0.2.0 review. Nothing capped a name's length or a league's weeks. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given a league name or an entrant name longer than 100 characters (after trimming), when I submit, then it is refused with "Name must be 100 characters or fewer". *(negative)*
+- Given weeks above 52, when I create a league, then it is refused with "Weeks must be between 1 and 52". Weeks of 0 or less still get "Weeks must be at least 1" (US02). *(negative)*
+- Given a league already has 52 entrants, when I add another, then it is refused with "A league can have at most 52 entrants", because 53 entrants need a 53-week schedule. *(negative)*
+
+### US04-01 · Schedule fairness and freshness
+
+**Found in** the v0.2.0 build. Entrants added after the schedule was generated got no games, silently; and the first entrant was the home side every week. **Decided 2026-10-24: fix both in v0.2.0.**
+
+**Acceptance criteria**
+- Given a schedule exists, when an entrant has no games in it (added after generating), then the Schedule tab says "Regenerate the schedule to include new entrants."
+- Given any number of entrants from 2 to 52, when the schedule is generated, then each entrant's home games and away games differ by at most one (byes don't count).
+- Given a league that ends up with 1 week, when the schedule is generated and the weeks change, then the message says "1 week", not "1 weeks".
+
+### SCAF-16 · The hello demo reports server errors honestly
+
+**Found in** US01 (#18). The home page's "Hello from …" greeting and Say hello box still said "Can't reach the backend at …" for a server error. **Decided 2026-10-24: fix in v0.2.0.**
+
+**Acceptance criteria**
+- Given the backend answers 500, when the home page loads or I press Say hello, then it says "The backend had a problem (500)". "Can't reach the backend at …" is only for a backend that doesn't answer.
 
 ### US07 · Public link to schedule and standings
 
@@ -355,6 +397,64 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 - Given Django is running, when a request arrives with `Host: 10.0.2.2:8001`, then it is refused with 400. *(negative)*
 
 ---
+
+## Polish found building v0.2.0 (not scheduled)
+
+Minor findings from the per-story and whole-branch reviews of the FastAPI + web reference build. None breaks an acceptance criterion; each is a candidate for a later release. Label `polish` when one is scheduled.
+
+### POL-01 · Backend hardening (FastAPI)
+- Warn at startup when `JWT_SECRET` is unset (belongs with REL-01 deploys).
+- An email of just `@` passes the "has an @" rule.
+- Login still accepts a password over 72 bytes on FastAPI (bcrypt truncates it) and Supabase (GoTrue truncates it), while Django refuses it; refuse it with `401 Email or password is incorrect` on all three (the signup half is done, US13-01).
+- Login answers faster for an unknown email than a wrong password (bcrypt skipped), which reveals whether an account exists.
+- On FastAPI, Django and Supabase the entrant duplicate check isn't enforced by the database, so two simultaneous adds could both pass. (Firebase does the check and the insert in one Firestore transaction, so it is not affected.)
+- A slug collision that survives every retry answers 409 "Could not create the league, try again", which isn't in the contract.
+- `DATABASE_URL`'s default is relative to the working directory.
+- The public and standings routes repeat the same load-and-compute block.
+- FastAPI and Django both accept the non-JSON constants `NaN`/`Infinity` in a body (Python's `json` allows them); the JS backends refuse them as `400 Invalid request`. Both Python backends should refuse them too.
+- Supabase's sign-in service refuses some addresses that contain an `@` (such as `a@`), answering "Enter a valid email address" where FastAPI and Django accept them.
+- Firebase's Auth emulator, like Supabase's, refuses some addresses that contain an `@` (such as `a@b`).
+- Django stores the email in `User.username` (150 characters); longer emails would fail on a database that enforces it (SQLite does not; FastAPI allows 320).
+- Django answers an unknown URL outside `/api/` with its HTML 404 page.
+- The Supabase email check uses JavaScript `trim()`, FastAPI and Django use Python `strip()`; they differ on U+FEFF (JS trims it, Python does not) and on `\x1c`-`\x1f` (Python strips them, JS does not).
+- `src/backends/supabase/test.sh` puts `ANON_KEY` on the `docker run` command line, where `ps` and `docker inspect` show it; pass it through the environment or an env file.
+- The live Supabase tests (`live_test.ts`) leave their users, leagues and games behind in the local database.
+- The live tests' check that the anon key is refused asserts a loose status range, not the exact status.
+- GoTrue rate-limiting (429) on signup or login is answered as 500 "The backend had a problem"; it should be a 4xx the frontends can show.
+- Signup on a Supabase stack with email auto-confirm turned off answers 500, because GoTrue returns no session.
+- On Supabase, the 409 "scores are recorded" guard on schedule replace is checked in a separate request from the replace, so a score saved in between slips through; move the guard into `replace_schedule`.
+- Supabase reads that need two requests (a league, then its entrants or games) can see two different moments; fold them into one query or one function. Firebase has the same shape: `allowTies` is read outside the score transaction, and the list, standings and public routes read the league, entrants and schedule non-transactionally (harmless today: nothing changes `allowTies` and entrants are append-only).
+- Firebase: calls to the Auth emulator have no timeout; a hung emulator holds the request until the function's 60 s limit.
+- A deleted user's Supabase access token still works until it expires (up to an hour); decide whether that is acceptable or whether the function should check the user exists.
+- Firebase: any body sent as `application/json` that isn't a JSON object (malformed, or `5`, `"x"`, `null`, `true`) is refused by the Cloud Functions runtime's own body parser with an HTML 400 page without CORS headers before our code runs, so it is not `{"error": "Invalid request"}`; clients must send no body and no `Content-Type` on routes that take none. `contract-test.sh` sends only `[]` as non-object JSON, so it does not catch it. Needs a decision (a proxy in front, or accept and document).
+- Supabase and Firebase standings sort ties by UTF-16 code units, FastAPI and Django by code points; they differ for names mixing characters above U+FFFF with U+E000-U+FFFF.
+
+- Supabase: anyone holding a self-hosted install's anon key can sign up straight through GoTrue (`/auth/v1/signup`) with a 6-character password, skipping the contract's 8-character rule; set `GOTRUE_PASSWORD_MIN_LENGTH=8`.
+- Supabase: the tables have no CHECK constraints, so an organizer's own token sent straight to PostgREST can write invalid rows (weeks 0, negative or half-entered scores, a game against itself); a self-play game makes that league's public page answer 500. Mirror the validation in `check` clauses.
+- The contract doesn't fix the order of the body rule and the 401 check for a request that is both malformed and unauthenticated; backends differ.
+- Supabase: Edge Function imports are unpinned (`npm:@supabase/supabase-js@2`, `jsr:@panva/jose@6`); pin exact versions.
+- Supabase: `scheduleRoutes` lives in `scores.ts` while `schedule.ts` holds only the pure functions; the `standings.ts` comment says "code point order" but the code compares UTF-16 code units.
+
+### POL-02 · Web screens
+- The weeks-change message on the Schedule tab uses the error colour although it is information.
+- No feedback after "Clear all scores" succeeds.
+- The Standings tab is blank while it loads.
+- An empty `<p>` renders on the league home when sport and season are both blank.
+- The organizer header ignores a non-sign-in failure from `/auth/me`.
+- The entrant form is still usable when the entrant list failed to load.
+- The stale-schedule notice hides a failed entrants fetch silently.
+- Save's accessible name ("Save A vs B") differs from its visible text.
+- When browser storage is blocked, signing in bounces back to `/signin` with no message.
+- The red message on the Schedule tab (for example a failed single-game save) stays on screen after a later single-game clear succeeds.
+- Flutter: the league home's public link (`SelectableText`) isn't exposed to screen readers; once, a 409 refusal under Generate was missing from the accessibility tree although visible.
+- Flutter: the game-line format ("A 21 – 14 B" / "A vs B" / "A — bye") is written twice (`public.dart` and `schedule.dart`).
+
+### POL-03 · Tests
+- No test that the league home redirects without a token; no web test of the T cell value with ties on; the public page's ties and blank sport/season branches are untested.
+- A few weak assertions (the "no league content" check on sign-in, the one-row entrant layout check by class name).
+- The contract test leaves extra "Tiny" and "Odd" leagues behind on the target backend.
+- Firebase: the Firestore transactions (score and entrant writes) and the two-step slug lookup are only exercised live, not in unit tests (the in-memory store has no transactions); three FastAPI coverage cases have no JS counterpart, and the text rule is only tested through `name`.
+- Flutter tests: the 375 px width assertions in the standings and public tests can't fail (they check against the parent's width); assert the table's own width or the scroll extent instead.
 
 ## Releases and delivery
 

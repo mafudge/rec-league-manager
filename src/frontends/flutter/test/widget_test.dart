@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rec_league_manager/main.dart';
 
 Widget app({Future<String> Function(String)? sayHello}) => RecLeagueApp(
-      loadGreeting: () async => 'Hello from django',
-      sayHello: sayHello ?? (name) async => 'Hello $name',
-    );
+  loadGreeting: () async => 'Hello from django',
+  sayHello: sayHello ?? (name) async => 'Hello $name',
+);
 
 void main() {
   testWidgets('says hello from the backend that answered', (tester) async {
@@ -17,10 +17,14 @@ void main() {
 
   testWidgets('Say hello shows what the backend replies', (tester) async {
     final asked = <String>[];
-    await tester.pumpWidget(app(sayHello: (name) async {
-      asked.add(name);
-      return 'Hello $name';
-    }));
+    await tester.pumpWidget(
+      app(
+        sayHello: (name) async {
+          asked.add(name);
+          return 'Hello $name';
+        },
+      ),
+    );
     await tester.enterText(find.widgetWithText(TextField, 'Your name'), 'Mike');
     await tester.tap(find.widgetWithText(FilledButton, 'Say hello'));
     await tester.pump();
@@ -36,12 +40,18 @@ void main() {
     expect(find.text('Hello Ada'), findsOneWidget);
   });
 
-  testWidgets('a blank name is sent as typed, and the backend decides', (tester) async {
+  testWidgets('a blank name is sent as typed, and the backend decides', (
+    tester,
+  ) async {
     final asked = <String>[];
-    await tester.pumpWidget(app(sayHello: (name) async {
-      asked.add(name);
-      return 'Name is required';
-    }));
+    await tester.pumpWidget(
+      app(
+        sayHello: (name) async {
+          asked.add(name);
+          return 'Name is required';
+        },
+      ),
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Say hello'));
     await tester.pump();
     expect(asked, ['']);

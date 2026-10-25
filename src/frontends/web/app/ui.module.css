@@ -1,0 +1,212 @@
+/* Shared look for the organizer screens; colors from docs/design/web-prototype.html. */
+.page {
+  --ink: #16342c;
+  --paper: #f4f0e4;
+  --bag-blue: #2e5fa3;
+  --bag-gold: #d9a431;
+  --brick: #a34430;
+  --line: #d8d2c0;
+  --muted: #5b6e67;
+  min-height: 100svh;
+  padding: 1rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.narrow {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.form label {
+  font-weight: 600;
+}
+
+.form input {
+  width: 100%;
+  max-width: 28rem;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+.button {
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--bag-blue);
+  border: 0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.message {
+  margin: 0;
+  min-height: 1.5rem;
+  color: var(--brick);
+}
+
+.links {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  color: var(--muted);
+}
+
+.links a,
+.tab {
+  color: var(--bag-blue);
+}
+
+.tab {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 3px solid transparent;
+  text-decoration: none;
+}
+
+.tab[aria-current="page"] {
+  border-bottom-color: var(--bag-gold);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+}
+
+.linkButton {
+  padding: 0.4rem 0.7rem;
+  font: inherit;
+  color: var(--bag-blue);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.muted {
+  margin: 0.25rem 0;
+  color: var(--muted);
+}
+
+.list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.rowLink {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.button {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.form .checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form .checkRow input {
+  width: auto;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* One row: label, name field and Add button side by side, even at 375 px. */
+.form.addRow {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+/* Two score fields and Save on one line, even at 375 px. */
+.scoreRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.scoreRow input {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.6rem 0.5rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+/* Standings: numbers right-aligned and compact so seven columns fit at 375 px; the wrapper scrolls if a name is long. */
+.tableScroll {
+  overflow-x: auto;
+}
+
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings th,
+.standings td {
+  padding: 0.5rem 0.35rem;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.standings th:first-child,
+.standings td:first-child {
+  text-align: left;
+  overflow-wrap: anywhere;
+}

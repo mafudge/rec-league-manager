@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { API_URL, fetchBackendName } from "./api";
+import { fetchBackendName, messageFor } from "./api";
 
 export default function BackendGreeting() {
   const [message, setMessage] = useState("Connecting to the backend…");
@@ -10,7 +10,7 @@ export default function BackendGreeting() {
   useEffect(() => {
     fetchBackendName()
       .then((name) => setMessage(`Hello from ${name}`))
-      .catch(() => setMessage(`Can't reach the backend at ${API_URL}`));
+      .catch((e) => setMessage(messageFor(e)));
   }, []);
 
   return <p>{message}</p>;

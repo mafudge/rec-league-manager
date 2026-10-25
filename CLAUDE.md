@@ -21,21 +21,21 @@ Rec League Manager — a tool for the volunteer who runs a recreational league (
 6. All GitHub issues should have acceptance criteria and definition of done sections, suitable for a product manager.
 7. Track the Github issue back to the backlog version number with labels ex: v1.10.0, US01, etc.
 8. Do not wander off task. If you encounter a bug, feature or enhancement idea while working, add it to the backlog and label it. 
-9. Always code in a `dev/branch` for the Github issue and when done, push to `main`. 
+9. Code in a `dev/<issue>-<slug>` branch cut from the current release branch (`release/vX.Y.Z`) and merge it back with `--no-ff`. The release branch merges to `main`, tagged, when every issue in it is closed.
 10. We test the code we write. Unit and integration tests.
 11. An issue is not done until tests pass, the server runs and the app runs without error.
 12. As you close Github issues review `docs/todo.md` and move completed items into `docs/xchangelog.md`
-13. start coding on `main` with a clean working directory before you start work on the next issue
+13. Start each issue from the release branch with a clean working directory.
 
-## Running the stubs
+## Running the apps
 Everything lives under `src/`; each folder's `README.md` is the full reference. Run from the repo root. Default ports are chosen so a backend and a frontend can run together. Any frontend works with any backend (ADR 003): [`src/README.md`](src/README.md) has the 4 × 3 table of pairings and each backend's `API_URL`; `src/contract-test.sh <API_URL>` checks a running backend.
 
 | Folder | Install (once) | Start | Test | Port |
 |---|---|---|---|---|
 | `src/backends/fastapi` | `cd src/backends/fastapi && . .venv/bin/activate && pip install -r requirements.txt` | `.venv/bin/uvicorn app.main:app --reload` | `.venv/bin/python -m pytest` | 8000 (`/api/health`) |
 | `src/backends/django` | `pip install -r requirements.txt` in its `.venv`, then `.venv/bin/python manage.py migrate` | `.venv/bin/python manage.py runserver` | `.venv/bin/python manage.py test` | 8001 (`/api/health`) |
-| `src/backends/supabase` | Docker only | `./start.sh` (first run generates `docker/.env`) | `./smoke.sh` | 54321 (`API_URL` = `/functions/v1`) |
-| `src/backends/firebase` | `npm install` (also installs `functions/`) | `npm run emulators` | `./smoke.sh` | 5000 Hosting = `API_URL`, 5001 Functions, 8080 Firestore, 9099 Auth, 4100 UI |
+| `src/backends/supabase` | Docker only | `./start.sh` (first run generates `docker/.env`) | `./test.sh` (Deno unit tests in Docker), `./smoke.sh` | 54321 (`API_URL` = `/functions/v1`) |
+| `src/backends/firebase` | `npm install` (also installs `functions/`) | `npm run emulators` | `cd functions && npm test`, `./smoke.sh` | 5000 Hosting = `API_URL`, 5001 Functions, 8080 Firestore, 9099 Auth, 4100 UI |
 | `src/frontends/web` | `npm install`, `cp .env.example .env.local` | `npm run dev` | `npm test` | 3000 |
 | `src/frontends/streamlit` | `pip install -r requirements.txt` in its `.venv` | `API_URL=http://localhost:8000 .venv/bin/streamlit run app.py` | `.venv/bin/python -m pytest` | 8501 |
 | `src/frontends/flutter` | `flutter pub get` | `flutter run -d chrome --dart-define=API_URL=http://localhost:8000` | `flutter analyze && flutter test` | chosen by Flutter |

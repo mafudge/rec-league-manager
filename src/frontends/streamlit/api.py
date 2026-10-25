@@ -1,13 +1,164 @@
 """The one client for every backend: they all serve the same REST contract (ADR 003)."""
+import json
 import os
+from collections.abc import MutableMapping
 
 import requests
+from urllib.parse import quote
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
 
 class BackendRefused(Exception):
     """The backend understood the request and said no, e.g. "Name is required"."""
+
+
+class BackendProblem(Exception):
+    """The backend answered, but with a failure it did not explain (5xx, or a 4xx with no `error`)."""
+
+    def __init__(self, status: int):
+        super().__init__(f"The backend had a problem ({status})")
+
+
+class SignInRequired(Exception):
+    """Sign-in is required and could not be restored: send the organizer to Sign in."""
+
+
+def message_for(e: Exception) -> str:
+    """What to show for a failed call: the backend's own words, or where we looked if nothing answered."""
+    if isinstance(e, (BackendRefused, BackendProblem)):
+        return str(e)
+    return f"Can't reach the backend at {API_URL}"
+
+
+# The tokens live in the `session` mapping every call takes: st.session_state in the app, a dict in tests.
+def save_session(session: MutableMapping, tokens: dict) -> None:
+    session["token"], session["refresh_token"] = tokens["token"], tokens["refresh_token"]
+
+
+def clear_session(session: MutableMapping) -> None:
+    for key in ("token", "refresh_token", "email"):
+        session.pop(key, None)
+
+
+def _send(method: str, href: str, body, token):
+    headers = {}
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    kwargs = {"headers": headers, "timeout": 10}
+    if body is not None:
+        kwargs["data"] = json.dumps(body)
+    return requests.request(method, href, **kwargs)
+
+
+def refresh(session: MutableMapping, api_url: str) -> bool:
+    """Trade the newest refresh token for a new pair. False if the backend refuses it; BackendProblem if it merely failed."""
+    refresh_token = session.get("refresh_token")
+    if not refresh_token:
+        return False
+    r = _send("POST", f"{api_url}/api/auth/refresh", {"refresh_token": refresh_token}, None)
+    # Only a refusal means the tokens are no good. A blip (5xx, 429) must not sign the organizer out.
+    if r.status_code in (400, 401, 403):
+        return False
+    if r.status_code >= 400:
+        raise BackendProblem(r.status_code)
+    save_session(session, r.json())
+    return True
+
+
+def request(session: MutableMapping, method: str, path: str, body=None, auth: bool = False, api_url: str = API_URL):
+    """One call for every contract route. A 4xx with an `error` becomes BackendRefused(error); any other
+    non-2xx becomes BackendProblem. With auth=True the bearer token is attached; on 401 the tokens are
+    refreshed once and the call retried, and if that fails the session is cleared and SignInRequired raised."""
+    api_url = api_url.rstrip("/")
+    href = f"{api_url}{path}"
+    r = _send(method, href, body, session.get("token") if auth else None)
+    if auth and r.status_code == 401:
+        if not refresh(session, api_url):
+            clear_session(session)
+            raise SignInRequired()
+        r = _send(method, href, body, session.get("token"))
+        if r.status_code == 401:
+            clear_session(session)
+            raise SignInRequired()
+    if r.status_code >= 400:
+        if r.status_code < 500:
+            try:
+                error = r.json().get("error")
+            except Exception:
+                error = None
+            if isinstance(error, str) and error:
+                raise BackendRefused(error)
+        raise BackendProblem(r.status_code)
+    return r.json()
+
+
+def sign_up(session: MutableMapping, email: str, password: str) -> None:
+    tokens = request(session, "POST", "/api/auth/signup", {"email": email, "password": password})
+    session.pop("email", None)  # a new session must not show the last one's email
+    save_session(session, tokens)
+
+
+def sign_in(session: MutableMapping, email: str, password: str) -> None:
+    tokens = request(session, "POST", "/api/auth/login", {"email": email, "password": password})
+    session.pop("email", None)  # a new session must not show the last one's email
+    save_session(session, tokens)
+
+
+def me(session: MutableMapping) -> dict:
+    return request(session, "GET", "/api/auth/me", auth=True)
+
+
+def list_leagues(session: MutableMapping) -> list:
+    return request(session, "GET", "/api/leagues", auth=True)
+
+
+def create_league(session: MutableMapping, league: dict) -> dict:
+    return request(session, "POST", "/api/leagues", league, auth=True)
+
+
+def get_league(session: MutableMapping, league_id: str) -> dict:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}", auth=True)
+
+
+def list_entrants(session: MutableMapping, league_id: str) -> list:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/entrants", auth=True)
+
+
+def add_entrant(session: MutableMapping, league_id: str, name: str) -> dict:
+    return request(session, "POST", f"/api/leagues/{quote(league_id, safe='')}/entrants", {"name": name}, auth=True)
+
+
+def generate_schedule(session: MutableMapping, league_id: str) -> dict:
+    """POST with no body: the Firebase rule for routes that take none."""
+    return request(session, "POST", f"/api/leagues/{quote(league_id, safe='')}/schedule", auth=True)
+
+
+def list_games(session: MutableMapping, league_id: str) -> list:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/games", auth=True)
+
+
+def clear_scores(session: MutableMapping, league_id: str) -> dict:
+    """DELETE with no body."""
+    return request(session, "DELETE", f"/api/leagues/{quote(league_id, safe='')}/scores", auth=True)
+
+
+def save_score(session: MutableMapping, game_id: str, home_score, away_score) -> dict:
+    """A blank box goes as "" (so the backend's whole-number message shows); only Clear sends None (null)."""
+    return request(session, "PUT", f"/api/games/{quote(game_id, safe='')}/score",
+                   {"home_score": home_score, "away_score": away_score}, auth=True)
+
+
+def get_standings(session: MutableMapping, league_id: str) -> dict:
+    return request(session, "GET", f"/api/leagues/{quote(league_id, safe='')}/standings", auth=True)
+
+
+def public_league(slug: str) -> dict:
+    """The public page's one call: no session at all, so no token can be read or sent. An unknown slug is
+    BackendRefused("League not found")."""
+    return request({}, "GET", f"/api/public/{quote(slug, safe='')}")
 
 
 def backend_name(api_url: str = API_URL) -> str:

@@ -1,0 +1,396 @@
+"""The pages. Each takes nothing and reads/writes the one session (st.session_state)."""
+import os
+import re
+
+import pandas as pd
+import streamlit as st
+
+import api
+from api import backend_name, hello
+
+# Filled in by app.py once the st.Page objects exist, so pages can send people to each other.
+PAGES: dict = {}
+
+
+def go(name: str) -> None:
+    st.switch_page(PAGES[name])
+
+
+def signed_in() -> bool:
+    return bool(st.session_state.get("token"))
+
+
+def require_sign_in() -> None:
+    """For every page that changes data: a signed-out visitor is sent to Sign in."""
+    if not signed_in():
+        go("signin")
+
+
+def greeting() -> str:
+    try:
+        return f"Hello from {backend_name()}"
+    except Exception as e:
+        return api.message_for(e)
+
+
+def say_hello(name: str) -> str:
+    """The backend's greeting, its refusal, or where we looked. The name is sent as typed."""
+    try:
+        return hello(name)
+    except Exception as e:
+        return api.message_for(e)
+
+
+def home() -> None:
+    st.title("Rec League Manager")
+    st.write(greeting())
+
+    # A form, so pressing Enter in the box submits it like the button does.
+    with st.form("say_hello"):
+        name = st.text_input("Your name", key="name")
+        asked = st.form_submit_button("Say hello")
+    if asked:
+        st.write(say_hello(name))
+    if not signed_in():
+        st.page_link(PAGES["signup"], label="Sign up")
+        st.page_link(PAGES["signin"], label="Sign in")
+
+
+def header() -> None:
+    """Shown on every page while signed in: who, and a way out. Sign-out is client-side only (spec §5)."""
+    if not signed_in():
+        return
+    if "email" not in st.session_state:
+        try:
+            st.session_state["email"] = api.me(st.session_state)["email"]
+        except api.SignInRequired:
+            go("signin")
+        except Exception:
+            pass  # anything else just leaves the email blank
+    who, out = st.columns([3, 1], vertical_alignment="center")
+    who.write(literal(st.session_state.get("email", "")))
+    if out.button("Sign out", key="sign_out"):
+        api.clear_session(st.session_state)
+        go("signin")
+
+
+def _auth_page(signup: bool) -> None:
+    st.title("Create your account" if signup else "Sign in")
+    # Sends what was typed; the backend's message is shown as-is (no validation of our own).
+    with st.form("signup" if signup else "signin"):
+        email = st.text_input("Email", key="auth_email")
+        password = st.text_input("Password", type="password", key="auth_password")
+        submitted = st.form_submit_button("Sign up" if signup else "Sign in")
+    if submitted:
+        try:
+            (api.sign_up if signup else api.sign_in)(st.session_state, email, password)
+        except Exception as e:
+            st.error(literal(api.message_for(e)))
+        else:
+            go("leagues")
+    st.write("Already have an account?" if signup else "New here?")
+    st.page_link(PAGES["signin" if signup else "signup"], label="Sign in" if signup else "Sign up")
+
+
+def sign_up() -> None:
+    _auth_page(True)
+
+
+def sign_in() -> None:
+    _auth_page(False)
+
+
+def _fail(e: Exception) -> None:
+    """A failed call: the backend's own words (or where we looked); a lost session goes to Sign in."""
+    if isinstance(e, api.SignInRequired):
+        go("signin")
+    st.error(literal(api.message_for(e)))
+
+
+def literal(text: str) -> str:
+    """User text for the few places Streamlit insists on markdown (titles, button labels): show it as typed."""
+    return re.sub(r"([\\`*_{}\[\]()#+\-.!~|<>$:&])", r"\\\1", text)
+
+
+def public_url(slug: str) -> str:
+    """This app's own public page for a league: `?league=<slug>` on the app's base URL."""
+    base = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8501").rstrip("/")
+    return f"{base}/?league={slug}"
+
+
+def leagues() -> None:
+    require_sign_in()
+    header()
+    st.title("My leagues")
+    try:
+        rows = api.list_leagues(st.session_state)
+    except Exception as e:
+        _fail(e)
+        rows = None
+    if rows is not None and not rows:
+        st.write("No leagues yet — create one.")
+    for league in rows or []:
+        if st.button(literal(league["name"]), key=f"open_{league['id']}"):
+            st.session_state["league_id"] = league["id"]
+            go("league")
+        st.text(league["location"])
+    st.page_link(PAGES["league_new"], label="Create a league")
+
+
+def league_new() -> None:
+    require_sign_in()
+    header()
+    st.title("Create a league")
+    # Sends what was typed; the backend's message is shown as-is (no validation of our own).
+    with st.form("new_league"):
+        name = st.text_input("Name", key="league_name")
+        location = st.text_input("Location", key="league_location")
+        sport = st.text_input("Sport", key="league_sport")
+        season = st.text_input("Season", key="league_season")
+        weeks = st.text_input("Weeks", key="league_weeks")
+        allow_ties = st.checkbox("Games can end in a tie", key="league_ties")
+        submitted = st.form_submit_button("Create league", key="create_league")
+    if not submitted:
+        return
+    weeks = weeks.strip()
+    if weeks == "":
+        weeks = None  # blank is sent as null for the backend to refuse
+    else:
+        if re.fullmatch(r"[0-9]+", weeks):
+            weeks = int(weeks)  # anything else is sent as typed; the backend says so
+    try:
+        league = api.create_league(st.session_state, dict(
+            name=name, location=location, sport=sport, season=season, weeks=weeks, allow_ties=allow_ties))
+    except Exception as e:
+        _fail(e)
+    else:
+        st.session_state["league_id"] = league["id"]
+        go("league")
+
+
+def league_home() -> None:
+    require_sign_in()
+    header()
+    league_id = st.session_state.get("league_id")
+    if not league_id:
+        go("leagues")
+    try:
+        league = api.get_league(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    st.title(literal(league["name"]))
+    st.text(league["location"])
+    st.text(" · ".join(x for x in (league["sport"], league["season"]) if x))
+    st.code(public_url(league["slug"]), language=None)
+    entrants_tab, schedule_tab, standings_tab = st.tabs(["Entrants", "Schedule", "Standings"])
+    with entrants_tab:
+        entrants(league_id)
+    with schedule_tab:
+        schedule(league_id)
+    with standings_tab:
+        standings(league_id, league["allow_ties"])
+
+
+def _diff(n: int) -> str:
+    return f"+{n}" if n > 0 else str(n)
+
+
+def standings_table(data: dict, allow_ties: bool) -> None:
+    """One standings table for the organizer's tab and the public page. The backend sorts the rows and words
+    the tiebreak. st.table is static (no re-sorting against the tiebreak, no toolbar). Its cells are markdown, so names go through literal() to show as typed."""
+    if data["played"] == 0:
+        st.text("No games played yet")
+    columns = [("Entrant", "name"), ("W", "w"), ("L", "l")] + ([("T", "t")] if allow_ties else []) + \
+              [("PF", "pf"), ("PA", "pa"), ("Diff", "diff")]
+    frame = pd.DataFrame([{label: _diff(r[key]) if key == "diff" else literal(r[key]) if key == "name" else r[key] for label, key in columns}
+                          for r in data["rows"]], columns=[label for label, _ in columns])
+    st.table(frame.style.hide(axis="index"))  # static: no re-sorting, search or CSV
+    st.text(data["tiebreak"])
+
+
+def standings(league_id: str, allow_ties: bool) -> None:
+    """The Standings tab. Every run fetches, so a score saved on the Schedule tab shows here on the next run."""
+    try:
+        data = api.get_standings(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    standings_table(data, allow_ties)
+
+
+def entrants(league_id: str) -> None:
+    """The Entrants tab: a one-row add form, then who is in, in order. Validation is the backend's."""
+    # A successful add swaps in a fresh, empty box (new key); a refused one keeps the old box and its text.
+    # (clear_on_submit would also wipe the text on a refusal.)
+    box_key = f"entrant_name_{st.session_state.get('entrant_boxes', 0)}"
+    with st.form("add_entrant"):
+        box, add = st.columns([3, 1], vertical_alignment="bottom")
+        name = box.text_input("Name", key=box_key)
+        submitted = add.form_submit_button("Add", key="add_entrant")
+    if submitted:  # True only on the run the click caused, so a later rerun never re-sends it
+        try:
+            api.add_entrant(st.session_state, league_id, name)
+        except Exception as e:
+            _fail(e)
+        else:
+            st.session_state["entrant_boxes"] = st.session_state.get("entrant_boxes", 0) + 1
+            st.rerun()
+    try:
+        rows = api.list_entrants(st.session_state, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    if not rows:
+        st.write("No entrants yet — add the first one.")
+    for entrant in rows:
+        st.text(entrant["name"])
+
+
+def _act(action, note_of=lambda result: None, error_key: str = "schedule_error") -> None:
+    """Run one Schedule action, then rerun to reload the games. Its message (the backend's note or refusal)
+    waits in the session for that rerun. Only the run the click caused gets here, so a later rerun never re-sends it."""
+    for key in [k for k in st.session_state if k.startswith("game_error_")]:
+        del st.session_state[key]
+    st.session_state["schedule_note"] = st.session_state["schedule_error"] = ""
+    try:
+        st.session_state["schedule_note"] = note_of(action()) or ""
+    except api.SignInRequired:
+        go("signin")
+    except Exception as e:
+        st.session_state[error_key] = api.message_for(e)
+    st.rerun()
+
+
+def schedule(league_id: str) -> None:
+    """The Schedule tab: generate the round robin, read it week by week, enter and clear scores."""
+    s = st.session_state
+    if st.button("Generate schedule", key="generate"):
+        _act(lambda: api.generate_schedule(s, league_id), lambda r: r.get("message"))
+    if s.get("confirm_clear") != league_id:
+        if st.button("Clear all scores", key="clear_all"):
+            s["confirm_clear"], s["schedule_error"] = league_id, ""
+            st.rerun()
+    else:
+        st.write("Clear every score in this league?")
+        yes, no = st.columns(2)
+        if yes.button("Yes, clear every score", key="clear_all_yes"):
+            s["confirm_clear"] = None
+            _act(lambda: api.clear_scores(s, league_id))
+        if no.button("Cancel", key="clear_all_no"):
+            s["confirm_clear"], s["schedule_error"] = None, ""
+            st.rerun()
+    if s.get("schedule_note"):
+        st.text(s["schedule_note"])
+    if s.get("schedule_error"):
+        st.error(literal(s["schedule_error"]))
+    try:
+        games = api.list_games(s, league_id)
+    except Exception as e:
+        _fail(e)
+        return
+    try:  # entrants only feed the stale notice, so a failed fetch just hides it
+        people = api.list_entrants(s, league_id)
+    except api.SignInRequired:
+        go("signin")
+    except Exception:
+        people = []
+    in_games = {g["home_id"] for g in games} | {g["away_id"] for g in games}
+    if games and any(p["id"] not in in_games for p in people):
+        st.text("Regenerate the schedule to include new entrants.")
+    if not games:
+        st.text("No schedule yet — add entrants, then generate.")
+    for week in sorted({g["week"] for g in games}):
+        st.subheader(f"Week {week}")
+        for g in games:
+            if g["week"] == week:
+                _game(league_id, g)
+
+
+def _text(score) -> str:
+    return "" if score is None else str(score)
+
+
+def _score(text: str):
+    """What a box sends: "" when blank (never null, which means Clear), a number when it parses as one,
+    else the text as typed. The backend decides what is a valid score and says so."""
+    text = text.strip()
+    if text == "":
+        return ""
+    for kind in (int, float):
+        try:
+            value = kind(text)
+        except ValueError:
+            continue
+        if kind is float and value != value or value in (float("inf"), float("-inf")):
+            break  # nan / inf are not JSON numbers: send the text
+        return value
+    return text
+
+
+def _game(league_id: str, g: dict) -> None:
+    """One game: who plays whom (or the score), two score boxes that stay open so a score can be corrected."""
+    s = st.session_state
+    if g["away_name"] is None:
+        st.text(f"{g['home_name']} — bye")
+        return
+    played = g["home_score"] is not None and g["away_score"] is not None
+    with st.container(border=True):
+        st.text(f"{g['home_name']} {g['home_score']} – {g['away_score']} {g['away_name']}" if played
+                else f"{g['home_name']} vs {g['away_name']}")
+        # Keys carry the saved score, so a reload that changes it (Clear) brings fresh boxes.
+        stamp = f"{g['id']}_{g['home_score']}_{g['away_score']}"
+        with st.form(f"score_{g['id']}", border=False):
+            home = st.text_input(literal(g["home_name"]) + " score", value=_text(g["home_score"]), key=f"home_{stamp}")
+            away = st.text_input(literal(g["away_name"]) + " score", value=_text(g["away_score"]), key=f"away_{stamp}")
+            saved = st.form_submit_button("Save", key=f"save_{g['id']}")
+        if saved:
+            _act(lambda: api.save_score(s, g["id"], _score(home), _score(away)), error_key=f"game_error_{g['id']}")
+        if played and st.button("Clear", key=f"clear_{g['id']}"):
+            _act(lambda: api.save_score(s, g["id"], None, None), error_key=f"game_error_{g['id']}")
+        if s.get(f"game_error_{g['id']}"):
+            st.error(literal(s[f"game_error_{g['id']}"]))
+
+
+def _public_game(g: dict) -> None:
+    if g["away_name"] is None:
+        st.text(f"{g['home_name']} — bye")
+    elif g["home_score"] is not None and g["away_score"] is not None:
+        st.text(f"{g['home_name']} {g['home_score']} – {g['away_score']} {g['away_name']}")
+    else:
+        st.text(f"{g['home_name']} vs {g['away_name']}")
+
+
+def public_page(slug: str) -> None:
+    """`?league=<slug>`: read-only, no sign-in, no header, this week first. It never touches the session
+    and has nothing that writes (no buttons, inputs or forms)."""
+    try:
+        view = api.public_league(slug)
+    except api.BackendRefused as e:
+        if str(e) == "League not found":
+            st.title("League not found")
+        else:
+            st.error(literal(str(e)))
+        return
+    except Exception as e:
+        st.error(literal(api.message_for(e)))
+        return
+    league, games = view["league"], view["games"]
+    st.title(literal(league["name"]))
+    st.text(league["location"])
+    st.text(" · ".join(x for x in (league["sport"], league["season"]) if x))
+    if not games:
+        st.text("No games scheduled yet")
+    else:
+        st.subheader(f"This week — Week {view['current_week']}")
+        for g in games:
+            if g["week"] == view["current_week"]:
+                _public_game(g)
+        st.subheader("Full schedule")
+        for week in sorted({g["week"] for g in games}):
+            st.markdown(f"**Week {week}**")
+            for g in games:
+                if g["week"] == week:
+                    _public_game(g)
+    st.subheader("Standings")
+    standings_table(view["standings"], league["allow_ties"])

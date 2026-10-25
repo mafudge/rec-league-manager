@@ -1,115 +1,75 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import 'api.dart';
+import 'screens/auth_form.dart';
+import 'screens/home.dart';
+import 'screens/league_home.dart';
+import 'screens/league_form.dart';
+import 'screens/leagues.dart';
+import 'screens/organizer_scaffold.dart';
+import 'screens/public.dart';
 
-Future<String> fetchGreeting({String baseUrl = apiUrl}) async {
-  try {
-    return 'Hello from ${await fetchBackendName(baseUrl: baseUrl)}';
-  } catch (_) {
-    return "Can't reach the backend at $baseUrl";
-  }
-}
+export 'screens/home.dart' show fetchGreeting, sayHello;
 
-/// What to show after Say hello: the backend's greeting, its refusal, or where we looked.
-/// The app never checks the name itself; the backend decides (SCAF-13).
-Future<String> sayHello(String name, {String baseUrl = apiUrl, http.Client? client}) async {
-  try {
-    return await fetchHello(name, baseUrl: baseUrl, client: client);
-  } on BackendRefused catch (e) {
-    return e.message;
-  } catch (_) {
-    return "Can't reach the backend at $baseUrl";
-  }
-}
-
-const Future<String> Function(String name) _defaultSayHello = sayHello;
-
-void main() => runApp(const RecLeagueApp());
+void main() => runApp(RecLeagueApp(api: Api()));
 
 class RecLeagueApp extends StatelessWidget {
-  const RecLeagueApp({super.key, this.loadGreeting = fetchGreeting, this.sayHello = _defaultSayHello});
+  RecLeagueApp({
+    super.key,
+    Api? api,
+    this.initialRoute,
+    this.origin,
+    this.loadGreeting = fetchGreeting,
+    this.sayHello = defaultSayHello,
+  }) : api = api ?? Api();
 
+  final Api api;
+  final String? initialRoute;
+
+  /// This app's own origin, for the public link; defaults to the page's (`Uri.base`).
+  final String? origin;
   final Future<String> Function() loadGreeting;
   final Future<String> Function(String name) sayHello;
+
+  /// Routes read the path of the (hash) URL, so `/#/l/<slug>` deep links work on any static server.
+  /// Organizer screens (`/leagues`, `/leagues/new`, `/leagues/<id>`) are wrapped in [OrganizerScaffold], which sends a
+  /// signed-out visit to `/signin`; the public page `/l/<slug>` is not.
+  Route<dynamic> _route(RouteSettings settings) {
+    final uri = Uri.parse(settings.name ?? '/');
+    final path = uri.path;
+    final seg = uri.pathSegments;
+    final Widget screen = switch (path) {
+      '/signup' => AuthForm(api: api, signup: true),
+      '/signin' => AuthForm(api: api, signup: false),
+      '/leagues' => OrganizerScaffold(
+        api: api,
+        child: LeaguesPage(api: api),
+      ),
+      '/leagues/new' => OrganizerScaffold(
+        api: api,
+        child: NewLeaguePage(api: api),
+      ),
+      _ when seg.length == 2 && seg[0] == 'leagues' && seg[1].isNotEmpty =>
+        OrganizerScaffold(
+          api: api,
+          child: LeagueHome(api: api, id: seg[1], origin: origin),
+        ),
+      _ when seg.length == 2 && seg[0] == 'l' && seg[1].isNotEmpty =>
+        PublicPage(api: api, slug: seg[1]),
+      _ => HomePage(loadGreeting: loadGreeting, sayHello: sayHello),
+    };
+    return MaterialPageRoute<void>(settings: settings, builder: (_) => screen);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Rec League Manager',
       theme: ThemeData(colorSchemeSeed: Colors.green),
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Rec League Manager')),
-        body: HomePage(loadGreeting: loadGreeting, sayHello: sayHello),
-      ),
-    );
-  }
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.loadGreeting, required this.sayHello});
-
-  final Future<String> Function() loadGreeting;
-  final Future<String> Function(String name) sayHello;
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  late final Future<String> _greeting = widget.loadGreeting();
-  final _name = TextEditingController();
-  String? _reply;
-  bool _asking = false;
-
-  Future<void> _ask() async {
-    setState(() => _asking = true);
-    final reply = await widget.sayHello(_name.text);
-    if (!mounted) return;
-    setState(() {
-      _reply = reply;
-      _asking = false;
-    });
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              FutureBuilder<String>(
-                future: _greeting,
-                builder: (context, snap) =>
-                    Text(snap.data ?? 'Connecting to the backend…', textAlign: TextAlign.center),
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Your name', border: OutlineInputBorder()),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _asking ? null : _ask(),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: _asking ? null : _ask, child: const Text('Say hello')),
-              const SizedBox(height: 16),
-              if (_reply != null)
-                Text(_reply!, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
-            ],
-          ),
-        ),
-      ),
+      initialRoute: initialRoute,
+      onGenerateRoute: _route,
+      // Open only the page asked for; the default would also stack the home page under `/signup`.
+      onGenerateInitialRoutes: (name) => [_route(RouteSettings(name: name))],
     );
   }
 }

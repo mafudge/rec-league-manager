@@ -1,6 +1,6 @@
 # Architecture — `CP-M3`
 
-**Product.** Rec League Manager · **Author.** Michael Fudge · **Version.** 1.0 draft, 2026-10-08 · **Status.** Draft — stubs exist and talk to each other; no product stories are built yet.
+**Product.** Rec League Manager · **Author.** Michael Fudge · **Version.** 1.0 draft, 2026-10-08 · **Status.** Draft — the v0.2.0 stories (US01–US07, US13) are built on all four backends and all three frontends.
 
 **Inputs.** [`02-prd.md`](02-prd.md) (§5 constraints, §7 data shape, §8 open questions) · [`backlog.md`](backlog.md) · ADRs [001](decisions/001-self-hosted-supabase-and-firebase.md), [002](decisions/002-backends-and-frontends-structure.md), [003](decisions/003-one-rest-contract-for-every-backend.md) · [`src/README.md`](../src/README.md) (how to run every pairing).
 
@@ -83,15 +83,29 @@ The single rule that makes the matrix work: **a frontend knows only `API_URL`.**
 | `GET /api/backend` | `200 {"backend": "fastapi"}` — or `django`, `supabase`, `firebase` |
 | `GET /api/hello?name=Mike` | `200 {"message": "Hello Mike"}` (name trimmed) |
 | `GET /api/hello` with no or blank name | `400 {"error": "Name is required"}` |
+| `POST /api/auth/signup` `{email, password}` | `201 {"token", "refresh_token"}`; `400 Enter a valid email address` (no `@`), `400 Password must be at least 8 characters`, `400 Password must be 72 characters or fewer` (UTF-8 bytes), `409 An account with that email already exists`, checked in that order. Email is trimmed and lower-cased |
+| `POST /api/auth/login` `{email, password}` (US01) | `200 {"token", "refresh_token"}`; `401 Email or password is incorrect` |
+| `POST /api/auth/refresh` `{refresh_token}` (US01) | `200 {"token", "refresh_token"}`; `401 Sign in required` |
+| 🔒 `GET /api/auth/me` (US01) | `200 {"email"}`, the signed-in organizer's lower-cased email |
 
 Rules that apply to every route, present and future:
 
+- **Protected routes need a bearer token.** `Authorization: Bearer <token>`; a missing, malformed or expired token is `401 {"error": "Sign in required"}`. A malformed body is `400 {"error": "Invalid request"}`, never 422.
 - **JSON in, JSON out.** Errors are `{"error": "<message for a person>"}` with a 4xx status, and every backend uses the same status and message for the same mistake. Frontends show the backend's message rather than writing their own.
 - **Cross-origin is allowed** (CORS, any origin), because the web and Flutter apps run in a browser on a different port from the backend.
 - **No trailing-slash surprises.** Django, whose convention is a trailing slash, accepts both forms without redirecting.
 - **`src/contract-test.sh <API_URL>` is the definition of "conforms".** A new route goes into the table above (kept in `src/README.md`), into all four backends, and into the contract test, in the same change.
 
-Product routes (leagues, entrants, schedule, scores, standings) will be added to this contract story by story.
+Product routes, all served by all four backends and used by all three frontends in v0.2.0; `src/README.md` has every status code and error message, and `contract-test.sh` checks them. 🔒 = needs a token.
+
+| Route | Returns |
+|---|---|
+| 🔒 `GET`/`POST /api/leagues`, 🔒 `GET /api/leagues/{id}` (US02) | `League` = `{id, slug, name, location, sport, season, weeks, allow_ties}`; `slug` is the 6-character public identifier; a name is at most 100 characters and `weeks` is 1–52 |
+| 🔒 `GET`/`POST /api/leagues/{id}/entrants` (US03) | `Entrant` = `{id, name}`; a league has at most 52 entrants |
+| 🔒 `POST /api/leagues/{id}/schedule`, `GET .../games`, `DELETE .../scores` (US04) | A round robin whose pairs are oriented so each entrant's home and away games differ by at most one (byes excluded); the weeks message says "1 week" for one, else "{n} weeks"; `Game` = `{id, week, home_id, home_name, away_id, away_name, home_score, away_score}`, a bye has no away side |
+| 🔒 `PUT /api/games/{id}/score` (US05) | The updated `Game` (both scores `null` clears the game, US05-01); refusals in the order 404 `Game not found`, 400 `A bye has no score`, 400 whole numbers, 400 no ties (full text in `src/README.md`) |
+| 🔒 `GET /api/leagues/{id}/standings` (US06) | `Standings` = `{rows, played, tiebreak}`, computed on every request |
+| `GET /api/public/{slug}` (US07) | `200 {league, current_week, games, standings}` with **no token**: `league` is a `League` without `id`; `current_week` is the lowest week with an unplayed non-bye game, the last week once all are played, `null` with no schedule; `404 League not found` for an unknown slug. The only route the public page calls, and it has no write twin |
 
 ## 5 · Backends
 
@@ -101,13 +115,17 @@ Product routes (leagues, entrants, schedule, scores, standings) will be added to
 |---|---|---|---|---|
 | Language | Python 3.12 | Python 3.12 | TypeScript (Deno) for the API; SQL for data | JavaScript (Node 18) |
 | Framework | FastAPI 0.142, Uvicorn 0.54 | Django 5.2, DRF 3.18 | Supabase self-hosted: Edge Runtime 1.76, Postgres 17.6, GoTrue 2.196, PostgREST 14.17, Envoy gateway | Firebase Emulator Suite (firebase-tools 13.35): Functions (firebase-functions 6.6), Firestore, Auth, Hosting |
-| Where data will live | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins) |
+| Where data lives | SQLite file via SQLAlchemy 2.1 | SQLite via the Django ORM (Postgres is one setting) | Postgres, with row-level security | Firestore (documents, no joins): `leagues/{id}`, its `entrants` subcollection, the schedule as one document (`schedule/current`, a generation and its games) so generating and scoring are transactions on it, and `slugs/{slug}` for the public link |
 | How it serves the contract | FastAPI routes | DRF views | One Edge Function, `api` | One Cloud Function, `api`, behind a Hosting rewrite of `/api/**` |
-| Sign-in (US01, planned) | Hashed password + token we write | Django's built-in auth | Supabase Auth (GoTrue) | Auth emulator |
+| Sign-in (US01) | Hashed password + token we write | Django's `User` model + simplejwt, behind the contract's `{token, refresh_token}` | Supabase Auth (GoTrue), called by the Edge Function, which maps its answers to the contract's statuses and messages | Auth emulator, called by the Cloud Function over its REST API; the function maps its answers to the contract's and verifies access tokens with the Admin SDK |
+| Who may see a league | A check in the route code | A check in the view code | Row-level security: queries run with the organizer's own token, so Postgres hides other organizers' leagues (the function's 404 is that check). Only the public page uses the service-role key, and it reads by slug | Ownership is checked in the function's code (the Admin SDK bypasses rules, so every organizer route compares the league's `organizerId` with the token's uid). `firestore.rules` deny every client read and write, so the browser never touches Firestore |
+| Where standings are computed | `standings.py`, per request | `standings.py`, per request | In the Edge Function (`standings.ts`), per request from the games rows; no view, no stored table | Inside the Cloud Function (`standings.js`), per request from the schedule document; nothing is stored |
 | Port / `API_URL` | 8000 / `http://localhost:8000` | 8001 / `http://localhost:8001` | 54321 / `http://localhost:54321/functions/v1` | 5000 / `http://localhost:5000` |
 | Here to show | Building it yourself: every piece visible, most to get wrong | Batteries included: auth, migrations, admin for free, at the price of Django's way | A managed platform's shape on Postgres, run on your own machine | The same managed shape on a document store, and a different answer to "where are standings computed?" |
 
 **What the contract cost Supabase and Firebase.** Both are designed for the browser to talk to the database directly through their client SDKs. Here they instead run a small server function that serves the shared API (ADR 003). That's what lets one client per frontend work, but it means writing server code on platforms marketed as "no server", and it makes row-level security and `firestore.rules` a second line of defence rather than the only one.
+
+**The Firebase emulators are development-only, not a security boundary.** The Auth emulator stores passwords in plaintext (also in `emulator-data/`), the Firestore emulator serves every document, and with the Auth emulator the Admin SDK accepts unsigned tokens. `firestore.rules` deny client access, but that is not a guarantee the deployment gives. Only Hosting (:5000, the API) listens on the LAN; Auth 9099, Functions 5001, Firestore 8080, UI 4100, hub 4400 and logging 4500 are bound to `127.0.0.1`. The function checks that a token is not revoked and the user still exists.
 
 **What each backend will repeat.** The round-robin scheduler and the standings calculation will exist four times: twice in Python, once in TypeScript and once in JavaScript. Shared logic (`src/core/`) is deferred (ADR 002); the contract test, plus each backend's unit tests for the PRD's scheduling cases, is what keeps the four honest. FastAPI and Django could later share one Python package.
 
@@ -123,7 +141,11 @@ Product routes (leagues, entrants, schedule, scores, standings) will be added to
 | `API_URL` is set by | `NEXT_PUBLIC_API_URL`, baked in at build/dev start | `API_URL` env var at start | `--dart-define=API_URL=…` at build |
 | Port | 3000 | 8501 | chosen by Flutter, or `--web-port` |
 | Tests | Vitest + Testing Library | Streamlit `AppTest` + pytest | `flutter test` (widget + unit) |
-| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page | One codebase that could also target phones and desktops; a different toolchain |
+| Here to show | The mainstream phone-first web UI | The fastest path to a working screen; awkward for a public, mobile, read-only page (see below) | One codebase that could also target phones and desktops; a different toolchain |
+
+The Streamlit app does every organizer story (sign in, leagues, entrants, schedule, scores, standings) and the public page, which it chooses from `?league=<slug>` before any sign-in check (no path routing). The public page calls `GET /api/public/{slug}` with no token and renders no button, input or form. On a phone it is honest but not native: Streamlit keeps its own chrome (a 60 px top bar with a small menu (Deploy is hidden by `.streamlit/config.toml`), and about 96 px of top padding), so the title starts at 96 px and "This week" games begin near 380 px of a 667 px screen, still above the fold with no sideways page scroll; the standings table is a static `st.table` that fits the width. The Streamlit server re-renders on every interaction, which is fine for the organizer and a weak fit for players who just want a fast, static page.
+
+The Flutter app does every organizer story (sign up and in, leagues, entrants, schedule, scores, standings) and the public page at `/#/l/<slug>`. It uses the hash URL strategy, so the public link works on any static server with no rewrites, and the route is chosen before any sign-in check. The public page calls `GET /api/public/{slug}` with no token and renders no button, field or link; on a 375 px phone the title starts at 16 px and "This week" games sit at about 134-202 px of 667, with no sideways page scroll. Tokens live in memory only, so a reload signs the organizer out (accepted, spec §7). The standings table is a plain `DataTable` that scrolls inside its own box if it must.
 
 Each frontend has one small API client (`app/api.ts`, `api.py`, `lib/api.dart`) and nothing backend-specific. All three currently show "Hello from <backend>" and a name box whose **Say hello** button calls `/api/hello`.
 
@@ -135,7 +157,7 @@ Every cell in the 4 × 3 table in [`src/README.md`](../src/README.md) is a suppo
 
 1. **The backend conforms:** `src/contract-test.sh <API_URL>` passes against each running backend.
 2. **The client works against a live backend:** each frontend has an opt-in live test (`LIVE_API_URL=… LIVE_BACKEND=…`) that calls the real routes.
-3. **The screen works:** the web and Flutter apps have been driven in headless Chrome, and Streamlit's app run live, against every backend.
+3. **The screen works:** all three frontends have been driven in headless Chrome through the PRD demo (sign up, create a league, add six teams, generate, score week 1, open the public page at 375 × 667) against every backend: 12 of 12 passed in the v0.2.0 release check.
 
 All four backends can run at once, each on its own port.
 
@@ -145,13 +167,13 @@ All four backends can run at once, each on its own port.
 
 | PRD §5 constraint | How the architecture meets it | State |
 |---|---|---|
-| Phone-first, 375 px | Each frontend's job, in a phone's browser | Not built (no product screens yet) |
-| Public means public | Public routes need no token; the public page exposes no write route | Not built |
-| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in a Postgres view or the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | Not built; the rule is fixed here |
-| Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | Not built |
+| Phone-first, 375 px | Each frontend's job, in a phone's browser | In place on all three frontends: at 375 × 667 the public page shows this week's games above the fold with no sideways page scroll (v0.2.0 release check) |
+| Public means public | Public routes need no token; the public page exposes no write route | In place on all four backends (the Firebase route validates the slug before any Firestore call) |
+| Standings derived, never stored | Computed per request: in Python (FastAPI, Django), in the Edge Function (Supabase), inside the Cloud Function (Firebase). No standings table or collection anywhere | In place on all four backends |
+| Schedule correctness tested | Each backend unit-tests its scheduler on the PRD's cases; the contract test checks the API shape | In place on all four backends |
 | Empty and error states | Errors are defined in the contract and shown as the backend sends them | In place for the current routes |
 | Runs from the repo | Every stub runs from its README; `src/README.md` covers all pairings | Done |
-| Data survives restarts | SQLite files (FastAPI, Django) and the Postgres volume (Supabase) persist. **The Firestore emulator forgets everything on exit** unless started with `--import`/`--export-on-exit` | Gap for Firebase; on its README's TODO |
+| Data survives restarts | SQLite files (FastAPI, Django) and the Postgres volume (Supabase) persist. Firebase's `npm run emulators` starts with `--import=./emulator-data --export-on-exit`, so the Firestore and Auth emulators keep their data when stopped with Ctrl+C (SIGINT; a killed process loses the session). Round trip proved with a league, its schedule and a score | Done |
 
 ## 9 · Decisions the PRD handed to this document
 
@@ -162,7 +184,7 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 | Question (PRD §8) | Proposed decision | Why |
 |---|---|---|
 | Is "sport" a controlled list or free text? | **Free text.** | Nothing in the architecture depends on the sport; no story has per-sport rules. |
-| Does the public identifier need to be unguessable? | **A short random slug** (e.g. 8 characters), never the database id. | Works the same in SQL and Firestore; stops casual enumeration of leagues. |
+| Does the public identifier need to be unguessable? | **A short random slug** (built: 6 characters from `abcdefghjkmnpqrstuvwxyz23456789`), never the database id. | Works the same in SQL and Firestore; stops casual enumeration of leagues. |
 | How is a bye stored? (PRD §7) | **A game with no away entrant.** | The schedule then lists byes explicitly ("Bag Ladies — bye"), and "no bye twice" is testable from the games alone. |
 | Where does data persist? (PRD §5) | Per backend, as in §5's table. | The point of the matrix. |
 
@@ -172,7 +194,7 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 
 | Question | Why it matters | Resolve by |
 |---|---|---|
-| How does the organizer's sign-in work across the contract? | Each backend issues tokens differently; the contract must say what a frontend sends back (ADR 003). | Before US01 is built. |
+| How does the organizer's sign-in work across the contract? | Each backend issues tokens differently; the contract must say what a frontend sends back (ADR 003). | **Decided (ADR 004):** one sign-in contract, built with US01. |
 | Which pairing is deployed for the live URL? | The final hand-in needs one live URL. The Firebase emulator is not a production host (ADR 001), so a deployed Firebase or Supabase would need a cloud account the course otherwise avoids. | Before `CP` (Dec 11). Lean: web on FastAPI or Django. |
 | Node 18 | Out of support since April 2025; it pins Next.js to 15 and `firebase-tools` to 13. | Before deployment. Move to Node 22. |
 | Shared logic (`src/core/`) | Four schedulers can drift. | Revisit after US04 exists in two backends. |
@@ -195,3 +217,4 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 | Date | Change | Why |
 |---|---|---|
 | 2026-10-08 | v1.0 draft — typical vs this project's structure; contract, backends, frontends, constraints, PRD hand-offs | `CP-M3` |
+| 2026-10-24 | Status, §4 (signup's 72-character rule, `GET /api/auth/me`), §7 and §8 brought up to what v0.2.0 built | v0.2.0 release check (#54) |

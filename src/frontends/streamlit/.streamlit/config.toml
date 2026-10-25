@@ -1,0 +1,3 @@
+# Players open the public page on phones: hide Deploy and the menu. Nothing secret here.
+[client]
+toolbarMode = "viewer"

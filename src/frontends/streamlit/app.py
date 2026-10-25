@@ -1,31 +1,20 @@
 import streamlit as st
 
-from api import API_URL, BackendRefused, backend_name, hello
+import views
 
+# The public page is chosen first: `?league=<slug>` needs no sign-in and shows no header.
+_slug = st.query_params.get("league")
+if _slug:
+    views.public_page(_slug)
+    st.stop()
 
-def greeting() -> str:
-    try:
-        return f"Hello from {backend_name()}"
-    except Exception:
-        return f"Can't reach the backend at {API_URL}"
-
-
-def say_hello(name: str) -> str:
-    """The backend's greeting, its refusal, or where we looked. The name is sent as typed."""
-    try:
-        return hello(name)
-    except BackendRefused as e:
-        return str(e)
-    except Exception:
-        return f"Can't reach the backend at {API_URL}"
-
-
-st.title("Rec League Manager")
-st.write(greeting())
-
-# A form, so pressing Enter in the box submits it like the button does.
-with st.form("say_hello"):
-    name = st.text_input("Your name", key="name")
-    asked = st.form_submit_button("Say hello")
-if asked:
-    st.write(say_hello(name))
+# One router for the whole app. The public page is chosen above, before any sign-in check.
+views.PAGES.update(
+    home=st.Page("screens/home.py", title="Home", url_path="home", default=True),
+    signup=st.Page("screens/signup.py", title="Sign up", url_path="signup"),
+    signin=st.Page("screens/signin.py", title="Sign in", url_path="signin"),
+    leagues=st.Page("screens/leagues.py", title="My leagues", url_path="leagues"),
+    league_new=st.Page("screens/league_new.py", title="Create a league", url_path="leagues-new"),
+    league=st.Page("screens/league.py", title="League", url_path="league"),
+)
+st.navigation(list(views.PAGES.values()), position="hidden").run()
