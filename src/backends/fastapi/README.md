@@ -18,6 +18,12 @@ curl localhost:8000/api/backend   # {"backend":"fastapi"}
 
 Set `JWT_SECRET` to a long random value anywhere but a local laptop; the built-in default is public.
 
+## Demo seed
+```bash
+DEMO_SEED=1 python -m app.seed   # then start uvicorn as above
+```
+On an empty database this signs up `demo@recleague.example` (password `cornhole-demo`) and builds "Tuesday Cornhole" through the real routes: 6 teams, the schedule, week 1 scored, public link `/l/tuesdy`. It does nothing unless `DEMO_SEED=1`, and nothing once anyone has signed up, so the deployed API runs it on every start (REL-01, `docs/deploy.md`).
+
 ## Test
 ```bash
 python -m pytest
