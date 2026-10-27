@@ -1,0 +1,20 @@
+# Render Blueprint for this release's API (REL-01, ADR 005, docs/deploy.md).
+# Each release branch carries its own copy: a new release changes the two version strings below.
+services:
+  - type: web
+    name: rlm-api-v0-2-1
+    runtime: python
+    plan: free
+    branch: release/v0.2.1
+    rootDir: src/backends/fastapi
+    buildCommand: pip install -r requirements.txt
+    # The free disk is wiped on every sleep and deploy, so every start seeds a fresh SQLite file.
+    startCommand: python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DEMO_SEED
+        value: "1"
+      - key: JWT_SECRET
+        generateValue: true
