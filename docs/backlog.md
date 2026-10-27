@@ -464,11 +464,32 @@ Not features. These are how the project is shipped and shown.
 
 **Why.** This is a reference example. Students learn as much from seeing how the app changes between releases (v0.2.x, v0.3.x, …) as from the final version. Each release should stay viewable at its own address after the next one ships.
 
-**Open; to be designed later.** Questions to settle then:
-- Which backend and frontend pairing(s) get deployed: the reference pair only, or all 12?
-- Where to host it, and what it costs, given ADR 001 runs Supabase and Firebase self-hosted or in emulators.
-- One address per release (e.g. `v0-2.example.org`) kept side by side, or one address that moves forward plus tagged source.
-- Demo data and accounts: seeded per release so the pages aren't empty, and reset on a schedule.
+**Decided 2026-10-27 (ADR 005), scheduled for v0.2.1.**
+- **Pairing:** FastAPI + web only. Supabase and Firebase stay local-only (ADR 001); the other pairings are a clone away.
+- **Host:** free tiers, $0. Web on Vercel Hobby (always on). FastAPI on Render Free: it sleeps after 15 idle minutes, takes about 50 s to wake, and its disk is wiped whenever it sleeps or redeploys.
+- **Addresses:** one pair per release, kept side by side, on the platforms' own free subdomains (`rlm-v0-2-1.vercel.app`, `rlm-api-v0-2-1.onrender.com`). sslip.io names were the first pick, but they need a server IP we control and PaaS gives none.
+- **Data:** every start seeds a demo organizer and "Tuesday Cornhole"; sign-up stays open; a nightly redeploy resets everything. A student's own data also disappears after 15 idle minutes, and the README says so.
+
+### REL-01a · The API can seed its own demo league — #55
+
+**Acceptance criteria**
+- Given `DEMO_SEED=1` and an empty database, when `python -m app.seed` runs, then `demo@recleague.example` can sign in and owns "Tuesday Cornhole" (Joe's Tavern, Cornhole, Fall 2026) with 6 teams, a generated schedule (5 weeks) and week 1 scored, and its public link is `/l/tuesdy`.
+- Given any organizer already exists, when the seed runs again, then nothing changes. *(edge)*
+- Given `DEMO_SEED` is not `1`, when the seed runs, then nothing is created. *(negative)*
+
+### REL-01b · Deploy config, nightly reset and runbook — #56
+
+**Acceptance criteria**
+- Given `render.yaml` on a release branch, when it is applied as a Render Blueprint, then one free web service for that release builds FastAPI, seeds it and answers `/api/health`.
+- Given the nightly-reset workflow, when it runs (on schedule or by hand), then every listed release's API redeploys and comes back with only the seed.
+- Given `docs/deploy.md`, when someone follows it for a new release, then they can stand up that release's API and web app without touching older releases.
+
+### REL-01c · v0.2.1 is live — #57
+
+**Acceptance criteria**
+- Given the live web URL on a 375-px phone, when the PRD demo runs (sign up, create a league, 6 teams, generate, score week 1, open the public link signed out), then it completes with no horizontal scroll.
+- Given the live API, when `src/contract-test.sh` runs against it, then it prints `contract ok`.
+- Given the root `README.md`, then it lists the live URL, the demo sign-in, the public link and the cold-start warning.
 
 ---
 
