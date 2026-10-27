@@ -2,7 +2,7 @@
 
 **Product.** Rec League Manager · **Author.** Michael Fudge · **Version.** 1.0 draft, 2026-10-08 · **Status.** Draft — the v0.2.0 stories (US01–US07, US13) are built on all four backends and all three frontends.
 
-**Inputs.** [`02-prd.md`](02-prd.md) (§5 constraints, §7 data shape, §8 open questions) · [`backlog.md`](backlog.md) · ADRs [001](decisions/001-self-hosted-supabase-and-firebase.md), [002](decisions/002-backends-and-frontends-structure.md), [003](decisions/003-one-rest-contract-for-every-backend.md) · [`src/README.md`](../src/README.md) (how to run every pairing).
+**Inputs.** [`02-prd.md`](02-prd.md) (§5 constraints, §7 data shape, §8 open questions) · [`backlog.md`](backlog.md) · ADRs [001](decisions/001-self-hosted-supabase-and-firebase.md), [002](decisions/002-backends-and-frontends-structure.md), [003](decisions/003-one-rest-contract-for-every-backend.md), [005](decisions/005-free-tier-deployment.md) · [`src/README.md`](../src/README.md) (how to run every pairing).
 
 Like the PRD, every section opens with the question it decides.
 
@@ -22,7 +22,7 @@ This repository is the course's **reference implementation**, so it answers a di
 | Central claim | "This stack fits this product because…" | "Here is what each stack makes easy or hard, on identical requirements" |
 | Rejected alternatives | Listed, with reasons | Built anyway, so the comparison is real |
 | API | Whatever the one backend exposes | A contract every backend must pass (ADR 003) |
-| Deployed | One live URL | One pairing will be deployed (§10); the rest run locally |
+| Deployed | One live URL | FastAPI + web is deployed per release on free tiers, each release at its own address (ADR 005, [`deploy.md`](deploy.md)); the rest run locally |
 
 **If you are writing your own capstone, model your document on §1, not on the rest.** §2 onward is what happens when the point of the project is the comparison.
 
@@ -195,8 +195,8 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 | Question | Why it matters | Resolve by |
 |---|---|---|
 | How does the organizer's sign-in work across the contract? | Each backend issues tokens differently; the contract must say what a frontend sends back (ADR 003). | **Decided (ADR 004):** one sign-in contract, built with US01. |
-| Which pairing is deployed for the live URL? | The final hand-in needs one live URL. The Firebase emulator is not a production host (ADR 001), so a deployed Firebase or Supabase would need a cloud account the course otherwise avoids. | Before `CP` (Dec 11). Lean: web on FastAPI or Django. |
-| Node 18 | Out of support since April 2025; it pins Next.js to 15 and `firebase-tools` to 13. | Before deployment. Move to Node 22. |
+| Which pairing is deployed for the live URL? | The final hand-in needs one live URL. The Firebase emulator is not a production host (ADR 001), so a deployed Firebase or Supabase would need a cloud account the course otherwise avoids. | **Decided (ADR 005):** web on FastAPI, on Render Free + Vercel Hobby, one address pair per release, seeded demo reset nightly. |
+| Node 18 | Out of support since April 2025; it pins Next.js to 15 and `firebase-tools` to 13. | Vercel builds the deployed web app on Node 22 (ADR 005). This machine still runs 18; move it to 22 too. |
 | Shared logic (`src/core/`) | Four schedulers can drift. | Revisit after US04 exists in two backends. |
 
 ## 11 · Risks
@@ -218,3 +218,4 @@ These follow the PRD's stated leans and are **proposed** until the next PRD revi
 |---|---|---|
 | 2026-10-08 | v1.0 draft — typical vs this project's structure; contract, backends, frontends, constraints, PRD hand-offs | `CP-M3` |
 | 2026-10-24 | Status, §4 (signup's 72-character rule, `GET /api/auth/me`), §7 and §8 brought up to what v0.2.0 built | v0.2.0 release check (#54) |
+| 2026-10-27 | §0 Deployed row and §10 answered: FastAPI + web per release on free tiers (ADR 005) | REL-01 (#56) |
