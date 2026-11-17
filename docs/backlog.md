@@ -122,7 +122,7 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 - Given an existing account, when I sign in, then no sign-up password is asked for.
 - Given the sign-up page in any frontend, then it has a "Sign-up password" box that hides what is typed.
 
-**Work.** a · FastAPI + contract test + docs; b · Django; c · Supabase; d · Firebase; e · web; f · Streamlit; g · Flutter; h · v0.2.2 release check.
+**Work.** a · FastAPI + contract test + docs — #59; b · Django — #60; c · Supabase — #61; d · Firebase — #62; e · web — #63; f · Streamlit — #64; g · Flutter — #65; h · v0.2.2 release check — #66.
 
 ### US06-01 · Standings refuse games that don't match the entrants
 
