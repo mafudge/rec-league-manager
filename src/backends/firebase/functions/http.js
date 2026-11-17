@@ -20,7 +20,7 @@ const fail = (status, message) => {
   throw new ApiError(status, message);
 };
 
-const TEXT_FIELDS = ["email", "password", "name", "location", "sport", "season"];
+const TEXT_FIELDS = ["email", "password", "signup_password", "name", "location", "sport", "season"];
 // U+0000, a high surrogate not followed by a low one, or a low one not preceded by a high one (no `u` flag: it works on UTF-16 units).
 const BAD_TEXT = /\u0000|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
 

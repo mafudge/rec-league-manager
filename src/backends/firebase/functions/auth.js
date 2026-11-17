@@ -1,5 +1,6 @@
 // Accounts: the Firebase Auth emulator behind the contract's auth routes.
 // The emulator's own bodies ({"error":{"code":400,"message":"EMAIL_EXISTS"}}) never leave this file; we map by message.
+const crypto = require("node:crypto");
 const { fail, ApiError } = require("./http");
 
 const SIGN_IN = "Sign in required";
@@ -8,6 +9,21 @@ const PROBLEM = "The backend had a problem";
 
 const codePoints = (s) => [...s].length;
 const cleanEmail = (v) => (typeof v === "string" ? v.trim().toLowerCase() : "");
+
+/**
+ * US13-02: sign-up needs the server's SIGNUP_PASSWORD; none set means sign-up is closed.
+ * Read on every request (not at load) so a changed setting applies without a code change, and checked
+ * before the email checks and the Auth emulator so a stranger can't learn which emails have accounts.
+ */
+function checkSignupPassword(given) {
+  const expected = process.env.SIGNUP_PASSWORD ?? "";
+  if (!expected) fail(403, "Sign-up is closed");
+  const want = Buffer.from(expected, "utf8");
+  const got = Buffer.from(typeof given === "string" ? given : "", "utf8");
+  // timingSafeEqual throws on unequal lengths, so compare `want` with itself then and refuse anyway.
+  const same = got.length === want.length ? crypto.timingSafeEqual(got, want) : !crypto.timingSafeEqual(want, want);
+  if (typeof given !== "string" || !same) fail(403, "Sign-up password is incorrect");
+}
 
 /**
  * deps.fetch: injectable for tests. deps.host(): "host:port" of the Auth emulator.
@@ -38,7 +54,8 @@ function createAuth(deps) {
     return fail(500, PROBLEM);
   }
 
-  async function signup(email, password) {
+  async function signup(email, password, signupPassword) {
+    checkSignupPassword(signupPassword);
     const address = cleanEmail(email);
     if (!address.includes("@")) fail(400, "Enter a valid email address");
     if (typeof password !== "string" || codePoints(password) < 8) fail(400, "Password must be at least 8 characters");
