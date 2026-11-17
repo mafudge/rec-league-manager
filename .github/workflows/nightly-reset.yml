@@ -1,0 +1,32 @@
+# Nightly demo reset (REL-01d, ADR 006, docs/deploy.md): redeploy the live API.
+# A Render Free redeploy starts on a fresh disk, and the start command reseeds it.
+# Scheduled runs only happen from main, which is also the branch the live site builds from.
+name: Nightly demo reset
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 08:00 UTC, about 4 am in Syracuse
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The GitHub secret holding the live API's Render deploy hook URL.
+        hook: [RENDER_HOOK]
+    steps:
+      - name: Redeploy ${{ matrix.hook }}
+        env:
+          HOOK_NAME: ${{ matrix.hook }}
+          HOOK_URL: ${{ secrets[matrix.hook] }}
+        run: |
+          if [ -z "$HOOK_URL" ]; then
+            echo "::warning::Secret $HOOK_NAME is not set, so the API was not reset"
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK_URL" > /dev/null
+          echo "Redeploy requested for $HOOK_NAME"
