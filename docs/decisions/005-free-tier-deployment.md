@@ -1,6 +1,6 @@
 # 005 · Each release is deployed on free tiers: FastAPI on Render, web on Vercel
 
-**Status.** Accepted · 2026-10-27
+**Status.** Accepted · 2026-10-27 · **Superseded in part by [ADR 006](006-deploy-from-main.md) (2026-11-16):** the live site is one Render service and one Vercel project built from `main`, not one pair per release. Everything else here still stands.
 
 ## Decision
 
