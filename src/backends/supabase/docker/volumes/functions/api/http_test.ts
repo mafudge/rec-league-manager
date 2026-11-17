@@ -122,7 +122,7 @@ Deno.test('extra or missing segments are 404; a wrong method on a :param path is
 
 // The text rule (src/README.md): U+0000 or an unpaired surrogate in a text field is 400 Invalid request.
 const BAD_TEXT = ['\\u0000', 'A\\u0000B', '\\ud800', 'x\\udc00y', '\\ud83d', 'a\\ud83dz']
-const TEXT_FIELDS = ['email', 'password', 'name', 'location', 'sport', 'season']
+const TEXT_FIELDS = ['email', 'password', 'signup_password', 'name', 'location', 'sport', 'season']
 
 Deno.test('NUL or a lone surrogate in any text field is 400 Invalid request', async () => {
   for (const field of TEXT_FIELDS) {

@@ -3,7 +3,8 @@
 # First run: creates docker/.env, moves the API gateway to port 54321 (so it
 # does not clash with FastAPI on 8000 or Django on 8001) and generates fresh secrets.
 # Every run: turns email auto-confirm on (there is no mail server, so nobody could confirm
-# a sign-up; works on an existing .env too) and applies migrations/*.sql in order.
+# a sign-up; works on an existing .env too), adds an empty SIGNUP_PASSWORD= line if .env has none,
+# and applies migrations/*.sql in order.
 set -e
 cd "$(dirname "$0")/docker"
 if [ ! -f .env ]; then
@@ -15,6 +16,11 @@ if grep -q '^ENABLE_EMAIL_AUTOCONFIRM=' .env; then
   sed -i 's/^ENABLE_EMAIL_AUTOCONFIRM=.*/ENABLE_EMAIL_AUTOCONFIRM=true/' .env
 else
   echo 'ENABLE_EMAIL_AUTOCONFIRM=true' >>.env
+fi
+# US13-02: sign-up needs SIGNUP_PASSWORD; add an empty one (sign-up closed) for the organizer to fill in.
+if ! grep -q '^SIGNUP_PASSWORD=' .env; then
+  echo 'SIGNUP_PASSWORD=' >>.env
+  echo "Added SIGNUP_PASSWORD= to docker/.env: fill it in to open sign-up (empty means sign-up is closed)."
 fi
 docker compose up -d
 

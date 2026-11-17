@@ -464,6 +464,8 @@ services:
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       # TODO: Allow configuring VERIFY_JWT per function.
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
+      # Rec League Manager (US13-02): the password sign-up asks for; unset or empty means sign-up is closed.
+      SIGNUP_PASSWORD: ${SIGNUP_PASSWORD:-}
     command:
       [
         "start",

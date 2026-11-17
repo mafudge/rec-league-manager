@@ -3,7 +3,8 @@
 import * as jose from 'jsr:@panva/jose@6'
 import { ApiError, fail } from './http.ts'
 
-export type Env = { url: string; anonKey: string; jwtSecret: string }
+// signupPassword: the server's SIGNUP_PASSWORD (US13-02); unset or empty means sign-up is closed.
+export type Env = { url: string; anonKey: string; jwtSecret: string; signupPassword?: string }
 export type Deps = { fetch: typeof fetch; env: Env | (() => Env) }
 export type Tokens = { token: string; refresh_token: string }
 export type Organizer = { id: string; email: string; token: string }
@@ -14,6 +15,19 @@ const PROBLEM = 'The backend had a problem'
 
 const codePoints = (s: string) => [...s].length
 const cleanEmail = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase() : '')
+
+/**
+ * True when given and expected are the same text, compared on their UTF-8 bytes in time that depends only
+ * on the length of `given`, not on where they first differ (so a guesser can't learn the sign-up password
+ * a byte at a time). A length difference is folded into the result rather than returned early.
+ */
+export function sameText(given: string, expected: string): boolean {
+  const x = new TextEncoder().encode(given)
+  const y = new TextEncoder().encode(expected)
+  let diff = x.length ^ y.length
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ (y[i] ?? 0)
+  return diff === 0
+}
 
 export function createAuth(deps: Deps) {
   const env = () => (typeof deps.env === 'function' ? deps.env() : deps.env)
@@ -44,7 +58,16 @@ export function createAuth(deps: Deps) {
     return fail(500, PROBLEM)
   }
 
-  async function signup(email: unknown, password: unknown): Promise<Tokens> {
+  // US13-02: read on every request, and checked before the email and duplicate checks (and before GoTrue)
+  // so a stranger can't learn which emails have accounts.
+  function checkSignupPassword(given: unknown) {
+    const expected = env().signupPassword ?? ''
+    if (!expected) fail(403, 'Sign-up is closed')
+    if (typeof given !== 'string' || !sameText(given, expected)) fail(403, 'Sign-up password is incorrect')
+  }
+
+  async function signup(email: unknown, password: unknown, signupPassword: unknown): Promise<Tokens> {
+    checkSignupPassword(signupPassword)
     const address = cleanEmail(email)
     if (!address.includes('@')) fail(400, 'Enter a valid email address')
     if (typeof password !== 'string' || codePoints(password) < 8) return fail(400, 'Password must be at least 8 characters')
@@ -108,5 +131,6 @@ export const auth = createAuth({
     url: Deno.env.get('SUPABASE_URL') ?? '',
     anonKey: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     jwtSecret: Deno.env.get('JWT_SECRET') ?? '',
+    signupPassword: Deno.env.get('SIGNUP_PASSWORD') ?? '',
   }),
 })
