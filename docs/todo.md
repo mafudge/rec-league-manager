@@ -6,5 +6,4 @@
 
 ## Deploy (v0.2.1)
 
-- **REL-01d** The live site deploys from `main` — #58.
 - **REL-01c** v0.2.1 is live — #57.
