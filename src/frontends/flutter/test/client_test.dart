@@ -164,21 +164,42 @@ void main() {
 
   group('sign up / in', () {
     test(
-      'signUp posts the typed email and password and keeps the token pair',
+      'signUp posts the typed email, password and sign-up password and keeps the token pair',
       () async {
         final rec = Recorder(
           (_, _) => json(201, {'token': 't1', 'refresh_token': 'r1'}),
         );
         final api = Api(client: rec.client, baseUrl: base);
         expect(api.signedIn, isFalse);
-        await api.signUp(' Dana@Example.com ', 'pw');
+        await api.signUp(' Dana@Example.com ', 'pw', 'class-pw');
         expect(api.signedIn, isTrue);
         final r = rec.sent.single;
         expect('${r.method} ${r.url}', 'POST $base/api/auth/signup');
-        expect(bodyOf(r), {'email': ' Dana@Example.com ', 'password': 'pw'});
+        expect(bodyOf(r), {
+          'email': ' Dana@Example.com ',
+          'password': 'pw',
+          'signup_password': 'class-pw',
+        });
         expect(r.headers['content-type'], startsWith('application/json'));
       },
     );
+
+    for (final msg in ['Sign-up password is incorrect', 'Sign-up is closed']) {
+      test('signUp surfaces a 403 refusal verbatim: $msg', () async {
+        final rec = Recorder((_, _) => json(403, {'error': msg}));
+        final api = Api(client: rec.client, baseUrl: base);
+        Object? caught;
+        try {
+          await api.signUp('a@b.c', 'longenough', '');
+        } catch (e) {
+          caught = e;
+        }
+        expect(caught, isA<BackendRefused>());
+        expect(api.messageFor(caught!), msg);
+        expect(api.signedIn, isFalse);
+        expect(bodyOf(rec.sent.single)['signup_password'], '');
+      });
+    }
 
     test(
       'signIn posts to /api/auth/login; a refusal keeps us signed out',
