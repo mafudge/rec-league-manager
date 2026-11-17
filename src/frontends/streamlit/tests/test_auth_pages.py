@@ -25,9 +25,11 @@ def page(name, state=None):
     return at.switch_page(f"screens/{name}.py").run()
 
 
-def submit(at, email, password):
+def submit(at, email, password, signup_password=None):
     at.text_input(key="auth_email").input(email)
     at.text_input(key="auth_password").input(password)
+    if signup_password is not None:
+        at.text_input(key="auth_signup_password").input(signup_password)
     at.button[0].click().run()
     assert not at.exception
     return at
@@ -35,14 +37,52 @@ def submit(at, email, password):
 
 def test_sign_up_lands_on_the_leagues_page_signed_in():
     with backend(Reply(201, TOKENS), Reply(200, {"email": "dana@example.com"})) as b:
-        at = submit(page("signup"), "dana@example.com", "password1")
+        at = submit(page("signup"), "dana@example.com", "password1", "class-pw")
     method, url, kw = b.calls[0]
     assert (method, url) == ("POST", f"{BASE}/api/auth/signup")
     assert kw["headers"] == {"Content-Type": "application/json"}
-    assert json.loads(kw["data"]) == {"email": "dana@example.com", "password": "password1"}
+    assert json.loads(kw["data"]) == {
+        "email": "dana@example.com",
+        "password": "password1",
+        "signup_password": "class-pw",
+    }
     assert at.title[0].value == "My leagues"
     assert at.session_state["token"] == "t1"
     assert at.session_state["refresh_token"] == "r1"
+
+
+def test_sign_up_asks_for_the_sign_up_password_below_password_hidden_and_sign_in_does_not():
+    with backend():
+        up, inn = page("signup"), page("signin")
+    assert [t.label for t in up.text_input] == ["Email", "Password", "Sign-up password"]
+    assert up.text_input(key="auth_signup_password").proto.type == up.text_input(key="auth_password").proto.type
+    assert up.text_input(key="auth_signup_password").proto.type != up.text_input(key="auth_email").proto.type
+    assert [t.label for t in inn.text_input] == ["Email", "Password"]
+
+
+def test_an_empty_sign_up_password_is_sent_as_typed_for_the_backend_to_judge():
+    with backend(Reply(403, {"error": "Sign-up password is incorrect"})) as b:
+        at = submit(page("signup"), "dana@example.com", "password1")
+    assert json.loads(b.calls[0][2]["data"])["signup_password"] == ""
+    assert [e.value for e in at.error] == [r"Sign\-up password is incorrect"]  # escaped so it shows as typed
+
+
+def test_sign_up_password_refusals_are_shown_verbatim_and_stay_on_sign_up():
+    for error, shown in [
+        ("Sign-up password is incorrect", r"Sign\-up password is incorrect"),  # escaped so it shows as typed
+        ("Sign-up is closed", r"Sign\-up is closed"),
+    ]:
+        with backend(Reply(403, {"error": error})):
+            at = submit(page("signup"), "dana@example.com", "password1", "wrong")
+        assert [e.value for e in at.error] == [shown]
+        assert at.title[0].value == "Create your account"
+        assert "token" not in at.session_state
+
+
+def test_sign_in_sends_no_sign_up_password():
+    with backend(Reply(200, TOKENS), Reply(200, {"email": "dana@example.com"})) as b:
+        submit(page("signin"), "dana@example.com", "password1")
+    assert json.loads(b.calls[0][2]["data"]) == {"email": "dana@example.com", "password": "password1"}
 
 
 def test_sign_in_lands_on_the_leagues_page():

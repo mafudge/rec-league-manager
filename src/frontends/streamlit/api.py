@@ -95,8 +95,9 @@ def request(session: MutableMapping, method: str, path: str, body=None, auth: bo
     return r.json()
 
 
-def sign_up(session: MutableMapping, email: str, password: str) -> None:
-    tokens = request(session, "POST", "/api/auth/signup", {"email": email, "password": password})
+def sign_up(session: MutableMapping, email: str, password: str, signup_password: str) -> None:
+    body = {"email": email, "password": password, "signup_password": signup_password}
+    tokens = request(session, "POST", "/api/auth/signup", body)
     session.pop("email", None)  # a new session must not show the last one's email
     save_session(session, tokens)
 
