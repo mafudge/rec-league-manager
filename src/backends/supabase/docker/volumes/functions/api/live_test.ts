@@ -9,6 +9,7 @@ const BASE = Deno.env.get('SUPABASE_BASE') ?? 'http://localhost:54321'
 const API = `${BASE}/functions/v1`
 const REST = `${BASE}/rest/v1`
 const ANON = Deno.env.get('ANON_KEY') ?? ''
+const SIGNUP_PASSWORD = Deno.env.get('SIGNUP_PASSWORD') ?? '' // US13-02: the stack's, from docker/.env
 
 async function call(method: string, url: string, headers: Record<string, string>, body?: unknown) {
   const res = await fetch(url, {
@@ -28,7 +29,7 @@ const rest = (method: string, path: string, token: string, body?: unknown, extra
 
 async function organizer(tag: string) {
   const email = `rls-${tag}-${crypto.randomUUID().slice(0, 8)}@example.com`
-  const r = await api('POST', '/api/auth/signup', undefined, { email, password: 'cornhole1' })
+  const r = await api('POST', '/api/auth/signup', undefined, { email, password: 'cornhole1', signup_password: SIGNUP_PASSWORD })
   assertEquals(r.status, 201, JSON.stringify(r.body))
   const sub = JSON.parse(atob(r.body.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub as string
   return { token: r.body.token as string, id: sub }

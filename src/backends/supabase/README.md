@@ -10,11 +10,11 @@ Docker with the Compose plugin, about 3 GB of images.
 ## Run
 ```bash
 ./start.sh      # first run creates docker/.env, generates secrets, moves the gateway to port 54321;
-                # every run turns on email auto-confirm and applies migrations/*.sql
+                # every run turns on email auto-confirm, adds SIGNUP_PASSWORD= if missing, applies migrations/*.sql
 ./test.sh       # unit tests for the Edge Function (Deno in Docker; needs no running stack)
-LIVE_SUPABASE=1 ./test.sh   # also proves row-level security against the running stack
+SIGNUP_PASSWORD=… LIVE_SUPABASE=1 ./test.sh   # also proves row-level security against the running stack
 ./smoke.sh      # prints "rest ok", "auth ok" and "api ok"
-../../contract-test.sh http://localhost:54321/functions/v1
+SIGNUP_PASSWORD=… ../../contract-test.sh http://localhost:54321/functions/v1
 ```
 - API gateway: http://localhost:54321 (`/rest/v1`, `/auth/v1`, `/functions/v1`)
 - **Our REST API** (ADR 003): `API_URL=http://localhost:54321/functions/v1`. It is the Edge Function `docker/volumes/functions/api/index.ts`; after editing it, `docker restart supabase-edge-functions`. Upstream's `docker/.gitignore` ignores every function folder, so ours is listed there by name.
@@ -28,6 +28,8 @@ LIVE_SUPABASE=1 ./test.sh   # also proves row-level security against the running
 
 ## Accounts
 Sign-up and sign-in go through Supabase Auth (GoTrue); the function maps its answers to the contract's statuses and messages and never passes its bodies through. `start.sh` sets `ENABLE_EMAIL_AUTOCONFIRM=true` in `docker/.env` (there is no mail server, so nobody could confirm a sign-up); leave `FUNCTIONS_VERIFY_JWT=false`, since the function checks tokens itself. GoTrue refresh tokens are single-use: always use the newest `refresh_token` (the web client does, and `contract-test.sh` does).
+
+**Sign-up password (US13-02).** Sign-up asks for the server's `SIGNUP_PASSWORD` as `signup_password`; without it anyone who finds the API could make an account. Set it in `docker/.env` (`SIGNUP_PASSWORD=…`; `start.sh` adds an empty line if there is none, and empty means `403 Sign-up is closed`). Wrap a value with spaces or `#` in single quotes, e.g. `SIGNUP_PASSWORD='league night 2026'`. Compose passes it to the function container only, so after changing it run `cd docker && docker compose up -d functions` (a plain `docker restart` keeps the old value). The function reads it on every request and checks it, in constant time, before the email, password and duplicate checks and before anything reaches GoTrue, so a wrong one is `403 Sign-up password is incorrect` even for an email that already has an account. Sign-in never asks for it. Give it to the organizers you want, out of band; the live test and contract test need it in their environment too.
 
 ## Leagues and entrants
 `migrations/0001_init.sql` creates `leagues`, `entrants` and `games` in `public` with text ids (32 hex characters, so a malformed id is just not found) and turns **row-level security** on for all three: role `authenticated` sees and writes a league only when `organizer_id = auth.uid()`, and entrants and games only when their league is theirs. `anon` has no privileges on them. A game's `home_id` and `away_id` reference `entrants (league_id, id)` together with the game's `league_id`, because foreign-key checks bypass RLS: a game can only name entrants of its own league. The function queries PostgREST with supabase-js as the organizer (their own access token, `db.ts` `userClient`), so ownership is enforced by Postgres, not by a filter in our code; the service-role client (`serviceClient`) is only for the public page (US07). `start.sh` applies the migration on every start; it is safe to re-run. Validation (order, messages, the 52-entrant cap after the duplicate check) is in `leagues.ts`, matching FastAPI.
