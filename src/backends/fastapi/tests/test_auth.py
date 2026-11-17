@@ -1,12 +1,12 @@
 import pytest
-from tests.conftest import signed_in
+from tests.conftest import SP, signed_in
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import check_password, issue_tokens, read_token
 from app.models import Organizer
 
-GOOD = {"email": "dana@example.com", "password": "cornhole1"}
+GOOD = {"email": "dana@example.com", "password": "cornhole1", **SP}
 
 
 def test_signup_creates_account_and_returns_tokens(client):
@@ -58,7 +58,7 @@ def test_cap_counts_utf8_bytes_so_72_byte_emoji_password_is_exact(client):
     # bcrypt would have ignored anything past 72 bytes; a different tail must not log in
     other = "😀" * 17 + "😁"
     assert client.post("/api/auth/login", json={**GOOD, "password": other}).status_code == 401
-    r = client.post("/api/auth/signup", json={"email": "b@example.com", "password": EMOJI72 + "a"})
+    r = client.post("/api/auth/signup", json={"email": "b@example.com", "password": EMOJI72 + "a", **SP})
     assert (r.status_code, r.json()) == (400, MSG72)
 
 
@@ -66,7 +66,7 @@ def test_long_password_is_checked_after_email_and_short_and_before_duplicate(cli
     client.post("/api/auth/signup", json=GOOD)
     r = client.post("/api/auth/signup", json={**GOOD, "password": "a" * 73})
     assert (r.status_code, r.json()) == (400, MSG72)
-    r = client.post("/api/auth/signup", json={"email": "nope", "password": "a" * 73})
+    r = client.post("/api/auth/signup", json={"email": "nope", "password": "a" * 73, **SP})
     assert r.json() == {"error": "Enter a valid email address"}
 
 
@@ -77,12 +77,12 @@ def test_signup_refuses_email_without_at(client):
 
 
 def test_email_message_wins_over_password_message(client):
-    r = client.post("/api/auth/signup", json={"email": "nope", "password": "x"})
+    r = client.post("/api/auth/signup", json={"email": "nope", "password": "x", **SP})
     assert r.json() == {"error": "Enter a valid email address"}
 
 
 def test_signup_with_missing_or_non_string_fields_is_400_not_500(client):
-    for body in ({}, {"email": 5, "password": "cornhole1"}, {"email": "a@b.c", "password": None}):
+    for body in (SP, {"email": 5, "password": "cornhole1", **SP}, {"email": "a@b.c", "password": None, **SP}):
         assert client.post("/api/auth/signup", json=body).status_code == 400
 
 

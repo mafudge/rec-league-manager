@@ -19,3 +19,6 @@ services:
         value: "1"
       - key: JWT_SECRET
         generateValue: true
+      # Needed to create an account (US13-02); unset means sign-up is closed. Typed into Render, never committed.
+      - key: SIGNUP_PASSWORD
+        sync: false
