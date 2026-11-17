@@ -418,6 +418,10 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 
 Minor findings from the per-story and whole-branch reviews of the FastAPI + web reference build. None breaks an acceptance criterion; each is a candidate for a later release. Label `polish` when one is scheduled.
 
+### ENV-01 · Local Python moved to 3.14
+
+**Found 2026-11-16.** The OS upgrade moved `/usr/bin/python3` from 3.12 to 3.14, so the FastAPI, Django and Streamlit `.venv`s (built on 3.12) could no longer import their packages. **Done:** all three rebuilt on 3.14; FastAPI 224, Django 157 and Streamlit 99 tests pass. Render pins 3.12.3 (`render.yaml`), so local and deployed differ by two minor versions; still to decide: pin Render to 3.14 too, or keep 3.12 and accept the gap.
+
 ### POL-01 · Backend hardening (FastAPI)
 - Warn at startup when `JWT_SECRET` is unset (belongs with REL-01 deploys).
 - An email of just `@` passes the "has an @" rule.

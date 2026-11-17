@@ -43,6 +43,7 @@ Everything lives under `src/`; each folder's `README.md` is the full reference. 
 
 Gotchas on this machine:
 - `python3 -m venv` fails (no `python3-venv`). Use `python3 -m venv --without-pip .venv`, then `.venv/bin/python get-pip.py` (download from `https://bootstrap.pypa.io/get-pip.py`).
+- Python is 3.14 (the OS moved from 3.12 on 2026-11-16, which broke every `.venv`; rebuilt and all suites pass). Render still pins 3.12.3. If a venv says `No module named …`, rebuild it as above.
 - Node is 18.19: keep Next.js on 15 and `firebase-tools` on 13. The Firestore emulator needs Java (installed).
 - Flutter is not on `PATH`: `export PATH=$PATH:/home/ubuntu/.local/flutter/bin`.
 - Every backend has its own port (FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321), so all four can run at once. Django's default comes from `api/management/commands/runserver.py`.
