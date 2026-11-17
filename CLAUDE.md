@@ -26,6 +26,7 @@ Rec League Manager — a tool for the volunteer who runs a recreational league (
 11. An issue is not done until tests pass, the server runs and the app runs without error.
 12. As you close Github issues review `docs/todo.md` and move completed items into `docs/xchangelog.md`
 13. Start each issue from the release branch with a clean working directory.
+14. deployments are always from `main`. so deploying a release implies merging with `main`
 
 ## Running the apps
 Everything lives under `src/`; each folder's `README.md` is the full reference. Run from the repo root. Default ports are chosen so a backend and a frontend can run together. Any frontend works with any backend (ADR 003): [`src/README.md`](src/README.md) has the 4 × 3 table of pairings and each backend's `API_URL`; `src/contract-test.sh <API_URL>` checks a running backend.
