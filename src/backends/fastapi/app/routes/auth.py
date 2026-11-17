@@ -1,3 +1,5 @@
+import hmac
+import os
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends
@@ -13,10 +15,24 @@ from ..models import Organizer
 router = APIRouter(prefix="/api/auth")
 
 
+def check_signup_password(given: object) -> None:
+    """US13-02: sign-up needs the server's SIGNUP_PASSWORD; none set means sign-up is closed.
+
+    Read on every request (not at import) so a changed setting applies without a code change, and
+    checked before the email and duplicate checks so a stranger can't learn which emails have accounts.
+    """
+    expected = os.environ.get("SIGNUP_PASSWORD", "")
+    if not expected:
+        raise ApiError(403, "Sign-up is closed")
+    if not isinstance(given, str) or not hmac.compare_digest(given.encode(), expected.encode()):
+        raise ApiError(403, "Sign-up password is incorrect")
+
+
 @router.post("/signup", status_code=201)
 def signup(body: Any = Body(...), session: Session = Depends(get_session)) -> dict[str, str]:
     # Body is read loosely and validated by hand, in the contract's order.
     data = object_body(body)
+    check_signup_password(data.get("signup_password"))
     email = data.get("email")
     email = email.strip().lower() if isinstance(email, str) else ""
     password = data.get("password")

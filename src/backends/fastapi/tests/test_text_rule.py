@@ -13,11 +13,12 @@ def raw(client, path, text, headers=None):
 
 
 @pytest.mark.parametrize("bad", BAD)
-@pytest.mark.parametrize("field", ["email", "password"])
+@pytest.mark.parametrize("field", ["email", "password", "signup_password"])
 def test_signup_refuses_bad_text(client, field, bad):
-    text = '{"email": "%s", "password": "%s"}' % (
+    text = '{"email": "%s", "password": "%s", "signup_password": "%s"}' % (
         bad if field == "email" else "dana@example.com",
         bad if field == "password" else "cornhole1",
+        bad if field == "signup_password" else "let-me-in-2026",
     )
     r = raw(client, "/api/auth/signup", text)
     assert (r.status_code, r.json()) == (400, INVALID)
