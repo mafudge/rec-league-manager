@@ -462,7 +462,7 @@ Not features. These are how the project is shipped and shown.
 
 ### REL-01 · Every release is deployed so students can watch the app evolve
 
-**Why.** This is a reference example. Students learn as much from seeing how the app changes between releases (v0.2.x, v0.3.x, …) as from the final version. Each release should stay viewable at its own address after the next one ships.
+**Why.** This is a reference example. Students learn as much from seeing how the app changes between releases (v0.2.x, v0.3.x, …) as from the final version. ~~Each release should stay viewable at its own address after the next one ships.~~ **Changed 2026-11-16 (REL-01d, ADR 006):** one live site, built from `main`, shows the newest release; older releases are a `git checkout v0.x.y` away, not online.
 
 **Decided 2026-10-27 (ADR 005), scheduled for v0.2.1.**
 - **Pairing:** FastAPI + web only. Supabase and Firebase stay local-only (ADR 001); the other pairings are a clone away.
@@ -490,6 +490,16 @@ Not features. These are how the project is shipped and shown.
 - Given the live web URL on a 375-px phone, when the PRD demo runs (sign up, create a league, 6 teams, generate, score week 1, open the public link signed out), then it completes with no horizontal scroll.
 - Given the live API, when `src/contract-test.sh` runs against it, then it prints `contract ok`.
 - Given the root `README.md`, then it lists the live URL, the demo sign-in, the public link and the cold-start warning.
+
+### REL-01d · The live site deploys from `main`
+
+**Why.** The organizer deployed from `main`, and one site that tracks `main` is simpler to run than a new Render service and Vercel project per release. Decided 2026-11-16 (ADR 006, superseding ADR 005's "one address pair per release"). Service names stay `rlm-api-v0-2-1` / the existing Vercel project so today's URLs keep working.
+
+**Acceptance criteria**
+- Given `render.yaml` on `main`, when it is applied as a Render Blueprint, then one free web service builds FastAPI from `main`, seeds it and answers `/api/health`.
+- Given `docs/deploy.md`, when someone follows it, then the API and web app build from `main`, and shipping a release is "merge the release branch to `main`, then check the live site".
+- Given the nightly-reset workflow, when it runs, then it redeploys the one API from secret `RENDER_HOOK`, and warns instead of failing when the secret is missing.
+- Given the docs, then nothing still says each release keeps its own address (ADR 005 marked superseded in part, architecture §0/§10, REL-01).
 
 ---
 
