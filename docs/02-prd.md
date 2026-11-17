@@ -96,7 +96,7 @@ Deliberately *not* constrained here: which language, framework, database or host
 
 *Decides: what does the person actually do, in what order, and what do they see?*
 
-0. **Sign up** (first time only). Email + password of at least 8 characters; lands on an empty league list. *(US13)*
+0. **Sign up** (first time only). Email + password of at least 8 characters + the league site's sign-up password (shared by whoever runs the site); lands on an empty league list. *(US13, US13-02)*
 1. **Sign in.** Email + password. Wrong password → same page, one message, nothing leaked. *(US01)*
 2. **League list.** Empty state: "No leagues yet — create one." One button. *(US02)*
 3. **Create league.** Five fields: name, location (free text — "Joe's Tavern", "Syracuse DPW"), sport (free text — we don't gate on a sport list), season label, weeks. Validation errors inline. *(US02)*
@@ -149,4 +149,5 @@ Shoulds and Coulds shipped by Dec 11 are a bonus. A Should that half-works costs
 |---|---|---|
 | 2026-09-27 | v1.0 — first complete draft after Workshop 2 peer review | `CP-M2` |
 | 2026-10-24 | v1.2 — US13 organizer sign-up added to the MVP slice, ahead of US01. | US01 signed in an organizer but nothing created one. |
+| 2026-11-16 | v1.3 — sign-up asks for a shared sign-up password set on the server; no password set means sign-up is closed. | Anyone who found the site could create an account (US13-02). |
 | 2026-10-01 | v1.1 — a league has a required free-text location, shown on the league list, league header and public page. Designs in `docs/design/` updated to match. | Leagues play at a venue (a tavern, a public-works field); players need to know where to show up. |
