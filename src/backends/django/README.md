@@ -12,10 +12,15 @@ python manage.py migrate
 
 ## Run
 ```bash
+cp .env.example .env           # once; then pick your own SIGNUP_PASSWORD in it
 python manage.py runserver     # port 8001, so it can run alongside FastAPI on 8000
 curl localhost:8001/api/backend   # {"backend":"django"}; a trailing slash works too
-../../contract-test.sh http://localhost:8001   # prints "contract ok"; CONTRACT_UPTO=accounts|leagues|schedule runs just the first sections
+SIGNUP_PASSWORD=<the one in .env> ../../contract-test.sh http://localhost:8001   # prints "contract ok"; CONTRACT_UPTO=accounts|leagues|schedule runs just the first sections
 ```
+The API reads `.env` in this folder at start (real environment variables win).
+- `SIGNUP_PASSWORD`: needed to create an account (US13-02). If it is unset or empty, sign-up is closed ("Sign-up is closed"); signing in still works.
+- `JWT_SECRET`: set it to a long random value anywhere but a local laptop; it falls back to the public `SECRET_KEY`.
+
 `ALLOWED_HOSTS` accepts only `localhost`. A phone on the LAN would need this machine's address added.
 
 ## Test

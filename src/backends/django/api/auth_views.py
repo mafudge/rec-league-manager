@@ -1,3 +1,6 @@
+import hmac
+import os
+
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -23,11 +26,25 @@ def _email(data: dict) -> str:
     return email.strip().lower() if isinstance(email, str) else ""
 
 
+def check_signup_password(given: object) -> None:
+    """US13-02: sign-up needs the server's SIGNUP_PASSWORD; none set means sign-up is closed.
+
+    Read on every request (not at import) so a changed setting applies without a code change, and
+    checked before the email and duplicate checks so a stranger can't learn which emails have accounts.
+    """
+    expected = os.environ.get("SIGNUP_PASSWORD", "")
+    if not expected:
+        raise ApiError(403, "Sign-up is closed")
+    if not isinstance(given, str) or not hmac.compare_digest(given.encode(), expected.encode()):
+        raise ApiError(403, "Sign-up password is incorrect")
+
+
 @api_view(["POST"])
 @authentication_classes([])  # open route: a stale token in the header is ignored, as on FastAPI
 @permission_classes([])
 def signup(request):
     data = object_body(request)
+    check_signup_password(data.get("signup_password"))
     email = _email(data)
     password = data.get("password")
     if "@" not in email:
