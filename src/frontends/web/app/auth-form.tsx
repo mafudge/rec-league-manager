@@ -12,6 +12,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "signin" }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const signup = mode === "signup";
@@ -21,7 +22,7 @@ export default function AuthForm({ mode }: { mode: "signup" | "signin" }) {
     setBusy(true);
     setMessage("");
     try {
-      await (signup ? signUp : signIn)(email, password);
+      await (signup ? signUp(email, password, signupPassword) : signIn(email, password));
       router.push("/leagues");
     } catch (err) {
       setMessage(messageFor(err));
@@ -44,6 +45,18 @@ export default function AuthForm({ mode }: { mode: "signup" | "signin" }) {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={signup ? "new-password" : "current-password"}
           />
+          {signup && (
+            <>
+              <label htmlFor="signup-password">Sign-up password</label>
+              <input
+                id="signup-password"
+                type="password"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                autoComplete="off"
+              />
+            </>
+          )}
           <p className={styles.message} aria-live="polite">
             {message}
           </p>
