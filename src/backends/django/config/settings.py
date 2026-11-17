@@ -14,8 +14,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Local dev only: read src/backends/django/.env (if present) before anything reads the environment.
+# An explicit path, so a .env elsewhere in the repo is never picked up. Real environment variables win.
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production

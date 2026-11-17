@@ -8,10 +8,11 @@ BAD = [r"\u0000", r"A\u0000B", r"\ud800", r"x\udc00y", r"\ud83d"]
 class TextRuleTests(LeagueTestCase):
     def test_signup_and_login_refuse_bad_text(self):
         for bad in BAD:
-            for field in ("email", "password"):
+            for field in ("email", "password", "signup_password"):
                 email = bad if field == "email" else "dana@example.com"
                 password = bad if field == "password" else "cornhole1"
-                text = '{"email": "%s", "password": "%s"}' % (email, password)
+                signup_password = bad if field == "signup_password" else "let-me-in-2026"
+                text = '{"email": "%s", "password": "%s", "signup_password": "%s"}' % (email, password, signup_password)
                 self.check(self.raw_post("/api/auth/signup", text), 400, INVALID)
             self.check(self.raw_post("/api/auth/login", '{"email": "dana@example.com", "password": "%s"}' % bad), 400, INVALID)
 

@@ -1,4 +1,6 @@
+import os
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -8,12 +10,21 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from api.errors import ApiError, exception_handler
 
-GOOD = {"email": "dana@example.com", "password": "cornhole1"}
+SIGNUP_PASSWORD = "let-me-in-2026"
+SP = {"signup_password": SIGNUP_PASSWORD}
+GOOD = {"email": "dana@example.com", "password": "cornhole1", **SP}
 SIGN_IN_REQUIRED = {"error": "Sign in required"}
 INVALID = {"error": "Invalid request"}
 
 
 class ApiTestCase(APITestCase):
+    def setUp(self):
+        super().setUp()
+        # Sign-up is closed without a server sign-up password (US13-02), so every test runs with one set.
+        patcher = mock.patch.dict(os.environ, {"SIGNUP_PASSWORD": SIGNUP_PASSWORD})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def post(self, path, body=None, **extra):
         return self.client.post(path, body, format="json", **extra)
 
@@ -63,14 +74,14 @@ class SignupTests(ApiTestCase):
         self.assertEqual(self.post("/api/auth/signup", {**GOOD, "password": self.EMOJI72}).status_code, 201)
         self.assertEqual(self.post("/api/auth/login", {**GOOD, "password": self.EMOJI72}).status_code, 200)
         self.assertEqual(self.post("/api/auth/login", {**GOOD, "password": "😀" * 17 + "😁"}).status_code, 401)
-        r = self.post("/api/auth/signup", {"email": "b@example.com", "password": self.EMOJI72 + "a"})
+        r = self.post("/api/auth/signup", {"email": "b@example.com", "password": self.EMOJI72 + "a", **SP})
         self.assertEqual((r.status_code, r.json()), (400, self.MSG72))
 
     def test_long_password_is_checked_after_email_and_before_duplicate(self):
         self.post("/api/auth/signup", GOOD)
         r = self.post("/api/auth/signup", {**GOOD, "password": "a" * 73})
         self.assertEqual((r.status_code, r.json()), (400, self.MSG72))
-        r = self.post("/api/auth/signup", {"email": "nope", "password": "a" * 73})
+        r = self.post("/api/auth/signup", {"email": "nope", "password": "a" * 73, **SP})
         self.assertEqual(r.json(), {"error": "Enter a valid email address"})
 
     def test_signup_refuses_email_without_at(self):
@@ -78,17 +89,17 @@ class SignupTests(ApiTestCase):
         self.assertEqual((r.status_code, r.json()), (400, {"error": "Enter a valid email address"}))
 
     def test_email_message_wins_over_password_message(self):
-        r = self.post("/api/auth/signup", {"email": "nope", "password": "x"})
+        r = self.post("/api/auth/signup", {"email": "nope", "password": "x", **SP})
         self.assertEqual(r.json(), {"error": "Enter a valid email address"})
 
     def test_signup_with_missing_or_non_string_fields_is_400_not_500(self):
-        for body in ({}, {"email": 5, "password": "cornhole1"}, {"email": "a@b.c", "password": None}):
+        for body in (SP, {"email": 5, "password": "cornhole1", **SP}, {"email": "a@b.c", "password": None, **SP}):
             self.assertEqual(self.post("/api/auth/signup", body).status_code, 400)
 
     def test_only_the_eight_character_rule_applies_not_djangos_validators(self):
         # Django's validators would refuse all of these; FastAPI accepts them, so every backend must.
         for i, pw in enumerate(["cornhole1", "password", "12345678", "dana@example"]):
-            r = self.post("/api/auth/signup", {"email": f"p{i}@example.com", "password": pw})
+            r = self.post("/api/auth/signup", {"email": f"p{i}@example.com", "password": pw, **SP})
             self.assertEqual(r.status_code, 201, pw)
 
     def test_non_object_body_is_invalid_request(self):
@@ -252,7 +263,7 @@ class StaleTokenOnOpenRoutesTests(ApiTestCase):
     def test_open_routes_answer_their_own_refusals_not_sign_in_required(self):
         r = self.post("/api/auth/login", {**GOOD, "password": "wrong-password"}, **self.GARBAGE)
         self.assertEqual((r.status_code, r.json()), (401, {"error": "Email or password is incorrect"}))
-        r = self.post("/api/auth/signup", {"email": "x", "password": "cornhole1"}, **self.GARBAGE)
+        r = self.post("/api/auth/signup", {"email": "x", "password": "cornhole1", **SP}, **self.GARBAGE)
         self.assertEqual((r.status_code, r.json()), (400, {"error": "Enter a valid email address"}))
 
     def test_health_backend_and_hello_ignore_a_garbage_token(self):
