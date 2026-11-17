@@ -31,4 +31,5 @@ Every route that changes data, and every organizer read, needs `Authorization: B
 
 - Supabase and Firebase sign-in go through our server function, not their client SDKs in the browser.
 - Considered and rejected: **Sign in with Google.** US01 says email and password, and Google sign-in would need every student to register a Google Cloud OAuth client, undoing ADR 001's "no Google account". It's on the backlog for a later release.
+- **Amended 2026-11-16 (US13-02, v0.2.2):** sign-up also takes `signup_password`, which must equal the server's `SIGNUP_PASSWORD`. It is checked on every backend before the email, password and duplicate checks (so a stranger can't probe which emails have accounts), and no `SIGNUP_PASSWORD` means sign-up is closed. Login, refresh and the bearer rules are unchanged. This closes open sign-up without leaving the one contract.
 - Not in v0.2.0: password reset (US14 on the backlog; it needs email) and server-side token revocation.

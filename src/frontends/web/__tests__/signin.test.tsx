@@ -58,3 +58,9 @@ test("links to sign up", () => {
   render(<SignInPage />);
   expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/signup");
 });
+
+test("has no sign-up password box", () => {
+  render(<SignInPage />);
+  expect(screen.queryByLabelText("Sign-up password")).toBeNull();
+  expect(document.querySelector("#signup-password")).toBeNull();
+});

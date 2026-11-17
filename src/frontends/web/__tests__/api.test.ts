@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { BackendProblem, BackendRefused, SignInRequired, fetchBackendName, fetchHello, request, saveScore } from "../app/api";
+import { BackendProblem, BackendRefused, SignInRequired, fetchBackendName, fetchHello, request, saveScore, signIn, signUp } from "../app/api";
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.unstubAllGlobals());
@@ -155,4 +155,23 @@ test("saveScore encodes the game id like the other paths", async () => {
   vi.stubGlobal("fetch", fetch);
   await saveScore("a/b c", 1, 2);
   expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/games/a%2Fb%20c/score");
+});
+
+test("signUp sends the sign-up password as signup_password", async () => {
+  const fetch = vi.fn().mockResolvedValue(reply(201, { token: "t1", refresh_token: "r1" }));
+  vi.stubGlobal("fetch", fetch);
+  await signUp("dana@example.com", "cornhole1", "class-pw");
+  expect(fetch.mock.calls[0][0]).toBe("http://localhost:8000/api/auth/signup");
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+    email: "dana@example.com",
+    password: "cornhole1",
+    signup_password: "class-pw",
+  });
+});
+
+test("signIn does not send a sign-up password", async () => {
+  const fetch = vi.fn().mockResolvedValue(reply(200, { token: "t1", refresh_token: "r1" }));
+  vi.stubGlobal("fetch", fetch);
+  await signIn("dana@example.com", "cornhole1");
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ email: "dana@example.com", password: "cornhole1" });
 });

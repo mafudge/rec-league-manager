@@ -7,3 +7,7 @@
 ## Deploy (v0.2.1)
 
 - **REL-01c** v0.2.1 is live — #57.
+
+## Sign-up password (v0.2.2)
+
+- **US13-02h** v0.2.2 release check, merge to main — #66.

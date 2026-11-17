@@ -6,10 +6,14 @@
 # A backend still being built can check just the sections it has: CONTRACT_UPTO=accounts|leagues|schedule|all (default all).
 #   accounts = health/backend/hello + signup/login/refresh/me    leagues = leagues + entrants
 #   schedule = schedule, games, scores, clear                    all = standings + public
+# SIGNUP_PASSWORD must be set to the backend's own sign-up password (US13-02), since every check after sign-up needs an account:
+#   SIGNUP_PASSWORD=change-me-locally ./contract-test.sh http://localhost:8000
 API_URL=${1:?usage: $0 <API_URL>}
 API_URL=${API_URL%/}
 ORIGIN=http://localhost:3000
 command -v jq >/dev/null 2>&1 || { echo "contract-test.sh needs jq"; exit 1; }
+[ -n "${SIGNUP_PASSWORD:-}" ] || { echo "Set SIGNUP_PASSWORD to the backend's sign-up password, e.g. SIGNUP_PASSWORD=change-me-locally $0 $1"; exit 1; }
+SPJ=$(jq -n --arg p "$SIGNUP_PASSWORD" '$p') # the sign-up password as a JSON string, escaped
 UPTO=${CONTRACT_UPTO:-all}
 case "$UPTO" in accounts|leagues|schedule|all) ;; *) echo "CONTRACT_UPTO must be accounts, leagues, schedule or all (got $UPTO)"; exit 1 ;; esac
 failures=0
@@ -74,37 +78,55 @@ hello "?name=%20" 400 '{"error":"Name is required"}'
 
 # --- US13 · sign up ---
 email="contract-$(date +%s)-$$@example.com"
-post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"$email\",\"password\":\"cornhole1\"}"
 [ "$status" = "201" ]; check "POST /api/auth/signup returns 201 (got ${status:-no answer})" $?
 echo "$body" | jq -e '(.token|type=="string" and length>0) and (.refresh_token|type=="string" and length>0)' >/dev/null
 check "  body has token and refresh_token" $?
-post /api/auth/signup "{\"email\":\"$email\",\"password\":\"cornhole1\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"$email\",\"password\":\"cornhole1\"}"
 [ "$status" = "409" ] && same '{"error":"An account with that email already exists"}'
 check "signing up the same email again returns 409 (got ${status:-no answer} $body)" $?
 upper=$(echo "$email" | tr 'a-z' 'A-Z')
-post /api/auth/signup "{\"email\":\"  $upper  \",\"password\":\"cornhole1\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"  $upper  \",\"password\":\"cornhole1\"}"
 [ "$status" = "409" ] && same '{"error":"An account with that email already exists"}'
 check "the same email upper-cased and padded with spaces returns 409 (got ${status:-no answer} $body)" $?
-post /api/auth/signup "{\"email\":\"short-$email\",\"password\":\"short\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"short-$email\",\"password\":\"short\"}"
 [ "$status" = "400" ] && same '{"error":"Password must be at least 8 characters"}'
 check "a short password returns 400 (got ${status:-no answer} $body)" $?
 long=$(printf 'a%.0s' $(seq 73)); ok72=$(printf 'a%.0s' $(seq 72))
 emoji72=$(printf '😀%.0s' $(seq 18))  # 72 UTF-8 bytes
-post /api/auth/signup "{\"email\":\"long-$email\",\"password\":\"$long\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"long-$email\",\"password\":\"$long\"}"
 [ "$status" = "400" ] && same '{"error":"Password must be 72 characters or fewer"}'
 check "a 73-character password returns 400 (got ${status:-no answer} $body)" $?
-post /api/auth/signup "{\"email\":\"long8-$email\",\"password\":\"${emoji72}a\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"long8-$email\",\"password\":\"${emoji72}a\"}"
 [ "$status" = "400" ] && same '{"error":"Password must be 72 characters or fewer"}'
 check "a 73-byte emoji password returns 400 (got ${status:-no answer} $body)" $?
-post /api/auth/signup "{\"email\":\"72-$email\",\"password\":\"$ok72\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"72-$email\",\"password\":\"$ok72\"}"
 [ "$status" = "201" ]; check "a 72-character password signs up (got ${status:-no answer})" $?
-post /api/auth/signup "{\"email\":\"emoji-$email\",\"password\":\"$emoji72\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"emoji-$email\",\"password\":\"$emoji72\"}"
 [ "$status" = "201" ]; check "a 72-byte emoji password signs up (got ${status:-no answer} $body)" $?
 post /api/auth/login "{\"email\":\"emoji-$email\",\"password\":\"$emoji72\"}"
 [ "$status" = "200" ]; check "  and signs in with it (got ${status:-no answer} $body)" $?
-post /api/auth/signup '{"email":"no-at-sign","password":"cornhole1"}'
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"no-at-sign\",\"password\":\"cornhole1\"}"
 [ "$status" = "400" ] && same '{"error":"Enter a valid email address"}'
 check "an email without @ returns 400 (got ${status:-no answer} $body)" $?
+
+# --- US13-02 · sign-up needs the server's sign-up password, checked before email, password and duplicate checks ---
+post /api/auth/signup "{\"email\":\"nosp-$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "403" ] && same '{"error":"Sign-up password is incorrect"}'
+check "signing up without a sign-up password returns 403 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"signup_password\":\"wrong-$$\",\"email\":\"wrongsp-$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "403" ] && same '{"error":"Sign-up password is incorrect"}'
+check "a wrong sign-up password returns 403 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"signup_password\":5,\"email\":\"numsp-$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "403" ] && same '{"error":"Sign-up password is incorrect"}'
+check "a sign-up password that isn't text returns 403 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"signup_password\":\"wrong-$$\",\"email\":\"$email\",\"password\":\"cornhole1\"}"
+[ "$status" = "403" ] && same '{"error":"Sign-up password is incorrect"}'
+check "a wrong sign-up password with a registered email returns 403, not 409 (got ${status:-no answer} $body)" $?
+post /api/auth/signup "{\"signup_password\":\"wrong-$$\",\"email\":\"no-at-sign\",\"password\":\"x\"}"
+[ "$status" = "403" ] && same '{"error":"Sign-up password is incorrect"}'
+check "a wrong sign-up password wins over a bad email and password (got ${status:-no answer} $body)" $?
+# (Sign-up is closed when the server has no sign-up password: each backend's unit tests cover it; a running backend here has one.)
 
 for route in signup login refresh; do
   post "/api/auth/$route" '[]'
@@ -114,9 +136,12 @@ done
 
 # NUL (\u0000) and an unpaired surrogate (\ud800) can't be stored on any backend: 400 Invalid request. Raw JSON escapes, in single quotes so the shell leaves them alone.
 for bad in '\u0000' 'A\u0000B' '\ud800' 'x\udc00y'; do
-  post /api/auth/signup "{\"email\":\"nul-$email\",\"password\":\"cornhole$bad\"}"
+  post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"nul-$email\",\"password\":\"cornhole$bad\"}"
   [ "$status" = "400" ] && same '{"error":"Invalid request"}'
   check "a signup password containing $bad returns 400 Invalid request (got ${status:-no answer} $body)" $?
+  post /api/auth/signup "{\"signup_password\":\"x$bad\",\"email\":\"nulsp-$email\",\"password\":\"cornhole1\"}"
+  [ "$status" = "400" ] && same '{"error":"Invalid request"}'
+  check "a sign-up password containing $bad returns 400 Invalid request (got ${status:-no answer} $body)" $?
 done
 
 # --- US01 · sign in, refresh, the sign-in gate ---
@@ -144,7 +169,7 @@ send GET /api/auth/me "" "$access"
 check "GET /api/auth/me with the token returns 200 {email} (got ${status:-no answer} $body)" $?
 
 # A stale or garbage token on a route that needs no sign-in is ignored, never a 401 (a client may send its expired token along).
-send POST /api/auth/signup "{\"email\":\"stale-$email\",\"password\":\"cornhole1\"}" garbage
+send POST /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"stale-$email\",\"password\":\"cornhole1\"}" garbage
 [ "$status" = "201" ]; check "POST /api/auth/signup ignores a garbage Authorization header (got ${status:-no answer})" $?
 send POST /api/auth/login "{\"email\":\"$email\",\"password\":\"cornhole1\"}" garbage
 [ "$status" = "200" ]; check "POST /api/auth/login ignores a garbage Authorization header (got ${status:-no answer})" $?
@@ -224,7 +249,7 @@ post /api/leagues '{"name":"A","location":"B"}' "$access"
 [ "$status" = "400" ] && same '{"error":"Weeks must be at least 1"}'
 check "missing weeks returns 400 (got ${status:-no answer} $body)" $?
 other="other-$email"
-post /api/auth/signup "{\"email\":\"$other\",\"password\":\"cornhole1\"}"
+post /api/auth/signup "{\"signup_password\":$SPJ,\"email\":\"$other\",\"password\":\"cornhole1\"}"
 [ "$status" = "201" ]; check "a second organizer signs up (got ${status:-no answer})" $?
 other_access=$(echo "$body" | jq -r '.token')
 send GET /api/leagues "" "$other_access"

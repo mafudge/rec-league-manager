@@ -106,8 +106,17 @@ def test_no_refresh_token_means_sign_in_is_required_without_calling_refresh():
 def test_a_4xx_shows_the_backends_error_verbatim():
     b = Backend(Reply(409, {"error": "An account with that email already exists"}))
     with pytest.raises(api.BackendRefused) as e:
-        run(b, api.sign_up, {}, "a@b.c", "password1")
+        run(b, api.sign_up, {}, "a@b.c", "password1", "class-pw")
     assert str(e.value) == "An account with that email already exists"
+
+
+def test_sign_up_password_refusals_are_shown_verbatim_and_save_nothing():
+    for error in ["Sign-up is closed", "Sign-up password is incorrect"]:
+        s = {}
+        with pytest.raises(api.BackendRefused) as e:
+            run(Backend(Reply(403, {"error": error})), api.sign_up, s, "a@b.c", "password1", "x")
+        assert str(e.value) == error
+        assert s == {}
 
 
 def test_a_5xx_or_an_unexplained_4xx_says_the_backend_had_a_problem():
@@ -126,14 +135,19 @@ def test_message_for_names_where_it_looked_when_nothing_answered():
 def test_sign_up_and_sign_in_save_the_pair_and_send_what_was_typed():
     s = {}
     b = Backend(Reply(201, TOKENS))
-    run(b, api.sign_up, s, " Dana@Example.com ", "pw")
+    run(b, api.sign_up, s, " Dana@Example.com ", "pw", " Class PW ")
     assert b.calls[0][1] == f"{BASE}/api/auth/signup"
-    assert json.loads(b.calls[0][2]["data"]) == {"email": " Dana@Example.com ", "password": "pw"}
+    assert json.loads(b.calls[0][2]["data"]) == {
+        "email": " Dana@Example.com ",
+        "password": "pw",
+        "signup_password": " Class PW ",
+    }
     assert s["token"] == "t2" and s["refresh_token"] == "r2"
     s = {}
     b = Backend(Reply(200, TOKENS))
     run(b, api.sign_in, s, "d@e.f", "pw")
     assert b.calls[0][1] == f"{BASE}/api/auth/login"
+    assert json.loads(b.calls[0][2]["data"]) == {"email": "d@e.f", "password": "pw"}
     assert s["token"] == "t2"
 
 

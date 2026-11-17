@@ -99,8 +99,9 @@ export async function request<T>(method: string, path: string, opts: Options = {
   return r.json();
 }
 
-export async function signUp(email: string, password: string): Promise<void> {
-  saveSession(await request<Tokens>("POST", "/api/auth/signup", { body: { email, password } }));
+export async function signUp(email: string, password: string, signupPassword: string): Promise<void> {
+  const body = { email, password, signup_password: signupPassword };
+  saveSession(await request<Tokens>("POST", "/api/auth/signup", { body }));
 }
 
 export async function signIn(email: string, password: string): Promise<void> {

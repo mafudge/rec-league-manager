@@ -80,10 +80,15 @@ def _auth_page(signup: bool) -> None:
     with st.form("signup" if signup else "signin"):
         email = st.text_input("Email", key="auth_email")
         password = st.text_input("Password", type="password", key="auth_password")
+        if signup:  # the site's shared sign-up password; the backend decides if it is right
+            signup_password = st.text_input("Sign-up password", type="password", key="auth_signup_password")
         submitted = st.form_submit_button("Sign up" if signup else "Sign in")
     if submitted:
         try:
-            (api.sign_up if signup else api.sign_in)(st.session_state, email, password)
+            if signup:
+                api.sign_up(st.session_state, email, password, signup_password)
+            else:
+                api.sign_in(st.session_state, email, password)
         except Exception as e:
             st.error(literal(api.message_for(e)))
         else:

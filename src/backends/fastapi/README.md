@@ -11,16 +11,19 @@ pip install -r requirements.txt
 
 ## Run
 ```bash
+cp .env.example .env              # once; then pick your own SIGNUP_PASSWORD in it
 uvicorn app.main:app --reload
 curl localhost:8000/api/backend   # {"backend":"fastapi"}
-../../contract-test.sh http://localhost:8000
+SIGNUP_PASSWORD=<the one in .env> ../../contract-test.sh http://localhost:8000
 ```
 
-Set `JWT_SECRET` to a long random value anywhere but a local laptop; the built-in default is public.
+The API reads `.env` in this folder at start (real environment variables win).
+- `SIGNUP_PASSWORD`: needed to create an account (US13-02). If it is unset or empty, sign-up is closed ("Sign-up is closed"); signing in still works.
+- `JWT_SECRET`: set it to a long random value anywhere but a local laptop; the built-in default is public.
 
 ## Demo seed
 ```bash
-DEMO_SEED=1 python -m app.seed   # then start uvicorn as above
+DEMO_SEED=1 python -m app.seed   # needs SIGNUP_PASSWORD (from .env); then start uvicorn as above
 ```
 On an empty database this signs up `demo@recleague.example` (password `cornhole-demo`) and builds "Tuesday Cornhole" through the real routes: 6 teams, the schedule, week 1 scored, public link `/l/tuesdy`. It does nothing unless `DEMO_SEED=1`, and nothing once anyone has signed up, so the deployed API runs it on every start (REL-01, `docs/deploy.md`).
 

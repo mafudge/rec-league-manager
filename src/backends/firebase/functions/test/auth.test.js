@@ -4,6 +4,12 @@ const { createAuth } = require("../auth");
 const { dispatch } = require("../http");
 const { createRoutes } = require("../routes");
 
+// Sign-up needs the server's sign-up password (US13-02); signup-password.test.js covers the refusals.
+const SP = "test-signup-password";
+const savedSP = process.env.SIGNUP_PASSWORD;
+test.before(() => { process.env.SIGNUP_PASSWORD = SP; });
+test.after(() => { if (savedSP === undefined) delete process.env.SIGNUP_PASSWORD; else process.env.SIGNUP_PASSWORD = savedSP; });
+
 const reply = (status, body) => async () => ({ status, json: async () => body });
 function make({ fetch = reply(200, {}), verify = async () => ({ uid: "u1", email: "A@B.com" }) } = {}) {
   const calls = [];
@@ -19,26 +25,26 @@ const err = (message) => ({ error: { code: 400, message } });
 
 test("signup validation order, before the emulator is called", async () => {
   const { auth, calls } = make();
-  await assert.rejects(auth.signup("nope", "short"), { status: 400, message: "Enter a valid email address" });
-  await assert.rejects(auth.signup("a@b.c", "short"), { status: 400, message: "Password must be at least 8 characters" });
-  await assert.rejects(auth.signup("a@b.c", undefined), { status: 400, message: "Password must be at least 8 characters" });
-  await assert.rejects(auth.signup("a@b.c", "x".repeat(73)), { status: 400, message: "Password must be 72 characters or fewer" });
-  await assert.rejects(auth.signup("a@b.c", "😀".repeat(19)), { status: 400, message: "Password must be 72 characters or fewer" });
+  await assert.rejects(auth.signup("nope", "short", SP), { status: 400, message: "Enter a valid email address" });
+  await assert.rejects(auth.signup("a@b.c", "short", SP), { status: 400, message: "Password must be at least 8 characters" });
+  await assert.rejects(auth.signup("a@b.c", undefined, SP), { status: 400, message: "Password must be at least 8 characters" });
+  await assert.rejects(auth.signup("a@b.c", "x".repeat(73), SP), { status: 400, message: "Password must be 72 characters or fewer" });
+  await assert.rejects(auth.signup("a@b.c", "😀".repeat(19), SP), { status: 400, message: "Password must be 72 characters or fewer" });
   assert.equal(calls.length, 0);
 });
 
 test("signup success trims and lower-cases; 72 bytes allowed", async () => {
   const { auth, calls } = make({ fetch: reply(200, session) });
-  assert.deepEqual(await auth.signup("  Me@X.com ", "😀".repeat(18)), { token: "T", refresh_token: "R" });
+  assert.deepEqual(await auth.signup("  Me@X.com ", "😀".repeat(18), SP), { token: "T", refresh_token: "R" });
   assert.equal(calls[0].body.email, "me@x.com");
   assert.match(calls[0].url, /^http:\/\/emu:9099\/identitytoolkit\.googleapis\.com\/v1\/accounts:signUp\?key=/);
 });
 
 test("signup maps EMAIL_EXISTS to 409 and hides unknown failures", async () => {
-  await assert.rejects(make({ fetch: reply(400, err("EMAIL_EXISTS")) }).auth.signup("a@b.c", "password1"), { status: 409, message: "An account with that email already exists" });
-  await assert.rejects(make({ fetch: reply(400, err("INVALID_EMAIL")) }).auth.signup("a@b", "password1"), { status: 400, message: "Enter a valid email address" });
+  await assert.rejects(make({ fetch: reply(400, err("EMAIL_EXISTS")) }).auth.signup("a@b.c", "password1", SP), { status: 409, message: "An account with that email already exists" });
+  await assert.rejects(make({ fetch: reply(400, err("INVALID_EMAIL")) }).auth.signup("a@b", "password1", SP), { status: 400, message: "Enter a valid email address" });
   const orig = console.error; console.error = () => {};
-  try { await assert.rejects(make({ fetch: reply(503, err("BOOM")) }).auth.signup("a@b.c", "password1"), { status: 500, message: "The backend had a problem" }); } finally { console.error = orig; }
+  try { await assert.rejects(make({ fetch: reply(503, err("BOOM")) }).auth.signup("a@b.c", "password1", SP), { status: 500, message: "The backend had a problem" }); } finally { console.error = orig; }
 });
 
 test("login: every bad credential is the one 401", async () => {
@@ -75,7 +81,7 @@ test("routes: bodies, 201 on signup, open routes ignore Authorization, /me needs
   const post = (path, raw, headers = {}) => dispatch({ method: "POST", path, rawBody: Buffer.from(raw), headers }, routes);
   assert.deepEqual(await post("/api/auth/signup", "[]"), [400, { error: "Invalid request" }]);
   assert.deepEqual(await post("/api/auth/signup", '{"email":"a@b.c","password":"\\u0000password"}'), [400, { error: "Invalid request" }]);
-  assert.deepEqual(await post("/api/auth/signup", '{"email":"a@b.c","password":"password1"}', { authorization: "Bearer junk" }), [201, { token: "T", refresh_token: "R" }]);
+  assert.deepEqual(await post("/api/auth/signup", '{"email":"a@b.c","password":"password1","signup_password":"test-signup-password"}', { authorization: "Bearer junk" }), [201, { token: "T", refresh_token: "R" }]);
   assert.deepEqual(await post("/api/auth/login", '{"email":"a@b.c","password":"password1"}', { authorization: "garbage" }), [200, { token: "T", refresh_token: "R" }]);
   assert.deepEqual(await dispatch({ method: "GET", path: "/api/auth/me", headers: {} }, routes), [401, { error: "Sign in required" }]);
 });

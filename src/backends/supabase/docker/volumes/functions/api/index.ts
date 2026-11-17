@@ -24,7 +24,7 @@ const routes: Route[] = [
     path: '/api/auth/signup',
     handler: async (req) => {
       const body = await objectBody(req)
-      return json(await auth.signup(body.email, body.password), 201)
+      return json(await auth.signup(body.email, body.password, body.signup_password), 201)
     },
   },
   {

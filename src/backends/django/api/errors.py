@@ -14,7 +14,7 @@ class ApiError(APIException):
         self.message = message
 
 
-TEXT_FIELDS = ("email", "password", "name", "location", "sport", "season")
+TEXT_FIELDS = ("email", "password", "signup_password", "name", "location", "sport", "season")
 
 
 def has_bad_text(value) -> bool:

@@ -33,7 +33,7 @@ def call(client: TestClient, method: str, path: str, **kwargs) -> dict:
 
 def seed(client: TestClient) -> str:
     """Build the demo league through the API and return its id."""
-    token = call(client, "POST", "/api/auth/signup", json={"email": EMAIL, "password": PASSWORD})["token"]
+    token = call(client, "POST", "/api/auth/signup", json={"email": EMAIL, "password": PASSWORD, "signup_password": os.environ.get("SIGNUP_PASSWORD", "")})["token"]
     h = {"Authorization": f"Bearer {token}"}
     lid = call(client, "POST", "/api/leagues", json=LEAGUE, headers=h)["id"]
     for name in TEAMS:

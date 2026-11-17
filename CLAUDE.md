@@ -26,6 +26,7 @@ Rec League Manager — a tool for the volunteer who runs a recreational league (
 11. An issue is not done until tests pass, the server runs and the app runs without error.
 12. As you close Github issues review `docs/todo.md` and move completed items into `docs/xchangelog.md`
 13. Start each issue from the release branch with a clean working directory.
+14. deployments are always from `main`. so deploying a release implies merging with `main`
 
 ## Running the apps
 Everything lives under `src/`; each folder's `README.md` is the full reference. Run from the repo root. Default ports are chosen so a backend and a frontend can run together. Any frontend works with any backend (ADR 003): [`src/README.md`](src/README.md) has the 4 × 3 table of pairings and each backend's `API_URL`; `src/contract-test.sh <API_URL>` checks a running backend.
@@ -42,8 +43,11 @@ Everything lives under `src/`; each folder's `README.md` is the full reference. 
 
 Gotchas on this machine:
 - `python3 -m venv` fails (no `python3-venv`). Use `python3 -m venv --without-pip .venv`, then `.venv/bin/python get-pip.py` (download from `https://bootstrap.pypa.io/get-pip.py`).
+- Python is 3.14 (the OS moved from 3.12 on 2026-11-16, which broke every `.venv`; rebuilt and all suites pass). Render still pins 3.12.3. If a venv says `No module named …`, rebuild it as above.
 - Node is 18.19: keep Next.js on 15 and `firebase-tools` on 13. The Firestore emulator needs Java (installed).
 - Flutter is not on `PATH`: `export PATH=$PATH:/home/ubuntu/.local/flutter/bin`.
+- Two `next dev` servers started from `src/frontends/web` share one `.next` cache, so the last one started decides `NEXT_PUBLIC_API_URL` for both. Run one web pairing at a time and delete `.next` when switching backends.
+- Driving Flutter web with Playwright: wait ~400 ms after clicking a field before typing, or keystrokes go to the previous field.
 - Every backend has its own port (FastAPI 8000, Django 8001, Firebase 5000, Supabase 54321), so all four can run at once. Django's default comes from `api/management/commands/runserver.py`.
 - Stop what you start: don't leave servers, the Firebase emulators or the Supabase containers (`cd src/backends/supabase/docker && docker compose down`) running when you finish.
 - Never commit `.env`, `docker/.env` or `.venv`; they are git-ignored.

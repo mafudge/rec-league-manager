@@ -1,5 +1,5 @@
 from api.slugs import ALPHABET, new_slug
-from api.test_auth import ApiTestCase
+from api.test_auth import SP, ApiTestCase
 
 GOOD = {"name": "Tuesday Cornhole", "location": "Joe's Tavern", "sport": "Cornhole", "season": "Fall 2026", "weeks": 8}
 INVALID = {"error": "Invalid request"}
@@ -8,7 +8,7 @@ NOT_FOUND = {"error": "League not found"}
 
 class LeagueTestCase(ApiTestCase):
     def signed_in_as(self, email="dana@example.com"):
-        tokens = self.post("/api/auth/signup", {"email": email, "password": "cornhole1"}).json()
+        tokens = self.post("/api/auth/signup", {"email": email, "password": "cornhole1", **SP}).json()
         return {"HTTP_AUTHORIZATION": f"Bearer {tokens['token']}"}
 
     def make(self, h, **over):

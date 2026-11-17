@@ -3,6 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import seed
+from tests.conftest import SP
 from app.models import Game, League, Organizer
 
 
@@ -54,7 +55,7 @@ def test_seed_leaves_a_used_database_alone(client, run):
 
 
 def test_seed_skips_when_anyone_has_signed_up(client, run):
-    client.post("/api/auth/signup", json={"email": "dana@example.com", "password": "cornhole1"})
+    client.post("/api/auth/signup", json={"email": "dana@example.com", "password": "cornhole1", **SP})
     run("1")
     assert count(client, Organizer) == 1 and count(client, League) == 0
 

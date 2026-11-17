@@ -108,6 +108,22 @@ Stories, acceptance criteria, MoSCoW, MVP slice. This is what the agent builds a
 
 **Decided 2026-10-24 (found building #14):** whether games can end tied is a per-league setting (US02). Leagues that allow ties show a T column; leagues that don't, don't show it.
 
+### US13-02 · Sign-up needs the sign-up password
+
+**Why.** The API already requires a token on every league route and checks ownership, but anyone who finds the site can create an account. **Decided 2026-11-16, scheduled for v0.2.2:** a shared `SIGNUP_PASSWORD`, set on the server, must be given to sign up. On every backend and every frontend, so ADR 004's one sign-up contract holds. With no `SIGNUP_PASSWORD` set, sign-up is closed. Login, refresh and the public page are unchanged.
+
+**Contract.** `POST /api/auth/signup` `{email, password, signup_password}`, checked after the body and text rules and **before** the email, password and duplicate checks (so a stranger can't learn which emails have accounts): server has no sign-up password → `403 Sign-up is closed`; `signup_password` missing, not text or wrong → `403 Sign-up password is incorrect`, compared in constant time.
+
+**Acceptance criteria**
+- Given the server's sign-up password is set, when I sign up with it and a new email and valid password, then my account is created and I land on my league list.
+- Given a wrong or missing sign-up password, when I sign up, then no account is created and I see "Sign-up password is incorrect". *(negative)*
+- Given a wrong sign-up password and an email that already has an account, when I sign up, then I see "Sign-up password is incorrect", not "An account with that email already exists". *(negative)*
+- Given the server has no sign-up password set, when anyone signs up, then no account is created and they see "Sign-up is closed". *(negative)*
+- Given an existing account, when I sign in, then no sign-up password is asked for.
+- Given the sign-up page in any frontend, then it has a "Sign-up password" box that hides what is typed.
+
+**Work.** a · FastAPI + contract test + docs — #59; b · Django — #60; c · Supabase — #61; d · Firebase — #62; e · web — #63; f · Streamlit — #64; g · Flutter — #65; h · v0.2.2 release check — #66.
+
 ### US06-01 · Standings refuse games that don't match the entrants
 
 **Found while reviewing** #14. `compute_standings` raises a bare `KeyError` when a played game names an entrant who isn't in the entrant list (say, one removed mid-season), and counts a game where an entrant plays itself as both a W and an L for that entrant. Decision: bad game data is a clear error, not silently skipped.
@@ -401,6 +417,10 @@ Not product stories: runnable stubs so each platform can be built on later (ADR 
 ## Polish found building v0.2.0 (not scheduled)
 
 Minor findings from the per-story and whole-branch reviews of the FastAPI + web reference build. None breaks an acceptance criterion; each is a candidate for a later release. Label `polish` when one is scheduled.
+
+### ENV-01 · Local Python moved to 3.14
+
+**Found 2026-11-16.** The OS upgrade moved `/usr/bin/python3` from 3.12 to 3.14, so the FastAPI, Django and Streamlit `.venv`s (built on 3.12) could no longer import their packages. **Done:** all three rebuilt on 3.14; FastAPI 224, Django 157 and Streamlit 99 tests pass. Render pins 3.12.3 (`render.yaml`), so local and deployed differ by two minor versions; still to decide: pin Render to 3.14 too, or keep 3.12 and accept the gap.
 
 ### POL-01 · Backend hardening (FastAPI)
 - Warn at startup when `JWT_SECRET` is unset (belongs with REL-01 deploys).
