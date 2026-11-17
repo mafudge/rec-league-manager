@@ -8,7 +8,10 @@ Node 18.18+ and Java 11+ (the Firestore emulator is a Java program). `firebase-f
 ## Install
 ```bash
 npm install            # also installs functions/
+cp functions/.env.example functions/.env   # then pick your own SIGNUP_PASSWORD
 ```
+
+**Sign-up password (US13-02).** Creating an account needs the server's `SIGNUP_PASSWORD`, sent as `signup_password` in the sign-up body. The Functions emulator reads it from `functions/.env` (dotenv syntax; quote a value with spaces, e.g. `SIGNUP_PASSWORD="s3cret q é"`). Unset or empty means sign-up is closed (`403 Sign-up is closed`). The file is git-ignored; only `functions/.env.example` is committed. The function reads the value on every request, but the emulator loads `.env` only when it starts, so restart `npm run emulators` after changing it. Sign-in never asks for it.
 
 ## Run
 ```bash
@@ -27,7 +30,7 @@ Accounts (US01) use the Auth emulator through its REST API; `functions/auth.js` 
 ```bash
 (cd functions && npm test)   # unit tests (node --test), no emulator needed
 ./smoke.sh             # with the emulators running: prints "firestore ok", "auth ok", "hosting ok", "api ok"
-../../contract-test.sh http://localhost:5000   # all routes: prints "contract ok"
+SIGNUP_PASSWORD=<the value in functions/.env> ../../contract-test.sh http://localhost:5000   # all routes: prints "contract ok"
 ```
 
 Known limit: the Functions runtime parses JSON bodies before our code, so a malformed body sent with `Content-Type: application/json` gets the runtime's HTML 400 instead of `{"error": "Invalid request"}` (backlog POL-01). The same goes for any body sent as `application/json` that is not a JSON object (`5`, `"x"`, `null`, `true`), and that 400 has no CORS headers. Clients therefore send no body and no `Content-Type` on routes that take none, and a JSON object otherwise.

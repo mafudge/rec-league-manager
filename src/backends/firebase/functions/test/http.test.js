@@ -15,7 +15,7 @@ test("body rule: missing, bad JSON and non-objects are Invalid request", () => {
 });
 
 test("text rule: NUL and lone surrogates in text fields", () => {
-  for (const f of ["email", "password", "name", "location", "sport", "season"]) {
+  for (const f of ["email", "password", "signup_password", "name", "location", "sport", "season"]) {
     for (const bad of ["a\\u0000b", "\\ud800", "x\\udfffy", "\\ud800a"]) {
       assert.throws(() => objectBody(body(`{"${f}":"${bad}"}`)), { status: 400, message: "Invalid request" }, f + bad);
     }
