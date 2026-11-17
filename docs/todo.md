@@ -10,5 +10,4 @@
 
 ## Sign-up password (v0.2.2)
 
-- **US13-02g** Flutter sign-up — #65.
 - **US13-02h** v0.2.2 release check, merge to main — #66.
