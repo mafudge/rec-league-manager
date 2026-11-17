@@ -10,7 +10,6 @@
 
 ## Sign-up password (v0.2.2)
 
-- **US13-02a** FastAPI checks the sign-up password; contract test and docs — #59.
 - **US13-02b** Django — #60.
 - **US13-02c** Supabase — #61.
 - **US13-02d** Firebase — #62.
