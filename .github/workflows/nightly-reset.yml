@@ -1,6 +1,6 @@
-# Nightly demo reset (REL-01, docs/deploy.md): redeploy every live release's API.
+# Nightly demo reset (REL-01d, ADR 006, docs/deploy.md): redeploy the live API.
 # A Render Free redeploy starts on a fresh disk, and the start command reseeds it.
-# Scheduled runs only happen from main, so a release is listed here when it merges to main.
+# Scheduled runs only happen from main, which is also the branch the live site builds from.
 name: Nightly demo reset
 
 on:
@@ -16,8 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One GitHub secret per live release, holding its Render deploy hook URL.
-        hook: [RENDER_HOOK_V0_2_1]
+        # The GitHub secret holding the live API's Render deploy hook URL.
+        hook: [RENDER_HOOK]
     steps:
       - name: Redeploy ${{ matrix.hook }}
         env:
@@ -25,7 +25,7 @@ jobs:
           HOOK_URL: ${{ secrets[matrix.hook] }}
         run: |
           if [ -z "$HOOK_URL" ]; then
-            echo "::warning::Secret $HOOK_NAME is not set, so that release was not reset"
+            echo "::warning::Secret $HOOK_NAME is not set, so the API was not reset"
             exit 0
           fi
           curl --fail --silent --show-error -X POST "$HOOK_URL" > /dev/null

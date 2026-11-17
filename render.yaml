@@ -1,11 +1,12 @@
-# Render Blueprint for this release's API (REL-01, ADR 005, docs/deploy.md).
-# Each release branch carries its own copy: a new release changes the two version strings below.
+# Render Blueprint for the live API (REL-01d, ADR 006, docs/deploy.md).
+# One service that builds from main, so it always runs the newest release.
+# The name keeps its v0-2-1 suffix on purpose: renaming would create a new service at a new URL.
 services:
   - type: web
     name: rlm-api-v0-2-1
     runtime: python
     plan: free
-    branch: release/v0.2.1
+    branch: main
     rootDir: src/backends/fastapi
     buildCommand: pip install -r requirements.txt
     # The free disk is wiped on every sleep and deploy, so every start seeds a fresh SQLite file.
