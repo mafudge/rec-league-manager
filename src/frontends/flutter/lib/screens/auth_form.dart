@@ -16,6 +16,7 @@ class AuthForm extends StatefulWidget {
 class _AuthFormState extends State<AuthForm> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _signupPassword = TextEditingController();
   String _message = '';
   bool _busy = false;
 
@@ -26,10 +27,15 @@ class _AuthFormState extends State<AuthForm> {
       _message = '';
     });
     try {
-      await (widget.signup ? widget.api.signUp : widget.api.signIn)(
-        _email.text,
-        _password.text,
-      );
+      if (widget.signup) {
+        await widget.api.signUp(
+          _email.text,
+          _password.text,
+          _signupPassword.text,
+        );
+      } else {
+        await widget.api.signIn(_email.text, _password.text);
+      }
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/leagues');
     } catch (e) {
@@ -45,6 +51,7 @@ class _AuthFormState extends State<AuthForm> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _signupPassword.dispose();
     super.dispose();
   }
 
@@ -93,9 +100,24 @@ class _AuthFormState extends State<AuthForm> {
                           ? AutofillHints.newPassword
                           : AutofillHints.password,
                     ],
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
+                    textInputAction: signup
+                        ? TextInputAction.next
+                        : TextInputAction.done,
+                    onSubmitted: signup ? null : (_) => _submit(),
                   ),
+                  if (signup) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _signupPassword,
+                      decoration: const InputDecoration(
+                        labelText: 'Sign-up password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Semantics(
                     liveRegion: true,

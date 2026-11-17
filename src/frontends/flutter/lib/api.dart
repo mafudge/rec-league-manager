@@ -186,11 +186,20 @@ class Api {
     return Future.value();
   }
 
-  Future<void> signUp(String email, String password) async => _saveTokens(
+  /// Sends the site's sign-up password as typed; the backend decides (403 "Sign-up is closed" / "Sign-up password is incorrect").
+  Future<void> signUp(
+    String email,
+    String password,
+    String signupPassword,
+  ) async => _saveTokens(
     await request(
       'POST',
       '/api/auth/signup',
-      body: {'email': email, 'password': password},
+      body: {
+        'email': email,
+        'password': password,
+        'signup_password': signupPassword,
+      },
     ),
   );
 

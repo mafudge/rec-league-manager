@@ -43,9 +43,19 @@ Future<void> show(WidgetTester tester, Api api, String route) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> fill(WidgetTester tester, String email, String password) async {
+final signupPasswordBox = find.widgetWithText(TextField, 'Sign-up password');
+
+Future<void> fill(
+  WidgetTester tester,
+  String email,
+  String password, {
+  String? signupPassword,
+}) async {
   await tester.enterText(find.widgetWithText(TextField, 'Email'), email);
   await tester.enterText(find.widgetWithText(TextField, 'Password'), password);
+  if (signupPassword != null) {
+    await tester.enterText(signupPasswordBox, signupPassword);
+  }
 }
 
 http.Response okBackend(http.Request r) {
@@ -69,6 +79,7 @@ void main() {
       expect(find.text('Create your account'), findsOneWidget);
       expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
       expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
+      expect(signupPasswordBox, findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Sign up'), findsOneWidget);
       expect(find.text('Already have an account?'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'Sign in'));
@@ -82,7 +93,12 @@ void main() {
     ) async {
       final fake = Fake(okBackend);
       await show(tester, fake.api, '/signup');
-      await fill(tester, ' Dana@Example.com ', 'longenough');
+      await fill(
+        tester,
+        ' Dana@Example.com ',
+        'longenough',
+        signupPassword: ' class-pw ',
+      );
       await tester.tap(find.widgetWithText(FilledButton, 'Sign up'));
       await tester.pumpAndSettle();
       final signup = fake.sent.first;
@@ -90,12 +106,64 @@ void main() {
       expect(jsonDecode(signup.body), {
         'email': ' Dana@Example.com ',
         'password': 'longenough',
+        'signup_password': ' class-pw ',
       });
       expect(find.text('My leagues'), findsOneWidget);
       expect(find.text('dana@example.com'), findsOneWidget);
       final me = fake.sent.firstWhere((r) => r.url.path == '/api/auth/me');
       expect(me.headers['authorization'], 'Bearer t1');
     });
+
+    testWidgets(
+      'the Sign-up password box sits below Password and hides what is typed',
+      (tester) async {
+        await show(tester, Fake(okBackend).api, '/signup');
+        final box = tester.widget<TextField>(signupPasswordBox);
+        expect(box.obscureText, isTrue);
+        expect(
+          tester.getTopLeft(signupPasswordBox).dy,
+          greaterThan(
+            tester.getTopLeft(find.widgetWithText(TextField, 'Password')).dy,
+          ),
+        );
+        expect(find.bySemanticsLabel('Sign-up password'), findsOneWidget);
+      },
+    );
+
+    testWidgets('an empty sign-up password is sent as typed (empty)', (
+      tester,
+    ) async {
+      final fake = Fake(
+        (r) => json(403, {'error': 'Sign-up password is incorrect'}),
+      );
+      await show(tester, fake.api, '/signup');
+      await fill(tester, 'dana@example.com', 'longenough');
+      await tester.tap(find.widgetWithText(FilledButton, 'Sign up'));
+      await tester.pumpAndSettle();
+      expect(jsonDecode(fake.sent.single.body)['signup_password'], '');
+      expect(find.text('Sign-up password is incorrect'), findsOneWidget);
+    });
+
+    for (final msg in ['Sign-up password is incorrect', 'Sign-up is closed']) {
+      testWidgets('shows the 403 refusal verbatim and stays: $msg', (
+        tester,
+      ) async {
+        final fake = Fake((r) => json(403, {'error': msg}));
+        await show(tester, fake.api, '/signup');
+        await fill(
+          tester,
+          'dana@example.com',
+          'longenough',
+          signupPassword: 'wrong',
+        );
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign up'));
+        await tester.pumpAndSettle();
+        expect(find.text(msg), findsOneWidget);
+        expect(find.text('Create your account'), findsOneWidget);
+        expect(find.text('My leagues'), findsNothing);
+        expect(fake.api.signedIn, isFalse);
+      });
+    }
 
     for (final msg in [
       'An account with that email already exists',
@@ -131,6 +199,9 @@ void main() {
     testWidgets('has the web copy and links to sign up', (tester) async {
       await show(tester, Fake(okBackend).api, '/signin');
       expect(find.text('Sign in'), findsNWidgets(2)); // heading and button
+      expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
+      expect(signupPasswordBox, findsNothing);
+      expect(find.byType(TextField), findsNWidgets(2));
       expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
       expect(find.text('New here?'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, 'Sign up'));
